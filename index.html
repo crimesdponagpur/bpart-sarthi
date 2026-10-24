@@ -343,12 +343,18 @@ table.rt tfoot td{font-weight:600;background:var(--surface2)}
         <div id="folderList" class="list" style="margin-top:8px"></div>
       </details>
       <div class="flist" id="flist"></div>
+      <div id="mergeBox" class="hide" style="margin-top:12px;border:1px solid var(--brand2);background:var(--brandSoft);border-radius:10px;padding:10px 12px">
+        <div class="small" style="margin-bottom:4px"><b>या महिन्याचे काम आधीच app मध्ये आहे. आता काय करायचे?</b></div>
+        <label class="small" style="display:block;margin:4px 0"><input type="radio" name="pmode" value="merge" checked> <b>अद्ययावत फाईल जोडा</b> – आधीचे सर्व काम (वर्गीकरण, तुमच्या दुरुस्त्या, मंजुरी) तसेच राहील. फक्त <b>नवीन</b> आणि <b>बदललेल्या</b> नोंदीच तपासायला येतील.</label>
+        <label class="small" style="display:block;margin:4px 0"><input type="radio" name="pmode" value="fresh"> सगळे नव्याने सुरू करा (आधीचे काम पुसले जाईल)</label>
+      </div>
       <div class="row" style="margin-top:14px">
         <label class="small">माहे <input type="text" id="monthIn" placeholder="09/2026" style="width:110px" data-notype="1"></label>
         <div style="flex:1"></div>
         <button class="btn pri" id="procBtn" disabled>वर्गीकरण करा →</button>
       </div>
     </div>
+    <div class="card hide" id="logCard"><h2>अद्ययावत इतिहास</h2><div id="logList" class="list"></div></div>
     <div class="card small muted">
       <b style="color:var(--text)">कसे काम करते:</b> app प्रत्येक गुन्ह्याचे कलम वाचून head ठरवते. तुम्ही head बदलल्यास "नियम जतन करा" दाबा – पुढच्या महिन्यापासून तसाच गुन्हा आपोआप त्या head मध्ये जाईल. माहिती राहिलेली असल्यास ⚠ दिसते.
     </div>
@@ -1571,6 +1577,9 @@ var REPORT = (function () {
     }
     f.sub = sub;
     if (sub) f.crime += '\n(' + sub + ')';
+    // text corrected by hand inside the app (final wording)
+    var ed = r.ed || {};
+    Object.keys(ed).forEach(function (k) { if (ed[k] != null && k !== 'sub') f[k] = ed[k]; });
     return f;
   }
 
@@ -2354,6 +2363,9 @@ var CHECKS = (function () {
   function issues(r, ctx) {
     ctx = ctx || {};
     var out = [], u = r.u || {}, hx = r.hx || {}, h = r.head || '', kind = kindOf(h);
+    if (r.isNew) out.push({ lv: 'hi', k: 'new', t: 'नवीन नोंद (अद्ययावत फाईलमधून) – तपासा' });
+    if (r.chg && r.chg.length) out.push({ lv: 'hi', k: 'chg', t: 'PS ने बदल केला: ' + r.chg.map(function (c) { return c.label; }).join(', ') });
+    if (r.missing) out.push({ lv: 'hi', k: 'miss', t: 'नवीन फाईलमध्ये ही नोंद नाही – PS ने काढली का?' });
     var ws = []; try { ws = TEXT.validate(r); } catch (e) {}
     ws.forEach(function (w) {
       var fix = null;
@@ -2684,7 +2696,7 @@ function test_converter() {
 
 </script>
 <script>
-var S = { heads: [], rules: [], fixes: [], files: [], records: [], month: '', filter: 'all', ps: '', q: '', collapsed: {}, open: {}, ruleOpen: {}, pvDone: false, cur: 'home', qIds: [], qTotal: 0, gen: false, batch: { gaps: [], dups: {}, dupList: [] }, batchOk: false };
+var S = { heads: [], rules: [], fixes: [], files: [], records: [], month: '', filter: 'all', ps: '', q: '', collapsed: {}, open: {}, ruleOpen: {}, pvDone: false, cur: 'home', qIds: [], qTotal: 0, gen: false, batch: { gaps: [], dups: {}, dupList: [] }, batchOk: false, log: [], edOpen: {}, lastMerge: null };
 /* local storage with in-memory fallback (private mode / sandboxed frames) */
 var MEM = {};
 function lsGet(k) { try { var v = localStorage.getItem(k); return v === null ? (MEM[k] == null ? null : MEM[k]) : v; } catch (e) { return MEM[k] == null ? null : MEM[k]; } }
@@ -2692,7 +2704,7 @@ function lsSet(k, v) { MEM[k] = String(v); try { localStorage.setItem(k, String(
 function lsDel(k) { delete MEM[k]; try { localStorage.removeItem(k); } catch (e) {} }
 /* automatic draft: unfinished work survives a phone/app reload */
 var _dt;
-function saveDraft() { if (!S.records.length) return; try { localStorage.setItem('bps_draft', JSON.stringify({ t: Date.now(), month: S.month, records: S.records, gen: S.gen })); } catch (e) {} }
+function saveDraft() { if (!S.records.length) return; try { localStorage.setItem('bps_draft', JSON.stringify({ t: Date.now(), month: S.month, records: S.records, gen: S.gen, log: S.log })); } catch (e) {} }
 function saveDraftSoon() { clearTimeout(_dt); _dt = setTimeout(saveDraft, 700); }
 function loadDraft() { try { var j = localStorage.getItem('bps_draft'); return j ? JSON.parse(j) : null; } catch (e) { return null; } }
 Object.defineProperty(S, 'pvDone', { get: function () { return this._pv; }, set: function (v) { this._pv = v; if (v === false) { S.arcDirty = true; saveDraftSoon(); } }, configurable: true });
@@ -2725,7 +2737,7 @@ function show(v) {
   S.cur = v;
   VIEWS.forEach(function (x) { $('v-' + x).classList.toggle('hide', x !== v); });
   Array.prototype.forEach.call(document.querySelectorAll('#tabs button'), function (b) { b.classList.toggle('on', b.dataset.v === v); });
-  if (v === 'home') renderHome(); if (v === 'files') renderPsStatus(); if (v === 'queue') { buildQueue(); renderQueue(); }
+  if (v === 'home') renderHome(); if (v === 'files') { renderPsStatus(); updateMergeBox(); renderLog(); } if (v === 'queue') { buildQueue(); renderQueue(); }
   if (v === 'archive') renderArchive(); if (v === 'review') renderReview(); if (v === 'hbt') renderHbt(); if (v === 'preview') renderPreview(); if (v === 'download') renderDownload(); if (v === 'reports') renderReports(); if (v === 'rules') renderRules();
   renderSteps();
   window.scrollTo(0, 0);
@@ -2797,19 +2809,83 @@ $('folderList').addEventListener('click', function (e) {
   if (a) { S.files = S.files.filter(function (x) { return x.driveId !== a.dataset.add; }); S.files.push({ name: a.dataset.nm, driveId: a.dataset.add, ps: a.dataset.ps }); renderFiles(); a.textContent = '✓'; }
   if (s) { $('folderIn').value = s.dataset.sub; $('folderBtn').click(); }
 });
+function clone(o) { return JSON.parse(JSON.stringify(o == null ? null : o)); }
+var RAW = ['crime', 'place', 'occ', 'filed', 'party', 'arrest', 'stolen', 'recovered', 'invest', 'details', 'deceased', 'cause'];
+var RAWLBL = { crime: 'अप.क्र./कलम', place: 'घटनास्थळ', occ: 'घटना ता.वेळ', filed: 'दाखल ता.वेळ', party: 'फिर्यादी/आरोपी', arrest: 'अटक', stolen: 'चोरीस गेलेला माल', recovered: 'वसुल माल', invest: 'तपास अधिकारी', details: 'हकिगत', deceased: 'मृतक', cause: 'मरणाचे कारण' };
+function recKey(r) { return r.ps + '|' + (r.table === 'M' ? 'M' : 'A') + '|' + r.no; }
+function nz(x) { return String(x || '').replace(/\s+/g, ' ').trim(); }
+function mergeRecords(newRecs, touched) {
+  var oldBy = {}, seen = {}, out = S.records.slice(), ids = {}, st = {}, tot = { added: 0, changed: 0, same: 0, missing: 0 };
+  S.records.forEach(function (r) { (oldBy[recKey(r)] = oldBy[recKey(r)] || []).push(r); ids[r.id] = 1; });
+  newRecs.forEach(function (n) {
+    var arr = oldBy[recKey(n)], o = arr && arr.shift(), x = st[n.ps] = st[n.ps] || { added: 0, changed: 0, same: 0, missing: 0 };
+    if (!o) {
+      while (ids[n.id]) n.id += '+'; ids[n.id] = 1;
+      n.isNew = true; n.ok = false; n.hx0 = clone(n.hx); out.push(n); tot.added++; x.added++; return;
+    }
+    seen[o.id] = 1;
+    var diff = RAW.filter(function (f) { return nz(o[f]) !== nz(n[f]); });
+    if (!diff.length) { tot.same++; x.same++; return; }
+    var chg = diff.map(function (f) { return { k: f, label: RAWLBL[f], was: (o.u && o.u[f]) || nz(o[f]), now: (n.u && n.u[f]) || nz(n[f]) }; });
+    RAW.forEach(function (f) { o[f] = n[f]; });
+    var ed = o.ed || {}, u0 = o.u0 || {}, nu = clone(n.u) || {};
+    diff.forEach(function (f) { delete ed[f]; delete u0[f]; });          // PS changed this field: PS wording wins
+    Object.keys(ed).forEach(function (f) { nu[f] = ed[f]; });            // your corrections to other fields stay
+    o.u = nu; o.ed = ed; o.u0 = u0;
+    var oh = o.hx || {}, oh0 = o.hx0 || {}, nh = n.hx || {}, mh = {}, keys = {};
+    Object.keys(oh).concat(Object.keys(nh)).forEach(function (k) { keys[k] = 1; });
+    Object.keys(keys).forEach(function (k) { var edited = (k in oh0) ? oh[k] !== oh0[k] : !!oh[k]; mh[k] = edited ? oh[k] : nh[k]; });
+    o.hx = mh; o.hx0 = clone(nh);
+    if (!o.manual) { o.head = n.head; o.rule = n.rule; o.auto = n.auto; }
+    o.secs = n.secs; o.acts = n.acts;
+    o.chg = chg; o.ok = false; delete o.missing; tot.changed++; x.changed++;
+  });
+  S.records.forEach(function (r) {
+    if (touched[r.ps] && !seen[r.id] && !r.isNew) { if (!r.missing) { r.missing = true; r.ok = false; } tot.missing++; st[r.ps] = st[r.ps] || { added: 0, changed: 0, same: 0, missing: 0 }; st[r.ps].missing++; }
+  });
+  S.records = out;
+  return { tot: tot, st: st };
+}
+function mergeText(m) {
+  return Object.keys(m.st).map(function (k) { var x = m.st[k]; return PSU[k] + ': ' + x.added + ' नवीन, ' + x.changed + ' बदललेल्या' + (x.missing ? ', ' + x.missing + ' फाईलमध्ये नाहीत' : '') + ', ' + x.same + ' तशाच'; }).join(' · ');
+}
+function renderLog() {
+  $('logCard').classList.toggle('hide', !S.log.length);
+  $('logList').innerHTML = S.log.slice().reverse().map(function (l) { return '<div class="li"><div class="tx"><span class="small muted">' + fmtDT(l.t) + '</span><div>' + esc(l.txt) + '</div></div></div>'; }).join('');
+}
+function updateMergeBox() { $('mergeBox').classList.toggle('hide', !S.records.length); $('procBtn').textContent = S.records.length && (document.querySelector('input[name=pmode]:checked') || {}).value !== 'fresh' ? 'अद्ययावत फाईल जोडा →' : 'वर्गीकरण करा →'; }
+document.addEventListener('change', function (e) { if (e.target.name === 'pmode') updateMergeBox(); });
 $('procBtn').addEventListener('click', function () {
+  var merge = S.records.length > 0 && ((document.querySelector('input[name=pmode]:checked') || {}).value !== 'fresh');
+  if (S.records.length && !merge && !confirm('आधीचे सर्व काम पुसले जाईल. सुरू करायचे?')) return;
   busy(true, 'फाईल्स वाचत आहे व वर्गीकरण करत आहे…');
   var payload = S.files.map(function (f) { return { name: f.name, b64: f.b64, driveId: f.driveId, ps: f.ps }; });
   call('api_process', payload).then(function (r) {
     busy(false);
-    S.records = r.records; S.pvDone = false; S.gen = false; S.batchOk = false;
-    S.batch = CHECKS.batch(S.records);
-    S.month = $('monthIn').value.trim() || r.month;
+    r.files.forEach(function (f) { var x = S.files.filter(function (y) { return y.name === f.name; })[0]; if (x) x.ps = f.ps; });
+    var lastF = {}; r.files.forEach(function (f, i) { lastF[f.ps] = i; });
+    var pos = 0, keepR = [], keepF = [];
+    r.files.forEach(function (f, i) { var part = r.records.slice(pos, pos + f.count); pos += f.count; if (lastF[f.ps] === i) { keepR = keepR.concat(part); keepF.push(f); } });
+    if (keepF.length < r.files.length) toast('एका PS ची एकापेक्षा जास्त फाईल – फक्त शेवटची वापरली');
+    r.records = keepR; r.files = keepF;
+    r.records.forEach(function (x) { x.hx0 = clone(x.hx); });
+    if (merge && r.month && S.month && r.month !== S.month && !confirm('फाईलचा महिना ' + r.month + ' आहे, पण चालू काम ' + S.month + ' चे आहे. तरीही मिसळायचे?')) return;
+    if (merge) {
+      var touched = {}; r.files.forEach(function (f) { touched[f.ps] = 1; });
+      var m = mergeRecords(r.records, touched), txt = mergeText(m);
+      S.log.push({ t: Date.now(), txt: txt }); S.lastMerge = { t: Date.now(), txt: txt, tot: m.tot };
+      S.batch = CHECKS.batch(S.records); S.batchOk = false; S.gen = false; S.pvDone = false;
+      toast('अद्ययावत झाले: ' + m.tot.added + ' नवीन, ' + m.tot.changed + ' बदललेल्या, ' + m.tot.same + ' तशाच');
+    } else {
+      S.records = r.records; S.pvDone = false; S.gen = false; S.batchOk = false; S.lastMerge = null;
+      S.log = [{ t: Date.now(), txt: 'नवीन सुरुवात: ' + r.records.length + ' नोंदी (' + r.files.map(function (f) { return PSU[f.ps] + ' ' + f.count; }).join(', ') + ')' }];
+      S.batch = CHECKS.batch(S.records);
+      toast(r.records.length + ' नोंदी वाचल्या (' + r.files.map(function (f) { return PSU[f.ps] + ' ' + f.count; }).join(', ') + ')');
+    }
+    S.month = $('monthIn').value.trim() || S.month || r.month;
     $('monthIn').value = S.month;
     $('monthTag').textContent = 'माहे ' + (S.month || '—');
-    r.files.forEach(function (f) { var x = S.files.filter(function (y) { return y.name === f.name; })[0]; if (x) x.ps = f.ps; });
-    renderFiles();
-    toast(r.records.length + ' नोंदी वाचल्या (' + r.files.map(function (f) { return PSU[f.ps] + ' ' + f.count; }).join(', ') + ')');
+    renderFiles(); updateMergeBox(); renderLog();
     saveDraft();
     show('queue');
   }).catch(fail);
@@ -2842,11 +2918,12 @@ function headOptions(sel) {
   return '<option value="">— head निवडा —</option>' + headOrder().map(function (h) { return '<option' + (h === sel ? ' selected' : '') + '>' + esc(h) + '</option>'; }).join('') + '<option value="__new">+ नवीन head…</option>';
 }
 function itemHtml(r, opt) {
+  var edB = Object.keys(r.ed || {}).length ? '<span class="badge manual">✎ संपादित</span>' : '';
   var badge = r.manual ? '<span class="badge manual">बदलले</span>' : /^learned/.test(r.rule || '') ? '<span class="badge learned">तुमचा नियम</span>' : r.head ? '<span class="badge">आपोआप</span>' : '<span class="badge none">ठरले नाही</span>';
   var tbl = r.table === 'M' ? 'मर्ग' : r.table === 'D' ? 'दारूबंदी तक्ता' : 'भाग 1-6';
   var first = r.u.crime.split('\n').filter(function (x) { return x.trim(); }).slice(0, 3).join('\n');
   var ws = warnsOf(r).filter(function (w) { return w !== 'head ठरलेला नाही'; });
-  var h = '<div class="item" id="it-' + esc(r.id) + '"><div class="l1"><span class="badge ps">' + PSU[r.ps] + '</span><b>' + esc(r.no) + '</b><span class="badge">' + tbl + '</span>' + badge + '</div>' +
+  var h = '<div class="item" id="it-' + esc(r.id) + '"><div class="l1"><span class="badge ps">' + PSU[r.ps] + '</span><b>' + esc(r.no) + '</b><span class="badge">' + tbl + '</span>' + badge + edB + '</div>' +
     '<div class="crime">' + esc(first) + '</div><div class="place">' + esc(r.u.place.replace(/\n/g, ' ')) + '</div>' +
     (ws.length && !(opt && opt.noWarn) ? '<div class="warns">' + ws.map(function (w) { return '<div>⚠ ' + esc(w) + '</div>'; }).join('') + '</div>' : '') +
     '<div class="ctl"><select data-head="' + esc(r.id) + '">' + headOptions(r.head) + '</select><button class="btn sm" data-det="' + esc(r.id) + '">तपशील</button>' +
@@ -2855,9 +2932,25 @@ function itemHtml(r, opt) {
     [['अप.क्र. व कलम', r.u.crime], ['घटनास्थळ', r.u.place], ['घटना ता.वेळ', r.u.occ], ['दाखल ता.वेळ', r.u.filed], [r.table === 'M' ? 'फिर्यादी' : 'फिर्यादी / आरोपी', r.u.party], r.table === 'M' ? ['मृतक', r.u.deceased] : ['अटक', r.u.arrest],
      ['चोरीस गेलेला माल', r.u.stolen], ['तपास अधिकारी', r.u.invest], [r.table === 'M' ? 'मरणाचे कारण' : 'हकिगत', r.table === 'M' ? r.u.cause : r.u.details]]
       .filter(function (x) { return x[1] && x[1].trim(); }).map(function (x) { return '<dt>' + x[0] + '</dt><dd>' + esc(x[1]) + '</dd>'; }).join('') + '</dl>' +
-    '<div class="row" style="margin-top:8px"><label class="small muted">उप-प्रकार (कलमाखाली): <input type="text" data-sub="' + esc(r.id) + '" value="' + esc(r.subEdited ? r.sub : (r.u.sub || '')) + '" style="min-width:200px"></label></div>' + ovrHtml(r) + '</div>';
+    '<div class="row" style="margin-top:8px"><label class="small muted">उप-प्रकार (कलमाखाली): <input type="text" data-sub="' + esc(r.id) + '" value="' + esc(r.subEdited ? r.sub : (r.u.sub || '')) + '" style="min-width:200px"></label></div>' + ovrHtml(r) + edHtml(r) + '</div>';
   if (S.ruleOpen[r.id]) h += ruleBoxHtml(r);
   return h + '</div>';
+}
+var EDLBL = { crime: 'अप.क्र. व कलम', place: 'घटनास्थळ', occ: 'घटना ता.वेळ', filed: 'दाखल ता.वेळ', party: 'फिर्यादी / आरोपी', deceased: 'मृतक', arrest: 'अटक', stolen: 'चोरीस गेलेला माल', invest: 'तपास अधिकारी', details: 'हकिगत', cause: 'मरणाचे कारण' };
+function edHtml(r) {
+  var id = esc(r.id), open = S.edOpen[r.id], n = Object.keys(r.ed || {}).length;
+  var h = '<div class="row" style="margin-top:8px"><button class="btn sm" data-edtoggle="' + id + '">✎ मजकूर दुरुस्त करा' + (open ? ' (बंद करा)' : '') + '</button>' + (n ? '<span class="badge manual">' + n + ' दुरुस्त्या केल्या</span>' : '') + '</div>';
+  if (!open) return h;
+  var keys = r.table === 'M' ? ['crime', 'place', 'occ', 'filed', 'party', 'deceased', 'invest', 'cause'] : ['crime', 'place', 'occ', 'filed', 'party', 'arrest', 'stolen', 'invest', 'details'];
+  h += '<div class="small muted" style="margin-top:6px">जे लिहाल तेच Word / अहवालात येईल. रोमन → मराठी टायपिंग वरून चालू करता येते.</div><div class="qfix">' + keys.map(function (k) {
+    var v = (r.u && r.u[k]) || '', edited = r.ed && (k in r.ed), wide = /details|party|crime|stolen/.test(k);
+    return '<div' + (wide ? ' style="grid-column:1/-1"' : '') + '><label>' + (r.table === 'M' && k === 'party' ? 'फिर्यादी' : EDLBL[k]) + (edited ? ' <span style="color:var(--warn)">(दुरुस्त)</span> <button class="btn sm ghost" data-edreset="' + id + '" data-k="' + k + '">मूळ परत</button>' : '') + '</label><textarea rows="' + (k === 'details' ? 5 : wide ? 3 : 2) + '" data-ed="' + id + '" data-k="' + k + '">' + esc(v) + '</textarea></div>';
+  }).join('') + '</div>';
+  return h;
+}
+function rerenderItem(id) {
+  var r = rec(id), el = $('it-' + id); if (!r || !el) return;
+  el.outerHTML = itemHtml(r, { noWarn: S.cur === 'queue' });
 }
 function optList(list, cur, autoLabel) {
   return '<option value="">आपोआप (' + esc(autoLabel) + ')</option>' + list.map(function (x) { return '<option' + (x === cur ? ' selected' : '') + '>' + esc(x) + '</option>'; }).join('');
@@ -2942,11 +3035,24 @@ function onReviewClick(e) {
     });
     S.pvDone = false; S.ruleOpen[r0.id] = false; refreshView(); toast(n + ' नोंदींना "' + r0.head + '" लावले ✓'); return;
   }
+  var et = e.target.closest('[data-edtoggle]'); if (et) { S.edOpen[et.dataset.edtoggle] = !S.edOpen[et.dataset.edtoggle]; S.open[et.dataset.edtoggle] = true; rerenderItem(et.dataset.edtoggle); return; }
+  var er = e.target.closest('[data-edreset]');
+  if (er) { var re = rec(er.dataset.edreset), kk = er.dataset.k; if (re.u0 && kk in re.u0) re.u[kk] = re.u0[kk]; if (re.ed) delete re.ed[kk]; if (re.u0) delete re.u0[kk]; S.pvDone = false; rerenderItem(re.id); toast('मूळ मजकूर परत आला'); return; }
+  var qr = e.target.closest('[data-qremove]');
+  if (qr && confirm('ही नोंद यादीतून काढायची? (PS च्या नवीन फाईलमध्ये ती नाही)')) { S.records = S.records.filter(function (x) { return x.id !== qr.dataset.qremove; }); S.qIds = S.qIds.filter(function (x) { return x !== qr.dataset.qremove; }); S.batch = CHECKS.batch(S.records); S.pvDone = false; renderQueue(); renderSteps(); return; }
   var qo = e.target.closest('[data-qok]'); if (qo) { qApprove(qo.dataset.qok); return; }
   var qs = e.target.closest('[data-qskip]'); if (qs) { var i = S.qIds.indexOf(qs.dataset.qskip); if (i >= 0) { S.qIds.splice(i, 1); S.qIds.push(qs.dataset.qskip); } renderQueue(); return; }
   var qh = e.target.closest('[data-qhead]'); if (qh) { var rq = rec(qh.dataset.qhead); rq.head = qh.dataset.h; rq.manual = true; rq.rule = 'manual'; rq.subEdited = false; S.pvDone = false; refreshView(); toast('head बदलला ✓'); return; }
 }
 function onReviewChange(e) {
+  var ed = e.target.closest('textarea[data-ed]');
+  if (ed) {
+    var rd = rec(ed.dataset.ed), k = ed.dataset.k, v = ed.value;
+    rd.u = rd.u || {}; rd.ed = rd.ed || {}; rd.u0 = rd.u0 || {};
+    if (!(k in rd.u0)) rd.u0[k] = rd.u[k];
+    if (v === rd.u0[k]) { delete rd.ed[k]; delete rd.u0[k]; } else rd.ed[k] = v;
+    rd.u[k] = v; S.pvDone = false; toast('दुरुस्ती जतन ✓'); return;
+  }
   var hx = e.target.closest('[data-hx]');
   if (hx) { var rh = rec(hx.dataset.hx); rh.hx = rh.hx || {}; rh.hx[hx.dataset.k] = hx.value; S.pvDone = false; var card = hx.closest('.qcard'); if (card) updateChips(card, rh); renderSteps(); return; }
   var ov = e.target.closest('select[data-ov]');
@@ -3265,6 +3371,11 @@ function updateChips(card, r) {
   card.querySelector('.chips').innerHTML = chipsHtml(r);
   card.classList.toggle('clean', !is.length); card.classList.toggle('hi', is.some(function (i) { return i.lv === 'hi'; }));
 }
+function diffHtml(r) {
+  if (!r.chg || !r.chg.length) return '';
+  var cut = function (t) { t = String(t || '—').replace(/\n/g, ' '); return t.length > 150 ? t.slice(0, 150) + '…' : t; };
+  return '<div class="simbox" style="border-color:var(--warn)"><div class="ttl">PS च्या नवीन फाईलमध्ये काय बदलले</div>' + r.chg.map(function (c) { return '<div class="small"><b>' + esc(c.label) + ':</b> <s class="muted">' + esc(cut(c.was)) + '</s> → ' + esc(cut(c.now)) + '</div>'; }).join('') + '</div>';
+}
 function qCardHtml(r) {
   var is = lookIssues(r), id = esc(r.id), fixes = [], alts = [];
   is.forEach(function (i) { if (i.fix && fixes.indexOf(i.fix) < 0) fixes.push(i.fix); (i.alt || []).forEach(function (a) { if (alts.indexOf(a) < 0) alts.push(a); }); });
@@ -3274,12 +3385,12 @@ function qCardHtml(r) {
   }).join('');
   var alt = alts.length ? '<div class="row" style="margin-top:6px"><span class="small muted">किंवा head:</span>' + alts.map(function (a) { return '<button class="btn sm" data-qhead="' + id + '" data-h="' + esc(a) + '">' + esc(a) + '</button>'; }).join('') + '</div>' : '';
   return '<div class="qcard' + (is.some(function (i) { return i.lv === 'hi'; }) ? ' hi' : '') + (is.length ? '' : ' clean') + '" id="q-' + id + '">' +
-    '<div class="item" style="padding-bottom:0"><div class="chips">' + chipsHtml(r) + '</div>' + (fx ? '<div class="qfix">' + fx + '</div>' : '') + alt + '</div>' +
+    '<div class="item" style="padding-bottom:0"><div class="chips">' + chipsHtml(r) + '</div>' + diffHtml(r) + (fx ? '<div class="qfix">' + fx + '</div>' : '') + alt + '</div>' +
     itemHtml(r, { noWarn: true }) +
-    '<div class="qact"><button class="btn pri sm" data-qok="' + id + '">✓ ठीक आहे</button><button class="btn sm" data-qskip="' + id + '">नंतर पाहतो</button></div></div>';
+    '<div class="qact"><button class="btn pri sm" data-qok="' + id + '">✓ ठीक आहे</button><button class="btn sm" data-qskip="' + id + '">नंतर पाहतो</button>' + (r.missing ? '<button class="btn sm danger" data-qremove="' + id + '">यादीतून काढा</button>' : '') + '</div></div>';
 }
 function qApprove(id) {
-  var r = rec(id); if (!r) return; r.ok = true; S.arcDirty = true; saveDraftSoon();
+  var r = rec(id); if (!r) return; r.ok = true; delete r.isNew; delete r.chg; delete r.missing; S.arcDirty = true; saveDraftSoon();
   var card = $('q-' + id);
   if (card) { card.style.transition = 'opacity .18s'; card.style.opacity = '0'; setTimeout(function () { renderQueue(); renderSteps(); }, 170); } else { renderQueue(); renderSteps(); }
 }
@@ -3292,6 +3403,7 @@ function renderQueue() {
   var h = '<h2>तपासणी रांग</h2><div class="small muted">' + n + ' नोंदींपैकी ' + total + ' नोंदींकडे तुमचे लक्ष हवे. बाकीच्या ' + (n - total) + ' नोंदी बिनचूक वाटतात.</div><div class="qbar"><div style="width:' + pct + '%"></div></div><div class="small">' + doneN + ' / ' + total + ' तपासल्या</div>';
   if (ids.length) h += '<div class="row" style="margin-top:8px"><button class="btn sm" id="qAllClean">त्रुटी नसलेल्या सर्व मंजूर करा</button></div>';
   else h += '<div style="margin-top:10px"><b style="color:var(--ok)">✓ सर्व नोंदी तपासल्या.</b> ' + (unc ? '<span style="color:var(--bad)">पण ' + unc + ' अवर्गीकृत आहेत – "वर्गीकरण" टॅब पाहा.</span>' : '') + '<div class="row" style="margin-top:8px"><button class="btn pri" data-go="download">Word बनवा →</button><button class="btn" data-go="review">सर्व वर्गीकरण पाहा</button></div></div>';
+  if (S.lastMerge) h = '<div class="banner" style="margin:0 0 10px;background:var(--brandSoft);color:var(--brand);border-color:var(--brand2)"><b>अद्ययावत फाईलनंतर (' + fmtDT(S.lastMerge.t) + '): ' + esc(S.lastMerge.txt) + '</b></div>' + h;
   $('qHead').innerHTML = h;
   var b = S.batch || {}, bl = [];
   (b.gaps || []).forEach(function (g) {
@@ -3360,7 +3472,7 @@ $('v-home').addEventListener('click', function (e) {
   if (d && d.dataset.draft === 'del') { lsDel('bps_draft'); try { localStorage.removeItem('bps_draft'); } catch (x) {} renderHome(); }
   if (d && d.dataset.draft === 'load') {
     var j = loadDraft(); if (!j) return;
-    S.records = j.records; S.month = j.month || ''; S.gen = !!j.gen; S.batch = CHECKS.batch(S.records); S.batchOk = true;
+    S.records = j.records; S.month = j.month || ''; S.gen = !!j.gen; S.log = j.log || []; S.batch = CHECKS.batch(S.records); S.batchOk = true;
     $('monthIn').value = S.month; $('monthTag').textContent = 'माहे ' + (S.month || '—');
     toast(S.records.length + ' नोंदी परत आणल्या ✓'); show('queue');
   }
@@ -3469,7 +3581,7 @@ function saveMonth() {
   if (!S.records.length) { toast('आधी फाईल्स प्रक्रिया करा', true); return; }
   var key = monthKey(S.month);
   if (!key) { toast('आधी "माहे" लिहा (उदा. 09/2026) – फाईल्स टॅबमध्ये', true); return; }
-  var m = { key: key, month: S.month, savedAt: Date.now(), n: S.records.length, counts: psCounts(S.records), gen: !!S.gen, ok: S.records.filter(function (r) { return r.ok; }).length, records: S.records };
+  var m = { key: key, month: S.month, savedAt: Date.now(), n: S.records.length, counts: psCounts(S.records), gen: !!S.gen, ok: S.records.filter(function (r) { return r.ok; }).length, records: S.records, log: S.log };
   var msg = 'जतन झाले ✓';
   ARC.get(key).then(function (old) {
     if (old && !confirm('माहे ' + S.month + ' आधीच जतन आहे (' + fmtDT(old.savedAt) + '). नवीन कामाने बदलायचे?')) return;
@@ -3494,8 +3606,8 @@ function openMonth(key, no) {
     busy(false);
     if (!m) return;
     if (S.records.length && S.arcDirty && !confirm('सध्याचे न जतन केलेले काम जाईल. माहे ' + m.month + ' उघडायचे?')) return;
-    S.records = m.records; S.month = m.month; S.gen = !!m.gen; S.batch = CHECKS.batch(S.records); S.batchOk = true; S.pvDone = false; S.arcDirty = false;
-    S.q = no || ''; $('qF').value = S.q; $('monthIn').value = S.month; $('monthTag').textContent = 'माहे ' + S.month;
+    S.records = m.records; S.month = m.month; S.gen = !!m.gen; S.log = m.log || []; S.batch = CHECKS.batch(S.records); S.batchOk = true; S.pvDone = false; S.arcDirty = false;
+    S.q = no || ''; $('qF').value = S.q; $('monthIn').value = S.month; updateMergeBox(); $('monthTag').textContent = 'माहे ' + S.month;
     saveDraftSoon(); toast('माहे ' + m.month + ' उघडले ✓'); show(no ? 'review' : 'home');
   }).catch(fail);
 }
