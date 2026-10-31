@@ -744,8 +744,8 @@ var ENG = (function () {
     MVA:   /eks\s*-?ok\s*-?\s*dk|eksokdk|ekssokdk|eksVkj\s*okgu|,e\s*Ogh\s*vWDV|,eOgh|eks\s*ok\s*dk/,
     MPOKA: /eiksdk|egk\.?-?\s*iksyhl\s*vf\/k|e\s*iks\s*dk/,
     MDA:   /enkdk|e\s*nk\s*dk|eknkdk|nk:\s*C?canh|nk:Ckanh|egk\.?-?\s*nk/,
-    MJKA:  /etqdk|e\s*tq\s*dk|e-twdk|egk\.?-?\s*tqxkj|e\s*tqxkj/,
-    NDPS:  /,uMhih,l/,
+    MJKA:  /etqdk|etwdk|e\s*t[qw]\s*dk|e-twdk|egk\.?-?\s*tqxkj|e\s*tqxkj/,
+    NDPS:  /,u[\s\-.]*Mh[\s\-.]*(?:ih|fi)[\s\-.]*,l/,
     ARMS:  /vkeZ\s*vWDV/,
     POCSO: /iksDlks|iksDlks/,
     IT:    /ra=Kku/,
@@ -792,20 +792,49 @@ var ENG = (function () {
   // ---- Default rules (head list, in report order) -------------------------
   // Each rule: id, head, type:'A'|'B'|'D'|'M'|'*' (table type or any) , test: function(ctx)->bool
   var HEADS = [
-    'खून कलम 103(1) बीएनएस', 'सदोष मनुष्यवध कलम 105 बीएनएस', 'खुनाचा प्रयत्न कलम 109 बीएनएस', 'आत्महत्येस प्रवृत्त करणे कलम 108 बीएनएस',
-    'निष्काळजीपणाने मृत्यू कलम 106(1) बीएनएस',
-    'बलात्कार वयस्क', 'बलात्कार अल्पवयीन (पोक्सो)', 'विनयभंग वयस्क', 'विनयभंग अल्पवयीन (पोक्सो)',
-    'पळवून नेणे कलम 137/140 बीएनएस',
-    'दुखापत कलम 118(1) बीएनएस', 'जबरी चोरी कलम 309 बीएनएस', 'दरोडा कलम 310/311 बीएनएस',
-    'चोरी', 'घरफोडी रात्री', 'घरफोडी दिवसा', 'विश्वासघात कलम 316 बीएनएस', 'फसवणूक कलम 318 बीएनएस',
+    'खून कलम 103(1) बीएनएस', 'सदोष मनुष्यवध कलम 105 बीएनएस', 'निष्काळजीपणाने मृत्यू कलम 106(1) बीएनएस',
+    'हुंडाबळी मृत्यू कलम 80(2) बीएनएस', 'आत्महत्येस प्रवृत्त करणे कलम 108 बीएनएस',
+    'मुलाच्या / अस्वस्थ व्यक्तीच्या आत्महत्येस प्रवृत्त करणे कलम 107 बीएनएस',
+    'खुनाचा प्रयत्न कलम 109 बीएनएस', 'सदोष मनुष्यवधाचा प्रयत्न कलम 110 बीएनएस',
+    'गर्भपात / भ्रूणहत्या कलम 88 ते 94 बीएनएस', 'मुलांना गुन्ह्यात गुंतवणे कलम 95 बीएनएस',
+    'दुखापत कलम 118(1) बीएनएस', 'अॅसिड हल्ला कलम 124 बीएनएस', 'चुकीचा प्रतिबंध / बंदिस्त कलम 126/127 बीएनएस',
+    'लोकसेवकावर हल्ला कलम 132 बीएनएस',
+    'विनयभंग वयस्क', 'विनयभंग अल्पवयीन (पोक्सो)', 'स्त्रीच्या नम्रतेचा अपमान कलम 79 बीएनएस',
+    'पती / नातेवाईकांकडून क्रूरता कलम 85 बीएनएस',
+    'पळवून नेणे कलम 137/140 बीएनएस', 'मानवी तस्करी कलम 143/144 बीएनएस', 'वेश्याव्यवसायासाठी मुलाची विक्री / खरेदी कलम 98/99 बीएनएस',
+    'बलात्कार वयस्क', 'बलात्कार अल्पवयीन (पोक्सो)',
+    'राज्याविरुद्ध गुन्हे कलम 147 ते 158 बीएनएस',
+    'बेकायदेशीर सभा कलम 189 बीएनएस', 'दंगल कलम 191 बीएनएस', 'मारामारी (Affray) कलम 194 बीएनएस', 'वैर वाढवणे / राष्ट्रीय एकात्मतेविरुद्ध कलम 196/197 बीएनएस',
+    'चोरी', 'घरफोडी रात्री', 'घरफोडी दिवसा', 'खंडणी / ब्लॅकमेलिंग कलम 308 बीएनएस', 'जबरी चोरी कलम 309 बीएनएस', 'दरोडा कलम 310/311 बीएनएस',
+    'विश्वासघात कलम 316 बीएनएस', 'अप्रामाणिकपणे मालमत्ता स्वीकारणे कलम 317 बीएनएस',
+    'फसवणूक कलम 318 बीएनएस', 'बनावट / खोटे दस्तऐवज कलम 336 ते 341 बीएनएस', 'बनावट चलन / नाणे / मुद्रांक कलम 178 ते 188 बीएनएस',
+    'सार्वजनिक सेवकाच्या आदेशाची अवज्ञा कलम 223 बीएनएस', 'गुन्हेगारास आश्रय देणे कलम 249/253/254 बीएनएस', 'कायदेशीर अटकेस विरोध कलम 262 बीएनएस',
+    'सार्वजनिक मार्गावर बेदरकार वाहन चालविणे कलम 281 बीएनएस',
     '336 भादवि (281, 125/324/185 बीएनएस)', '337 भादवि (125 अ बीएनएस)', '338 भादवि (125 ब बीएनएस)', 'कलम 285 बीएनएस',
-    'अश्लिल शिवीगाळ कलम 296 बीएनएस',
+    'अश्लील वस्तूंची विक्री कलम 294/295 बीएनएस', 'अश्लिल शिवीगाळ कलम 296 बीएनएस', 'धर्माशी संबंधित गुन्हे कलम 298 ते 301 बीएनएस',
+    'गैरप्रकार (मिस्चिफ) / जाळपोळ कलम 324 ते 328 बीएनएस', 'फौजदारी अतिक्रमण कलम 329 बीएनएस',
+    'गुन्हेगारी धमकी कलम 351 बीएनएस', 'खोट्या बातम्या / अफवा कलम 353 बीएनएस', 'निवडणुकीशी संबंधित गुन्हे कलम 173 ते 177 बीएनएस',
+    'संघटित गुन्हा / दहशतवाद कलम 111 ते 113 बीएनएस',
+    'वेठबिगारी बाल मजुरी', 'इतर बीएनएस गुन्हे',
     'प्राण्यांना निर्दयतेने वागविणे अधिनियम 1960', 'महाराष्ट्र प्राणी संरक्षण अधिनियम 1976',
     'आर्म ॲक्ट', 'जिवनावश्यक वस्तु अधिनियम 1955', 'एनडीपीएस ॲक्ट', 'महाराष्ट्र पोलीस अधिनियम 1951',
-    'वेठबिगारी बाल मजुरी', 'माहिती तंत्रज्ञान अधिनियम, 2000', 'मोटार वाहन कायदा 1988', 'महाराष्ट्र जुगार कायदा', 'महाराष्ट्र दारूबंदी कायदा', 'मर्ग'
+    'माहिती तंत्रज्ञान अधिनियम, 2000', 'मोटार वाहन कायदा 1988', 'महाराष्ट्र जुगार कायदा', 'महाराष्ट्र दारूबंदी कायदा',
+    'हुंडा बंदी कायदा 1961', 'अनैतिक वाहतूक (प्रतिबंध) कायदा 1956', 'कौटुंबिक हिंसाचारापासून महिलांचे संरक्षण कायदा 2005',
+    'लैंगिक गुन्ह्यांपासून मुलांचे संरक्षण (पोक्सो) कायदा 2012', 'बाल न्याय कायदा 2015', 'बालविवाह प्रतिबंध कायदा 2006',
+    'अनुसूचित जाती/जमाती (अत्याचार प्रतिबंधक) कायदा 1989', 'नागरी हक्क संरक्षण कायदा 1955',
+    'सार्वजनिक मालमत्ता नुकसान प्रतिबंधक कायदा 1984', 'महाराष्ट्र मालमत्ता विद्रूपीकरण प्रतिबंधक कायदा 1995',
+    'स्फोटक कायदा 1884 / स्फोटक पदार्थ कायदा 1908', 'कॉपीराइट / ट्रेडमार्क कायदा', 'लॉटरी (नियमन) कायदा 1998',
+    'खाणी व खनिजे (विकास व नियमन) कायदा 1957', 'भ्रष्टाचार प्रतिबंधक कायदा 1988',
+    'वन / वन्यजीव संरक्षण कायदा', 'पर्यावरण / हवा / पाणी प्रदूषण प्रतिबंधक कायदा', 'सिगारेट व तंबाखू उत्पादने (COTPA) कायदा 2003',
+    'फॉरेनर्स / पासपोर्ट / इमिग्रेशन कायदा', 'भारतीय रेल्वे कायदा 1989', 'टेलिग्राफ / सिनेमॅटोग्राफ / केबल टीव्ही कायदा',
+    'अन्न सुरक्षा व मानक कायदा 2006', 'कॅटल ट्रेसपास कायदा 1871', 'मकोका 1999', 'विद्युत कायदा 2003',
+    'महाराष्ट्र मुद्रा-कर्ज (नियमन) अधिनियम 2014', 'महाराष्ट्र प्रादेशिक व नगररचना अधिनियम 1966', 'महाराष्ट्र सामाजिक बहिष्कार (प्रतिबंध) कायदा 2016',
+    'महाराष्ट्र छळवाद प्रतिबंध (रॅगिंग) अधिनियम 1999', 'इतर एसएलएल गुन्हे',
+    'मर्ग'
   ];
   function head(prefix) { for (var i = 0; i < HEADS.length; i++) if (HEADS[i].indexOf(prefix) === 0) return HEADS[i]; return prefix; }
 
+  function ut(c, re) { return re.test(c.utext || '') || re.test(c.text || ''); }
   var NIGHT_RE = /jk=|रात्र/;
   var POCSO_U = /पोक्सो|पॉक्सो|पोस्को|अल्पवयीन|POCSO/i;
   function pocso(c) { return !!c.acts.POCSO || POCSO_U.test(c.utext); }
@@ -852,6 +881,77 @@ var ENG = (function () {
     { id: 's285',   head: head('कलम 285'), test: function (c) { return c.bns && has(c.sec, '285'); } },
     { id: 's296',   head: head('अश्लिल'), test: function (c) { return c.bns && has(c.sec, '296'); } },
     { id: 'mva',    head: head('मोटार वाहन'), test: function (c) { return c.acts.MVA && !c.bns; } },
+    // ---- added from the Noting/MCR head list (these only fire when no rule above matched) ----
+    { id: 'x80',   head: head('हुंडाबळी'), test: function (c) { return c.bns && has(c.sec, '80'); } },
+    { id: 'x107',  head: head('मुलाच्या'), test: function (c) { return c.bns && has(c.sec, '107'); } },
+    { id: 'x110',  head: head('सदोष मनुष्यवधाचा'), test: function (c) { return c.bns && has(c.sec, '110'); } },
+    { id: 'x88',   head: head('गर्भपात'), test: function (c) { return c.bns && anySec(c, ['88', '89', '90', '91', '92', '93', '94']); } },
+    { id: 'x95', weak: true, head: head('मुलांना गुन्ह्यात'), test: function (c) { return c.bns && has(c.sec, '95'); } },
+    { id: 'x124',  head: head('अॅसिड'), test: function (c) { return c.bns && has(c.sec, '124'); } },
+    { id: 'xhurt', weak: true, head: head('दुखापत'), test: function (c) { return c.bns && anySec(c, ['115', '117', '119', '120', '121', '122', '123']); } },
+    { id: 'x132', weak: true, head: head('लोकसेवकावर'), test: function (c) { return c.bns && (has(c.sec, '132') || has(c.sec, '121')); } },
+    { id: 'x126', weak: true, head: head('चुकीचा प्रतिबंध'), test: function (c) { return c.bns && (has(c.sec, '126') || has(c.sec, '127')); } },
+    { id: 'x79', weak: true, head: head('स्त्रीच्या नम्रतेचा'), test: function (c) { return c.bns && has(c.sec, '79'); } },
+    { id: 'x85',   head: head('पती'), test: function (c) { return c.bns && (has(c.sec, '85') || has(c.sec, '86')); } },
+    { id: 'xkid',  head: head('पळवून नेणे'), test: function (c) { return c.bns && anySec(c, ['87', '96', '97', '139', '141', '142']); } },
+    { id: 'x143',  head: head('मानवी तस्करी'), test: function (c) { return c.bns && (has(c.sec, '143') || has(c.sec, '144')); } },
+    { id: 'x98', weak: true, head: head('वेश्याव्यवसायासाठी'), test: function (c) { return c.bns && (has(c.sec, '98') || has(c.sec, '99')); } },
+    { id: 'x146',  head: head('वेठबिगारी'), test: function (c) { return c.bns && has(c.sec, '146'); } },
+    { id: 'x147',  head: head('राज्याविरुद्ध'), test: function (c) { return c.bns && anySec(c, ['147', '148', '149', '150', '151', '152', '153', '154', '155', '156', '157', '158']); } },
+    { id: 'x191',  head: head('दंगल कलम'), test: function (c) { return c.bns && anySec(c, ['191', '192', '193', '195']); } },
+    { id: 'x189',  head: head('बेकायदेशीर सभा'), test: function (c) { return c.bns && has(c.sec, '189'); } },
+    { id: 'x194',  head: head('मारामारी'), test: function (c) { return c.bns && has(c.sec, '194'); } },
+    { id: 'x196',  head: head('वैर वाढवणे'), test: function (c) { return c.bns && (has(c.sec, '196') || has(c.sec, '197')); } },
+    { id: 'x111',  head: head('संघटित'), test: function (c) { return c.bns && anySec(c, ['111', '112', '113']); } },
+    { id: 'x308',  head: head('खंडणी'), test: function (c) { return c.bns && has(c.sec, '308'); } },
+    { id: 'x312', weak: true, head: head('दरोडा'), test: function (c) { return c.bns && has(c.sec, '312'); } },
+    { id: 'x317',  head: head('अप्रामाणिकपणे'), test: function (c) { return c.bns && has(c.sec, '317'); } },
+    { id: 'x336f', weak: true, head: head('बनावट / खोटे'), test: function (c) { return c.bns && anySec(c, ['336', '337', '338', '339', '340', '341']) && !has(c.sec, '281') && !has(c.sec, '125'); } },
+    { id: 'x178',  head: head('बनावट चलन'), test: function (c) { return c.bns && anySec(c, ['178', '179', '180', '181', '182', '183', '184', '185', '186', '187', '188']) && !c.acts.MVA; } },
+    { id: 'x223', weak: true, head: head('सार्वजनिक सेवकाच्या'), test: function (c) { return c.bns && has(c.sec, '223'); } },
+    { id: 'x249', weak: true, head: head('गुन्हेगारास आश्रय'), test: function (c) { return c.bns && anySec(c, ['249', '253', '254']); } },
+    { id: 'x262', weak: true, head: head('कायदेशीर अटकेस'), test: function (c) { return c.bns && has(c.sec, '262'); } },
+    { id: 'x281', weak: true, head: head('सार्वजनिक मार्गावर'), test: function (c) { return c.bns && has(c.sec, '281'); } },
+    { id: 'x294',  head: head('अश्लील वस्तूंची'), test: function (c) { return c.bns && (has(c.sec, '294') || has(c.sec, '295')); } },
+    { id: 'x298',  head: head('धर्माशी'), test: function (c) { return c.bns && anySec(c, ['298', '299', '300', '301']); } },
+    { id: 'x324', weak: true, head: head('गैरप्रकार'), test: function (c) { return c.bns && anySec(c, ['324', '325', '326', '327', '328']); } },
+    { id: 'x329', weak: true, head: head('फौजदारी अतिक्रमण'), test: function (c) { return c.bns && anySec(c, ['329', '330', '331', '332', '333', '334']); } },
+    { id: 'x351', weak: true, head: head('गुन्हेगारी धमकी'), test: function (c) { return c.bns && has(c.sec, '351'); } },
+    { id: 'x353', weak: true, head: head('खोट्या बातम्या'), test: function (c) { return c.bns && has(c.sec, '353'); } },
+    { id: 'x173',  head: head('निवडणुकीशी'), test: function (c) { return c.bns && anySec(c, ['173', '174', '175', '176', '177']) && !c.acts.MVA; } },
+    // special & local laws (matched on the Unicode text)
+    { id: 'l-dowry', head: head('हुंडा बंदी'), test: function (c) { return ut(c, /हुंडा\s*(?:बंदी|प्रतिबंध)/); } },
+    { id: 'l-immoral', head: head('अनैतिक वाहतूक'), test: function (c) { return ut(c, /अनैतिक\s*(?:वाहतूक|व्यापार)/); } },
+    { id: 'l-dv', head: head('कौटुंबिक हिंसाचार'), test: function (c) { return ut(c, /कौटुंबिक\s*हिंसाचार/); } },
+    { id: 'l-atro', head: head('अनुसूचित जाती'), test: function (c) { return ut(c, /अ\s*[-.]?\s*जा\s*[-.]?\s*ज\s*[-.]?\s*अ|अत्याचार\s*प्रति|ॲट्रॉसिटी|अॅट्रॉसिटी/); } },
+    { id: 'l-pocso', weak: true, head: head('लैंगिक गुन्ह्यांपासून'), test: function (c) { return pocso(c); } },
+    { id: 'l-jj', head: head('बाल न्याय'), test: function (c) { return ut(c, /बाल\s*न्याय|जुवेनाईल/); } },
+    { id: 'l-cm', head: head('बालविवाह'), test: function (c) { return ut(c, /बालविवाह|बाल\s*विवाह/); } },
+    { id: 'l-civil', head: head('नागरी हक्क'), test: function (c) { return ut(c, /नागरी\s*हक्क/); } },
+    { id: 'l-pdpp', head: head('सार्वजनिक मालमत्ता'), test: function (c) { return ut(c, /सार्वजनिक\s*मालमत्ते?चे?\s*नुकसान|सा\.?\s*मा\.?\s*न\.?\s*प्र/); } },
+    { id: 'l-deface', head: head('महाराष्ट्र मालमत्ता विद्रूपीकरण'), test: function (c) { return ut(c, /विद्रू?पीकरण/); } },
+    { id: 'l-expl', head: head('स्फोटक कायदा'), test: function (c) { return ut(c, /स्फोटक/); } },
+    { id: 'l-copy', head: head('कॉपीराइट'), test: function (c) { return ut(c, /कॉपी\s*राइट|कॉपीराईट|ट्रेड\s*मार्क/); } },
+    { id: 'l-lott', head: head('लॉटरी'), test: function (c) { return ut(c, /लॉटरी|लाॅटरी/); } },
+    { id: 'l-mine', head: head('खाणी व खनिजे'), test: function (c) { return ut(c, /खान\s*(?:आणि|व)\s*खनि|खाणी\s*(?:आणि|व)\s*खनि|खनिज/); } },
+    { id: 'l-acb', head: head('भ्रष्टाचार प्रतिबंधक'), test: function (c) { return ut(c, /भ्रष्टाचार/); } },
+    { id: 'l-forest', head: head('वन / वन्यजीव'), test: function (c) { return ut(c, /वन\s*(?:अधिनियम|कायदा)|वन्य\s*जीव|वन्यप्राणी|वनसंवर्धन|भारतीय\s*वन/); } },
+    { id: 'l-env', head: head('पर्यावरण'), test: function (c) { return ut(c, /पर्यावरण|प्रदूषण/); } },
+    { id: 'l-cotpa', head: head('सिगारेट'), test: function (c) { return ut(c, /कोटपा|सिगारेट|तंबाखू\s*उत्पाद|COTPA/i); } },
+    { id: 'l-foreign', head: head('फॉरेनर्स'), test: function (c) { return ut(c, /फॉरेनर|परदेशी\s*नागरिक|पासपोर्ट|इमिग्रेशन|नागरिकत्व/); } },
+    { id: 'l-rly', head: head('भारतीय रेल्वे'), test: function (c) { return ut(c, /रेल्वे\s*(?:अधिनियम|कायदा|अॅक्ट|ॲक्ट)/); } },
+    { id: 'l-tele', head: head('टेलिग्राफ'), test: function (c) { return ut(c, /टेलिग्राफ|सिनेमॅटोग्राफ|केबल\s*टी/); } },
+    { id: 'l-food', head: head('अन्न सुरक्षा'), test: function (c) { return ut(c, /अन्न\s*सुरक्षा|अन्न\s*व\s*औषध|गुटखा|FSSA/i); } },
+    { id: 'l-cattle', head: head('कॅटल ट्रेसपास'), test: function (c) { return ut(c, /कॅटल\s*ट्रेस|गुरे\s*अतिक्रमण/); } },
+    { id: 'l-mcoca', head: head('मकोका'), test: function (c) { return ut(c, /मकोका|म\.?\s*को\.?\s*का|संघटित\s*गुन्हेगारी\s*(?:नियंत्रण|प्रतिबंध)/); } },
+    { id: 'l-elec', head: head('विद्युत कायदा'), test: function (c) { return ut(c, /विद्युत\s*(?:कायदा|अधिनियम)|वीज\s*चोरी/); } },
+    { id: 'l-lend', head: head('महाराष्ट्र मुद्रा-कर्ज'), test: function (c) { return ut(c, /मुद्रा\s*[-]?\s*कर्ज|सावकार/); } },
+    { id: 'l-town', head: head('महाराष्ट्र प्रादेशिक'), test: function (c) { return ut(c, /प्रादेशिक\s*(?:आणि|व)\s*नगर/); } },
+    { id: 'l-boycott', head: head('महाराष्ट्र सामाजिक बहिष्कार'), test: function (c) { return ut(c, /सामाजिक\s*बहिष्कार/); } },
+    { id: 'l-ragging', head: head('महाराष्ट्र छळवाद'), test: function (c) { return ut(c, /छळवाद|रॅगिंग/); } },
+    // catch-alls (never counted as "ambiguous")
+    { id: 'bns-other', weak: true, head: head('इतर बीएनएस'), test: function (c) { return c.bns && c.table !== 'M'; } },
+    { id: 'sll-other', weak: true, head: head('इतर एसएलएल'), test: function (c) { return !c.bns && c.table !== 'M' && ut(c, /अधिनियम|कायदा|ॲक्ट|अॅक्ट|अधि\./); } },
   ];
 
   // उप-प्रकार (note shown under the section) for heads where it can be derived from sections
@@ -904,7 +1004,7 @@ var ENG = (function () {
   // every default rule that matches (to spot ambiguous classification)
   function candidates(rec, rules) {
     var c = ctxOf(rec), out = [];
-    (rules || DEFAULT_RULES).forEach(function (r) { try { if (r.test(c) && out.indexOf(r.head) < 0) out.push(r.head); } catch (e) {} });
+    (rules || DEFAULT_RULES).forEach(function (r) { try { if (!r.weak && r.test(c) && out.indexOf(r.head) < 0) out.push(r.head); } catch (e) {} });
     return out;
   }
 
@@ -2509,7 +2609,13 @@ function getHeads_() {
   var out = [];
   h.forEach(function (x) { x = ENG.RENAMED[x] || x; if (out.indexOf(x) < 0) out.push(x); });
   h = out;
-  ENG.HEADS.forEach(function (d) { if (h.indexOf(d) < 0) h.push(d); }); // new defaults appear automatically
+  // new defaults appear automatically, placed after the default head that precedes them
+  ENG.HEADS.forEach(function (d, i) {
+    if (h.indexOf(d) >= 0) return;
+    var at = -1;
+    for (var j = i - 1; j >= 0 && at < 0; j--) at = h.indexOf(ENG.HEADS[j]);
+    if (at < 0) h.push(d); else h.splice(at + 1, 0, d);
+  });
   return h;
 }
 function getFixes_() { return getBig_('fixes', []); }
@@ -2547,6 +2653,18 @@ function api_listFolder(folderUrlOrId) {
 
 /* ---------------- API: process PS files ---------------- */
 // files: [{name, b64?, driveId?, ps?}]
+function dataMonth_(recs) {
+  var cnt = {}, tot = 0, best = '', bn = 0;
+  recs.forEach(function (r) {
+    var m = String(r.filed || '').match(/(\d{1,2})\s*[\/\-.@]\s*(\d{1,2})\s*[\/\-.@]\s*(\d{2,4})/);
+    if (!m) return;
+    var mo = +m[2], y = +m[3]; if (y < 100) y += 2000;
+    if (mo < 1 || mo > 12) return;
+    var k = ('0' + mo).slice(-2) + '/' + y; cnt[k] = (cnt[k] || 0) + 1; tot++;
+    if (cnt[k] > bn) { bn = cnt[k]; best = k; }
+  });
+  return tot >= 5 && bn / tot >= 0.6 ? best : '';
+}
 function api_process(files) {
   var learned = getRules_(), fixes = getFixes_();
   var all = [], info = [], month = null;
@@ -2570,9 +2688,12 @@ function api_process(files) {
     info.push({ name: f.name, ps: ps, count: recs.length, tables: parsed.tables.length });
     all = all.concat(recs);
   });
+  // the month in the PS file heading is sometimes typed wrong: trust the filing dates when most agree
+  var dm = dataMonth_(all), hdrMonth = month || '';
+  if (dm && dm !== hdrMonth) month = dm;
   CORE.classifyAll(all, learned);
   decorate_(all, fixes, month || '');
-  return { records: all, files: info, month: month || '' };
+  return { records: all, files: info, month: month || '', hdrMonth: hdrMonth, monthFromData: !!(dm && dm !== hdrMonth) };
 }
 
 function decorate_(recs, fixes, month) {
@@ -2704,9 +2825,10 @@ function lsSet(k, v) { MEM[k] = String(v); try { localStorage.setItem(k, String(
 function lsDel(k) { delete MEM[k]; try { localStorage.removeItem(k); } catch (e) {} }
 /* automatic draft: unfinished work survives a phone/app reload */
 var _dt;
-function saveDraft() { if (!S.records.length) return; try { localStorage.setItem('bps_draft', JSON.stringify({ t: Date.now(), month: S.month, records: S.records, gen: S.gen, log: S.log })); } catch (e) {} }
+function saveDraft() {} /* स्वयंचलित draft बंद – फक्त 'जतन करा' ने काम राहते */
 function saveDraftSoon() { clearTimeout(_dt); _dt = setTimeout(saveDraft, 700); }
-function loadDraft() { try { var j = localStorage.getItem('bps_draft'); return j ? JSON.parse(j) : null; } catch (e) { return null; } }
+function loadDraft() { return null; }
+try { localStorage.removeItem('bps_draft'); } catch (e) {}
 Object.defineProperty(S, 'pvDone', { get: function () { return this._pv; }, set: function (v) { this._pv = v; if (v === false) { S.arcDirty = true; saveDraftSoon(); } }, configurable: true });
 S.pvDone = false;
 var PSU = { bela: 'बेला', bori: 'बोरी', midc: 'एमआयडीसी' };
@@ -2882,7 +3004,8 @@ $('procBtn').addEventListener('click', function () {
       S.batch = CHECKS.batch(S.records);
       toast(r.records.length + ' नोंदी वाचल्या (' + r.files.map(function (f) { return PSU[f.ps] + ' ' + f.count; }).join(', ') + ')');
     }
-    S.month = $('monthIn').value.trim() || S.month || r.month;
+    if (r.monthFromData) toast('फाईलच्या वरच्या ओळीत माहे ' + r.hdrMonth + ' लिहिले आहे, पण तारखा ' + r.month + ' च्या आहेत – ' + r.month + ' धरले');
+    S.month = (r.monthFromData ? r.month : ($('monthIn').value.trim() || S.month || r.month));
     $('monthIn').value = S.month;
     $('monthTag').textContent = 'माहे ' + (S.month || '—');
     renderFiles(); updateMergeBox(); renderLog();
@@ -3756,11 +3879,32 @@ if (window.BPS_PWA) document.body.classList.add('pwa');
 })();
 /* ---------- boot ---------- */
 applyLook(); renderSteps(); renderHome();
+/* न जतन केलेले काम: वरच्या माहे-चिपवर खूण + बंद करताना इशारा */
+function unsaved() { return !!(S.records.length && S.arcDirty); }
+setInterval(function () {
+  var t = $('monthTag'), u = unsaved(), base = 'माहे ' + (S.month || '—');
+  t.textContent = u ? base + ' ● न जतन – जतन करा' : base;
+  t.style.cursor = u ? 'pointer' : ''; t.style.color = u ? 'var(--warn)' : ''; t.style.fontWeight = u ? '700' : '';
+}, 700);
+$('monthTag').addEventListener('click', function () { if (unsaved()) saveMonth(); });
+window.addEventListener('beforeunload', function (e) { if (unsaved()) { e.preventDefault(); e.returnValue = ''; return ''; } });
+/* सुरुवातीला: शेवटचा जतन केलेला (app मधील) महिना आपोआप उघडतो */
+function autoOpenSaved() {
+  if (S.records.length) return;
+  ARC.all().then(function (all) {
+    var hot = (all || []).filter(function (m) { return m.records && m.records.length; }).sort(function (a, b) { return (b.savedAt || 0) - (a.savedAt || 0); })[0];
+    if (!hot || S.records.length) return;
+    S.records = hot.records; S.month = hot.month; S.gen = !!hot.gen; S.log = hot.log || [];
+    S.batch = CHECKS.batch(S.records); S.batchOk = true; S.arcDirty = false;
+    $('monthIn').value = S.month; $('monthTag').textContent = 'माहे ' + S.month;
+    renderHome(); renderSteps();
+  }).catch(function () {});
+}
 call('api_bootstrap').then(function (b) {
   window._hideSplash();
   S.heads = b.heads; S.defaultHeads = b.defaultHeads; S.rules = b.rules; S.fixes = b.fixes;
   if (b.folder) $('folderIn').value = b.folder;
-  renderHome();
+  renderHome(); autoOpenSaved();
 }).catch(function (e) { window._hideSplash(); fail(e); });
 </script>
 </body>
