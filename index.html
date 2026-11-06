@@ -1592,10 +1592,22 @@ var TEXT = (function () {
     if (!/(कि[ंम]?|किंमत|रु|रू|ग्र[ॅा]म|ग्राम|ग्रॅ)/.test(seg) || seg.length < 12) return '';
     return seg;
   }
+
+  /* प्रतिबंधक कारवाई (इस्तगासा) – PS कधी "चोरीस माल"/"वसुल माल"/हकिगतीत लिहितात */
+  var PREV_RE = /(?:प्रतिबंधक\s*(?:कार्य|कार)[ऀ-ॿ]*\s*)?(?:[इई]स्त(?:गासा|\.)?|प्रति(?:बंधक)?\s*(?:कार्य|कार)[ऀ-ॿ]*\s*[इई]स्त)\s*[-.]?\s*क(?:्र)?[ं.]?\s*[-.:]?\s*[\d,\s]{1,20}(?:\s*\/\s*\d{2,4})?(?:\s*(?:कलम|क\.)\s*[\d(),\s]{1,40}\s*(?:बी\s*-?\s*एन\s*-?\s*एस\s*-?\s*एस|बीएनएसएस|बीएनएस|सीआरपीसी|फौ\.?\s*प्र\.?\s*सं\.?|BNSS)?)?(?:\s*(?:प्रमाणे|अन्वये))?(?:\s*प्रतिबंधक\s*(?:कार्य|कार)[ऀ-ॿ]*)?/g;
+  var PREV_RE2 = /प्रतिबंधक\s*(?:कार्य|कार)[ऀ-ॿ]*\s*(?:कलम\s*)?[\d(),\s]{2,30}\s*(?:बी\s*-?\s*एन\s*-?\s*एस\s*-?\s*एस|बीएनएसएस|सीआरपीसी)/g;
+  function prevOf(t) {
+    var out = [];
+    String(t || '').replace(PREV_RE, function (m) { if (/\d/.test(m)) out.push(m.trim()); return m; }).replace(PREV_RE2, function (m) { out.push(m.trim()); return m; });
+    return out.filter(function (x, i, a) { return a.indexOf(x) === i && !a.some(function (y, j) { return j !== i && y.length > x.length && y.indexOf(x) >= 0; }); });
+  }
   function stolenSentence(d) {
     if (!d) return '';
-    var i = d.search(/माल\s*(?:चोरी|चोर[ुू]न|लंपास)|चोर[ुू]न\s*ने(?:ले|ली|ल्या)|चोरी\s*कर[ुू]न\s*ने(?:ले|ली|ल्या)/);
-    if (i < 0) return listSentence(d);
+    var i = d.search(/माल\s*(?:चोरी|चोर[ुू]न|लंपास)|चोर[ुू]न\s*ने(?:ले|ली|ल्या|ला|लेला|लेले)|चोरी\s*कर[ुू]न\s*ने(?:ले|ली|ल्या|ला)|लंपास\s*केल/);
+    if (i < 0) {
+      var mi = d.match(/(?:अंदाजे\s*)?\d+(?:\.\d+)?\s*ब्र[ाॉ]ॅ?स\s*(?:रेती|मुरू?ु?म|गिट्टी|वाळू|माती|दगड)/);
+      return mi ? mi[0] : listSentence(d);
+    }
     var end = d.indexOf(' ', i + 4); if (end < 0) end = d.length;
     var start = d.lastIndexOf('1)', i);
     if (start < 0 || i - start > 900) {
@@ -1793,7 +1805,7 @@ var TEXT = (function () {
     return String(text || '').replace(/[A-Za-z]+/g, romanWord);
   }
 
-  return { normInvest: normInvest, digits: digits, normCrime: normCrime, normParty: normParty, normAct: normAct, accusedKnown: accusedKnown, shortHakikat: shortHakikat, tplHakikat: tplHakikat, stolenSentence: stolenSentence, theftKinds: theftKinds, validate: validate, blank: blank, u2k: u2k, roman: roman, romanWord: romanWord };
+  return { normInvest: normInvest, digits: digits, normCrime: normCrime, normParty: normParty, normAct: normAct, accusedKnown: accusedKnown, shortHakikat: shortHakikat, tplHakikat: tplHakikat, prevOf: prevOf, stolenSentence: stolenSentence, theftKinds: theftKinds, validate: validate, blank: blank, u2k: u2k, roman: roman, romanWord: romanWord };
 })();
 if (typeof module !== 'undefined') module.exports = TEXT;
 
@@ -2102,10 +2114,23 @@ var REPORT = (function () {
     f.party = TEXT.normParty(cv(r.party));
     f.deceased = cv(r.deceased); f.cause = tidy(cv(r.cause));
     var ar = cv(r.arrest); f.arrest = TEXT.blank(ar) ? '' : ar;
+    // प्रतिबंधक कारवाई written in another column / in the hakikat -> अटक व प्रतिबंधक
+    var norm0 = function (x) { return String(x || '').replace(/[\s.\-]+/g, ''); };
+    var pv = []; [cv(r.stolen), cv(r.recovered), cv(r.invest), cv(r.details)].forEach(function (x) { TEXT.prevOf(x).forEach(function (q) { if (pv.indexOf(q) < 0) pv.push(q); }); });
+    var pvCell = function (x) { x = String(x || '').replace(/\s+/g, ' ').trim(); return /^प्रतिबंधक|बॉन्ड|बंधपत्र|इंटेरी?ि?म|इटेरीयम/.test(x) && !/चोर|रुपये\s*रोख|सोन|मोबा/.test(x) ? x : ''; };
+    [cv(r.stolen), cv(r.recovered)].forEach(function (x) { var c = pvCell(x); if (c) { pv = pv.filter(function (q) { return c.indexOf(q) < 0; }); pv.push(c); } });
+    pv = pv.filter(function (q) { var k = (q.match(/\d+/) || [''])[0]; return norm0(f.arrest).indexOf(norm0(q)) < 0 && !(k && /[इई]स्त/.test(f.arrest) && f.arrest.indexOf(k) >= 0); });
+    pv = pv.map(function (q) { return q.replace(/\s+/g, ' ').replace(/^प्रतिबंधक\s*(?:कार्य|कार)[ऀ-ॿ]*\s*/, '').replace(/\s*प्रतिबंधक\s*(?:कार्य|कार)[ऀ-ॿ]*$/, '').replace(/^ईस्त/, 'इस्त').replace(/[\s\-]+$/, '').trim(); });
+    pv = pv.filter(function (q, i) { return q && pv.indexOf(q) === i && !pv.some(function (y, j) { return j !== i && y.length > q.length && y.indexOf(q) >= 0; }); });
+    if (pv.length) f.arrest = (f.arrest ? f.arrest + '\n' : '') + 'प्रतिबंधक कारवाई: ' + pv.join('; ');
+    r._prevCols = pv.length ? 1 : 0;
     f.invest = TEXT.normInvest(cv(r.invest));
     var det = cv(r.details);
     f.details = o.full ? det : (TEXT.tplHakikat(r.head, f.crime, det) || TEXT.shortHakikat(det));
-    f.stolen = cv(r.stolen); f.recovered = cv(r.recovered);
+    var noPrev = function (x) { var y = String(x || ''); TEXT.prevOf(y).forEach(function (q) { y = y.split(q).join(' '); }); y = y.replace(/\s{2,}/g, ' ').trim(); return /[ऀ-ॿA-Za-z0-9]{2,}/.test(y.replace(/[्ँ-ः]/g, '')) ? y : ''; };
+    f.stolen = noPrev(cv(r.stolen)); f.recovered = noPrev(cv(r.recovered));
+    if (/^प्रतिबंधक|बॉन्ड|बंधपत्र|इंटेरी?ि?म|इटेरीयम/.test(f.stolen) && !/चोर|सोन|मोबा/.test(f.stolen)) f.stolen = '';
+    if (/^प्रतिबंधक|बॉन्ड|बंधपत्र|इंटेरी?ि?म|इटेरीयम/.test(f.recovered) && !/चोर|सोन|मोबा/.test(f.recovered)) f.recovered = '';
     // उप-प्रकार (note under section)
     var sub = r.subEdited ? (r.sub || '') : '';
     if (!r.subEdited) {
@@ -2150,7 +2175,7 @@ var REPORT = (function () {
         weights = [520, 950, 1650, 1250, 1100, 1100, 2150, 1150, 2000, 900, 1250, 3500];
         rows = rs.map(function (r, i) {
           var f = fl[i], x = r.hx || {};
-          var st = x.stolen || x.desc || f.stolen;
+          var st = x.stolen || x.desc || f.stolen || TEXT.stolenSentence(cv(r.details).replace(/\s+/g, ' '));
           if (x.value && st.indexOf(x.value) < 0) st += (st ? '\n' : '') + 'एकूण किं. ' + x.value + '/- रु.';
           return [String(i + 1), PSU[r.ps] || r.ps, f.crime, f.place, f.occ, f.filed, f.party, f.arrest, st, x.recovered || f.recovered, f.invest, f.details];
         });
@@ -2184,7 +2209,8 @@ var REPORT = (function () {
     var cv = makeConv(fixes);
     var k = hbtKind(r.head), x = {};
     var det = cv(r.details), st = cv(r.stolen);
-    if (TEXT.blank(st)) st = '';
+    TEXT.prevOf(st).forEach(function (q) { st = st.split(q).join(' '); }); st = st.replace(/\s{2,}/g, ' ').trim();
+    if (TEXT.blank(st) || !/[ऀ-ॿA-Za-z0-9]{3,}/.test(st)) st = '';
     var fromDet = '';
     if (k === 'H' || k === 'T') fromDet = TEXT.stolenSentence(det);
     if (k === 'H') {
