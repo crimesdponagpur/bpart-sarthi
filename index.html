@@ -1421,6 +1421,142 @@ var TEXT = (function () {
   /* ------------------------------------------------------------------ */
   /* हकिगत संक्षिप्त (फक्त ठराविक साचेबद्ध वाक्ये काढते, तथ्ये तशीच)   */
   /* ------------------------------------------------------------------ */
+
+  /* ------------------------------------------------------------------ */
+  /* ठरलेल्या प्रकारच्या गुन्ह्यांची एकसारखी हकिगत (दारू, जुगार, 285 ...)   */
+  /* फक्त हकिगतीत असलेली माहिती वापरली जाते; काही सापडले नाही तर '' परत  */
+  /* ------------------------------------------------------------------ */
+  function num(x) { return +String(x || '').replace(/[,\s]/g, ''); }
+  function rs(v) { return v ? v.toLocaleString('en-IN') + ' रु.' : ''; }
+  function amountTotal(t) {
+    var m, best = 0, re = /एकु?ू?[णन]\s*(?:कि[ंम]?मती?|कि\.?|किं\.?)?\s*[-:]?\s*(?:रू\.?|रु\.?)?\s*([\d,]{2,9})\s*(?:\/-|ध-|\/|-)?\s*(?:रू|रु|रूपये|रुपये)/g;
+    while ((m = re.exec(t))) best = Math.max(best, num(m[1]));
+    if (best) return best;
+    re = /([\d,]{2,9})\s*(?:\/-|ध-)?\s*(?:रू|रु)(?:\.|पये|पयाचा|पयांचा)?\s*(?:चा|चे|ची|किंमतीचा)?\s*माल/g;
+    while ((m = re.exec(t))) best = Math.max(best, num(m[1]));
+    if (best) return best;
+    re = /(?:किं?म?मत|किमंत|कि\.|किं\.|कि-)\s*[-:]?\s*([\d,]{2,9})\s*(?:\/-|ध-)?\s*(?:रू|रु)/g;
+    while ((m = re.exec(t))) best = Math.max(best, num(m[1]));
+    return best;
+  }
+  function vehicleNo(t) {
+    var m = t.replace(/[‐–]/g, '-').match(/(?:एम[\s.\-]*एच|MH|एम[\s.\-]*पी|MP|सी[\s.\-]*जी|CG|टी[\s.\-]*एस|TS|जी[\s.\-]*जे|GJ)\s*[-.\s]*\d{1,2}\s*[-.\s]*(?:[A-Za-zऀ-ॿ]{1,4}\s*[-.\s]*)?\d{3,4}/);
+    return m ? m[0].replace(/\s*[-.]\s*/g, ' ').replace(/\s{2,}/g, ' ').trim() : '';
+  }
+  function vehicleKind(t) {
+    var K = [[/ट्रॅक्टर/, 'ट्रॅक्टर'], [/टिप्पर/, 'टिप्पर'], [/हायवा/, 'हायवा ट्रक'], [/कंटेनर/, 'कंटेनर'], [/ट्रक|ट्रेलर/, 'ट्रक'], [/पिक\s*-?\s*अप|पिकअप/, 'पिकअप वाहन'], [/टाटा\s*-?\s*(?:एस|ACE)|छोटा\s*हाथी/, 'टाटा एस वाहन'], [/ऑटो|ॲटो|रिक्षा/, 'ऑटो-रिक्षा'], [/बस(?![ऀ-ॿ])/, 'बस'],
+      [/कार(?![ऀ-ॿ])|चारचाकी|चार\s*चाकी/, 'चारचाकी वाहन'], [/मो\.?\s*सा\.?|मोसा|मोटार\s*सायकल|मोटरसायकल|दुचाकी|स्कुटी|स्कूटी|ॲक्टिव्हा|अ[ॅॅ]क्टिव्हा|पल्सर|स्प्लें?डर|पॅशन/, 'मोटार सायकल']];
+    for (var i = 0; i < K.length; i++) if (K[i][0].test(t)) return K[i][1];
+    return '';
+  }
+  function plural(t) {
+    if (/आरोपी\s*क्र\.?\s*-?\s*\d+\s*(?:व|ते|,)\s*\d+|आरोपीतां|काही\s*ई?इ?सम/.test(t)) return true;
+    if (/आरोपी\s*(?:हा|ही|याचे|याने|याच्या|चे\s*ताब्या|चा\s*ताब्या)|आरोपीचे\s*ता|आरोपीच्या/.test(t)) return false;
+    return /आरोपी\s*क्र\.?\s*-?\s*\d+\s*(?:व|ते|,)\s*\d+|आरोपी\s*(?:हे|यांचे|यांनी|यांच्या)|आरोपीतां|आरोपीत\s*(?:हे|यांचे)|इसम\s*हे/.test(t); }
+  var FOREIGN = /रॉयल\s*स्टॅ?ा?ॉ?र?ं?ग|रॉयल\s*स्टेज|जॉ?ा?नी\s*वॉ?ा?कर|आय\s*बी(?![ऀ-ॿ])|इम्पि?ी?रि?ी?यल\s*ब्लू|ब्लेंडर्स|मॅकडॉवेल|मॅक\s*डॉवेल|ऑफि?ी?सर्?स?\s*चॉईस|ओल्ड\s*मंक|8\s*पी\s*एम|किंगफिशर|टुबर्ग|बॅगपायपर/;
+  function daruTpl(t, crimeU) {
+    t = t.replace(/ेे/g, 'े').replace(/निप(?![ा-ॿ])/g, 'निपा');
+    if (/85\s*\(?1?\)?\s*(?:म|महा)/.test(crimeU) || (/नशेत|पिऊन|पिवून|पिउन/.test(t) && /ओरड|शांतता|धिंगाणा|गोंधळ/.test(t) && !/लीटर|लिटर|नीपा|निपा|बॉटल/.test(t)))
+      return 'आरोपी ' + (plural(t) ? 'हे' : 'हा') + ' दारू पिऊन ' + (/सार्वज?नि?ी?क/.test(t) ? 'सार्वजनिक ठिकाणी ' : '') + (/ओरड/.test(t) ? 'आरडाओरड करून ' : '') + (/शांतता/.test(t) ? 'सार्वजनिक शांतता भंग करताना' : 'असभ्य वर्तन करताना') + ' मिळून ' + (plural(t) ? 'आले.' : 'आला.');
+    var types = [];
+    if (/मोहा?\s*फु?ू?ल|मोहफूल|मोहाफुल/.test(t) && /दारू|दारु/.test(t)) types.push('मोहाफूल गावठी दारू');
+    else if (/गावठी|हातभट्टी/.test(t) && /दारू|दारु/.test(t)) types.push('गावठी हातभट्टी दारू');
+    var fb = t.match(FOREIGN);
+    var br = t.match(/भिं?गरी\s*सं?त्रा(?:\s*नं?\.?\s*0?1)?|रॉकेट\s*सं?त्रा|सं?त्र[ाी]ं?\s*(?:999|नं?\.?\s*0?1)|999(?=\s*(?:असे\s*)?लेबल)|टँ?ॅ?गो\s*पंच|मसाला\s*दारू/);
+    if (/(?<!वि)दे[शष][ीि]\s*(?:[ऀ-ॿ0-9 .\-]{0,30}?)?(?:दारू|दारु|निपा|नीपा)|देशा\s*दि?ा?रू/.test(t) || (br && !fb)) types.push('देशी दारू' + (br ? ' (' + br[0].replace(/^999$/, 'संत्रा 999').replace(/सं?त्र[ाी]ं?/, 'संत्रा').replace(/भिगरी/, 'भिंगरी').replace(/\s*नं?\.?\s*0?1/, ' नं. 1').replace(/\s+/g, ' ').trim() + ')' : ''));
+    if (/विदेशी|इंग्लिश|इंग्रजी\s*दारू|व्हिस्की|रम(?![ऀ-ॿ])/.test(t) || fb) types.push('विदेशी दारू' + (fb ? ' (' + fb[0].replace(/\s+/g, ' ') + ')' : ''));
+    if (/बिय[रा]|बीयर|बियर/.test(t)) types.push('बियर');
+    if (/ताडी/.test(t)) types.push('ताडी');
+    var raw = /सडवा|रसायन|गुळ\s*पाणी/.test(t);
+    var make = (raw || /गावठी|हातभट्टी/.test(types.join(' '))) && /गाळ|भट्टी\s*लाव|भट्टी\s*पेटव/.test(t);
+    var qty = [], m, re = /(\d{1,4})\s*(?:नग\s*)?(?:नीपा|निपा|निप्या|नीप|बॉटल|बाटल्या|बाटली|पव्वे|क्वार्टर|सिलबंद\s*बॉटल)\s*(?:प्रत्येकी\s*)?(?:(\d{2,4})\s*(?:मी\.?\s*ली|मिली|मि\.?\s*ली|एम\.?\s*-?\s*एल|ml))?/gi;
+    while ((m = re.exec(t)) && qty.length < 3) qty.push(m[1].replace(/^0+(?=\d)/, '') + ' नीपा' + (m[2] && [90, 180, 375, 650, 750, 1000].indexOf(+m[2]) >= 0 ? ' (' + m[2] + ' मिली)' : ''));
+    if (!qty.length) { var q2 = t.match(/(\d{1,3})\s*(?:नग\s+)?[^\d]{0,40}?(?:नीपा|निपा|बॉटल|नग)/); if (q2) qty.push(q2[1].replace(/^0+(?=\d)/, '') + ' नीपा'); }
+    // bottle size: the usual 90 / 180 / 375 / 750 ml written anywhere
+    var mls = (t.match(/(\d{2,4})\s*(?:मी\.?\s*ली|मिली|मि\.?\s*ली|एम\.?\s*-?\s*एल)/g) || []).map(function (x) { return +x.match(/\d+/)[0]; }).filter(function (v) { return [90, 180, 375, 650, 750, 1000].indexOf(v) >= 0; });
+    if (qty.length === 1 && !/मिली/.test(qty[0]) && /नीपा/.test(qty[0]) && mls.length) qty[0] += ' (' + mls[0] + ' मिली)';
+    if (types.length > 1 && qty.length) qty = [];
+    var lt = t.match(/एकु?ू?[णन]\s*(\d{1,4}(?:\.\d+)?)\s*(?:लीटर|लिटर)/);
+    if (lt) qty.push(lt[1].replace(/^0+(?=\d)/, '') + ' लीटर');
+    else { re = /(\d{1,4}(?:\.\d+)?)\s*(?:लीटर|लिटर|ली\.)(?!\s*क्षमतेच्या\s*रिकाम)/g; while ((m = re.exec(t)) && qty.length < 3) qty.push(m[1].replace(/^0+(?=\d)/, '') + ' लीटर'); }
+    if (!types.length && qty.length && /नीपा/.test(qty[0])) types.push('दारू');
+    if (!types.length && !raw) return '';
+    make = make || (raw && /गाळ|भट्टी/.test(t));
+    // several lots of the same kind: one total of bottles
+    if (qty.length > 1 && qty.every(function (q) { return /नीपा/.test(q); }) && types.length === 1) {
+      var tot = qty.reduce(function (a, q) { return a + +q.match(/\d+/)[0]; }, 0), szs = qty.map(function (q) { return (q.match(/\((\d+) मिली\)/) || [])[1] || ''; });
+      qty = [tot + ' नीपा' + (szs[0] && szs.every(function (z) { return z === szs[0]; }) ? ' (' + szs[0] + ' मिली)' : '')];
+    }
+    var val = amountTotal(t);
+    var veh = /वाहतूक|वाहतुक/.test(t) ? vehicleKind(t) : '';
+    var who = plural(t) ? 'आरोपींच्या' : 'आरोपीच्या';
+    var goods = (qty.length ? qty.join(', ') + ' ' : '') + (types.length ? types.join(' व ') : 'दारू गाळण्याचे साहित्य व सडवा') + (raw && types.length ? ', सडवा व साहित्य' : '');
+    var act = make ? 'हातभट्टीवर गावठी दारू गाळताना' : veh ? (veh === 'मोटार सायकल' ? 'मोटार सायकलवरून' : veh + 'मधून') + ' विनापरवाना वाहतूक करताना' : /विक्री|विकत/.test(t) ? 'विनापरवाना विक्रीकरिता बाळगताना' : 'विनापरवाना बाळगताना';
+    return who + ' ताब्यातून ' + goods + (val ? ' किं. ' + rs(val) + ' चा माल ' : ' असा माल ') + act + ' मिळून ' + (plural(t) ? 'आले.' : 'आला.');
+  }
+  function jugarTpl(t) {
+    var game = /क्रि?ी?केट|बेटिं?ी?ंग/.test(t) ? 'cricket' : /वरली|मटका|मटक्य|सट|कल्याण|आकड/.test(t) ? 'matka' : /तास\s*प|ताश|पत्त्यावर|52\s*पत्ते|एक्का|झन्ना/.test(t) ? 'cards' : /कोंबड/.test(t) ? 'cock' : '';
+    if (!game && !/नगदी/.test(t)) return '';
+    var many = plural(t) || (game === 'cards' && !/आर[ाो]पी\s*हा/.test(t));
+    var cash = 0, m, re = /नगदी\s*(?:रोख\s*)?(?:रक्कम\s*)?(?:रू\.?|रु\.?)?\s*[-:]?\s*([\d,]{2,9})/g;
+    while ((m = re.exec(t))) cash += num(m[1]);
+    if (!cash) { re = /([\d,]{2,9})\s*(?:\/-|ध-)?\s*(?:रू|रु)\.?\s*नगदी/g; while ((m = re.exec(t))) cash += num(m[1]); }
+    var val = amountTotal(t), extra = [];
+    // other rupee amounts not marked नगदी / किंमत / एकूण: the cash figure would be incomplete
+    var am = /([\d,]{2,9})\s*(?:\/-|ध-|\/)?\s*(?:रू|रु)/g, other = false;
+    while ((m = am.exec(t))) { var bf = t.slice(Math.max(0, m.index - 16), m.index); if (!/नगदी|[कक][िी][ंम]?|किंमत|किमत|कीमत|एकु?ू?[णन]|प्रमाणे|ने\s*भरलेल/.test(bf) && !/^\s*\.?\s*नगदी/.test(t.slice(am.lastIndex, am.lastIndex + 8))) other = true; }
+    if (other && val) cash = 0;
+    if (/मोबा[ईइ]ल/.test(t)) extra.push('मोबाईल');
+    var vk = vehicleKind(t); if (vk && /जप्त|ताब्यातून|ताब्यातुन/.test(t) && /वाहन|मोटार\s*सायकल|मोसा/.test(t)) extra.push(vk);
+    var pub = /सार्वज?नि?ी?क/.test(t) ? 'सार्वजनिक ठिकाणी ' : '', fromPeople = /लो[ंक]?[कं]ा?ं?[कं]?[डध][ुू]न|लोका?ंकडून|लोकाकडुन/.test(t) ? 'लोकांकडून पैसे घेऊन ' : '';
+    var mob = /मोबा[ईइ]ल\s*(?:द्वारे|व्दारे|वर|वरून)/.test(t);
+    var s1 = game === 'matka' ? 'आरोपी ' + (many ? 'हे' : 'हा') + ' ' + pub + fromPeople + 'वरली मटक्याचे (सट्टापट्टी) आकडे ' + (mob ? 'मोबाईलवर घेऊन' : 'लिहून') + ' हारजीतचा जुगार खेळविताना मिळून ' + (many ? 'आले.' : 'आला.')
+      : game === 'cards' ? 'आरोपी ' + (many ? 'हे ' : 'हा ') + pub + 'तासपत्त्यावर पैशाची बाजी लावून हारजीतचा जुगार खेळताना मिळून ' + (many ? 'आले.' : 'आला.')
+      : game === 'cricket' ? 'आरोपी ' + (many ? 'हे' : 'हा') + ' ' + fromPeople + 'क्रिकेट सामन्यावर बेटिंग (सट्टा) घेताना मिळून ' + (many ? 'आले.' : 'आला.')
+      : game === 'cock' ? 'आरोपी ' + (many ? 'हे' : 'हा') + ' कोंबड्यांच्या झुंजीवर पैशाची बाजी लावून जुगार खेळताना मिळून ' + (many ? 'आले.' : 'आला.') : '';
+    var parts = [];
+    if (cash) parts.push('नगदी ' + rs(cash));
+    if (extra.length) parts.push(extra.join(', '));
+    parts.push('जुगाराचे साहित्य');
+    var s2 = (s1 ? 'ताब्यातून ' : (plural(t) ? 'आरोपींच्या' : 'आरोपीच्या') + ' ताब्यातून ') + parts.join(', ').replace(/, ([^,]+)$/, ' व $1') + (val && val !== cash ? ' असा एकूण ' + rs(val) + ' चा माल' : '') + ' जप्त.';
+    return (s1 ? s1 + ' ' : '') + s2;
+  }
+  function s285Tpl(t) {
+    if (!/अडथळा|अडथडा|अडथडे|अडथळे/.test(t)) return '';
+    var vk = vehicleKind(t), vn = vehicleNo(t);
+    var who = /चालक/.test(t) ? 'वाहन चालकाने' : 'आरोपीने';
+    return who + ' आपल्या ताब्यातील ' + (vk || 'वाहन') + (vn ? ' क्र. ' + vn : '') + ' सार्वजनिक रस्त्यावर ' + (/धोकादायक|मधोमध|बेदरकार|कोणतेही\s*सि/.test(t) ? 'धोकादायक स्थितीत ' : '') + 'उभे करून वाहतुकीस अडथळा निर्माण केला.';
+  }
+  function mva185Tpl(t) {
+    if (!/नशेत|मद्यप्राशन|दारू\s*पिऊन|दारु\s*पिवून|ब्रे?ी?थ|अल्कोहोल/.test(t)) return '';
+    var vk = vehicleKind(t), vn = vehicleNo(t);
+    var mg = t.match(/(\d{1,3})(?:\s*[.\-]\s*(\d{1,2}))?\s*(?:mg|MG|मि\.?\s*ग्र[ॅा]?\.?|मिलीग्रॅम|मिलिग्राम|एम\.?\s*जी)/);
+    if (mg) mg[1] = mg[1].replace(/^0+(?=\d)/, '') + (mg[2] ? '.' + mg[2] : '');
+    return 'आरोपी हा आपल्या ताब्यातील ' + (vk || 'वाहन') + (vn ? ' क्र. ' + vn : '') + ' दारूच्या नशेत चालविताना मिळून आला' + (mg ? '; ब्रेथ ॲनालायझर तपासणीत अल्कोहोलचे प्रमाण ' + mg[1] + ' मिग्रॅ/100 मिली आढळले.' : '.');
+  }
+  function ndpsTpl(t, crimeU) {
+    if (!/\b27\b/.test(crimeU) || /\b(?:8|20|22)\s*\(/.test(crimeU)) return '';
+    var d = /गांजा|गाजा/.test(t) ? 'गांजा' : /चरस/.test(t) ? 'चरस' : /एम\.?\s*डी|मेफेड्रोन/.test(t) ? 'एमडी' : /ब्राऊ?उ?न\s*शुगर/.test(t) ? 'ब्राऊन शुगर' : '';
+    if (!d || !/ओढ|सेवन|पित|पिताना|नशा|पिले|चिल[ीि]म|झिंगल/.test(t)) return '';
+    return 'आरोपी ' + (plural(t) ? 'हे' : 'हा') + ' सार्वजनिक ठिकाणी ' + d + ' (अंमली पदार्थ) सेवन करताना मिळून ' + (plural(t) ? 'आले.' : 'आला.');
+  }
+  function mpoka122Tpl(t, crimeU) {
+    if (!/122/.test(crimeU) || !/लपव|संशय|अंधारात|लपून/.test(t)) return '';
+    return 'आरोपी ' + (plural(t) ? 'हे' : 'हा') + ' ' + (/रात्र/.test(t) ? 'रात्रीच्या वेळी ' : '') + (/अंधार/.test(t) ? 'अंधारात ' : '') + 'आपले अस्तित्व लपवून ' + (/गुन्हा\s*करण्या|हस्तक्षेप|दखलपात्र|चोरी\s*करण्या|इराद/.test(t) ? 'गुन्हा करण्याच्या उद्देशाने ' : '') + 'मिळून ' + (plural(t) ? 'आले.' : 'आला.');
+  }
+  function tplHakikat(head, crimeU, detU) {
+    var t = (detU || '').replace(/\s+/g, ' ').replace(/ध-/g, '/-');
+    if (!t || !head) return '';
+    try {
+      if (/दारूबंदी/.test(head)) return daruTpl(t, crimeU || '');
+      if (/जुगार/.test(head)) return jugarTpl(t);
+      if (/^कलम 285/.test(head)) return s285Tpl(t);
+      if (/मोटार वाहन/.test(head) && /185/.test(crimeU || '')) return mva185Tpl(t);
+      if (/एनडीपीएस/.test(head)) return ndpsTpl(t, crimeU || '');
+      if (/पोलीस अधिनियम/.test(head)) return mpoka122Tpl(t, crimeU || '');
+    } catch (e) {}
+    return '';
+  }
   function shortHakikat(u) {
     var t = (u || '').replace(/\s+/g, ' ').trim();
     if (!t) return '';
@@ -1657,7 +1793,7 @@ var TEXT = (function () {
     return String(text || '').replace(/[A-Za-z]+/g, romanWord);
   }
 
-  return { normInvest: normInvest, digits: digits, normCrime: normCrime, normParty: normParty, normAct: normAct, accusedKnown: accusedKnown, shortHakikat: shortHakikat, stolenSentence: stolenSentence, theftKinds: theftKinds, validate: validate, blank: blank, u2k: u2k, roman: roman, romanWord: romanWord };
+  return { normInvest: normInvest, digits: digits, normCrime: normCrime, normParty: normParty, normAct: normAct, accusedKnown: accusedKnown, shortHakikat: shortHakikat, tplHakikat: tplHakikat, stolenSentence: stolenSentence, theftKinds: theftKinds, validate: validate, blank: blank, u2k: u2k, roman: roman, romanWord: romanWord };
 })();
 if (typeof module !== 'undefined') module.exports = TEXT;
 
@@ -1968,7 +2104,7 @@ var REPORT = (function () {
     var ar = cv(r.arrest); f.arrest = TEXT.blank(ar) ? '' : ar;
     f.invest = TEXT.normInvest(cv(r.invest));
     var det = cv(r.details);
-    f.details = o.full ? det : TEXT.shortHakikat(det);
+    f.details = o.full ? det : (TEXT.tplHakikat(r.head, f.crime, det) || TEXT.shortHakikat(det));
     f.stolen = cv(r.stolen); f.recovered = cv(r.recovered);
     // उप-प्रकार (note under section)
     var sub = r.subEdited ? (r.sub || '') : '';
