@@ -326,6 +326,7 @@ nav.tabs .navh{display:none}
 .tblv th,.tblv td{border-bottom:1px solid var(--line);padding:6px 8px;text-align:right}
 .tblv th:first-child,.tblv td:first-child{text-align:left}
 .tblv th{color:var(--muted);font-weight:600;font-size:12px}
+body.simple .adv{display:none!important}
 </style>
 </head>
 <body>
@@ -346,7 +347,7 @@ nav.tabs .navh{display:none}
 </svg></div>
   <div><h1>बी-पार्ट सारथी</h1><small>नागपूर उपविभाग</small></div>
   <div class="sp"></div>
-  <select id="tmode" title="टायपिंग पद्धत (सर्व रकान्यांसाठी)">
+  <select id="tmode" class="adv" title="टायपिंग पद्धत (सर्व रकान्यांसाठी)">
     <option value="off">टायपिंग: साधे</option>
     <option value="roman">रोमन → मराठी</option>
     <option value="kruti">Kruti Dev → मराठी</option>
@@ -360,16 +361,16 @@ nav.tabs .navh{display:none}
 </div>
 <nav class="tabs" id="tabs">
   <button data-v="home" class="on">मुख्य</button>
-  <button data-v="dash">डॅशबोर्ड</button>
+  <button data-v="dash" class="adv">डॅशबोर्ड</button>
   <button data-v="files">फाईल्स</button>
   <button data-v="queue">तपासणी रांग <span class="n hide" id="qN"></span></button>
   <button data-v="review">वर्गीकरण <span class="n hide" id="uncN"></span></button>
-  <button data-v="hbt">HBT तपशील</button>
+  <button data-v="hbt" class="adv">HBT तपशील</button>
   <button data-v="preview">पूर्वावलोकन</button>
   <button data-v="download">Word डाउनलोड</button>
-  <button data-v="archive">संग्रह</button>
-  <button data-v="reports">अहवाल</button>
-  <button data-v="typing">टायपिंग</button>
+  <button data-v="archive" class="adv">संग्रह</button>
+  <button data-v="reports" class="adv">अहवाल</button>
+  <button data-v="typing" class="adv">टायपिंग</button>
   <button data-v="rules">नियम व सेटिंग</button>
 </nav>
 <main>
@@ -381,7 +382,7 @@ nav.tabs .navh{display:none}
       <button class="btn" id="heroBtn">सुरू करा →</button>
     </div>
     <div id="draftBox"></div>
-    <div id="arcHome"></div>
+    <div id="arcHome" class="adv"></div>
     <div id="bkBanner"></div>
     <div class="tiles" id="tiles"></div>
     <div class="card"><h2>PS कडून फाईल्स</h2><div id="psHome"></div></div>
@@ -537,7 +538,7 @@ nav.tabs .navh{display:none}
         </div>
         <div class="dl-res" id="res-division"></div>
       </div>
-      <div class="card">
+      <div class="card adv">
         <h2>HBT, THEFT, HURT यादी</h2>
         <p class="muted small" style="margin-top:0" id="hbtSum"></p>
         <div class="row">
@@ -605,6 +606,11 @@ nav.tabs .navh{display:none}
 
   <!-- RULES -->
   <section id="v-rules" class="hide">
+    <div class="card">
+      <h2>App पद्धत</h2>
+      <div class="seg" id="segMode"><button data-mode="simple">साधी (फक्त B Part)</button><button data-mode="full">सर्व साधने</button></div>
+      <p class="muted small" style="margin-bottom:0">साधी पद्धत: फाईल्स → तपासणी → head-wise Word एवढेच दिसते. "सर्व साधने" निवडल्यास डॅशबोर्ड, HBT यादी, अहवाल, संग्रह, टायपिंग परत दिसतात.</p>
+    </div>
     <div class="card">
       <h2>शिकलेले नियम <span class="count" id="ruleN">0</span></h2>
       <p class="muted small" style="margin-top:0">तुम्ही जतन केलेले नियम मूळ नियमांपेक्षा आधी लागू होतात.</p>
@@ -880,7 +886,7 @@ var ENG = (function () {
 
   // ---- Acts -------------------------------------------------------------
   var ACT_RE = {
-    BNS:   /(?:ch|fc|chh|ck)\s*-?\s*,\s*u\s*-?\s*,\s*l|Hkk[\s\-.]*U;k(?![a-zA-Z])|Hkk[\s\-.]*U;k;?[\s\-.]*(?:l|la)|Hkkjrh;\s*U;k;\s*la|Hkk[\s\-.]*U;k[\s\-.]*la/,
+    BNS:   /\bBNS\b|\bB\.\s*N\.\s*S\b|(?:ch|fc|chh|ck)\s*-?\s*,\s*u\s*-?\s*,\s*l|Hkk[\s\-.]*U;k(?![a-zA-Z])|Hkk[\s\-.]*U;k;?[\s\-.]*(?:l|la)|Hkkjrh;\s*U;k;\s*la|Hkk[\s\-.]*U;k[\s\-.]*la/,
     MVA:   /eks[\s\-.]*ok[\s\-.]*dk|ekssokdk|eksVkj\s*okgu|eksVj\s*okgu|,e\s*Ogh\s*vWDV|,eOgh|eks[\s\-.]*ok[\s\-.]*dk;nk|eks[\s\-.]*ok[\s\-.]*vf\/k|eksVkj\s*okgu/,
     MPOKA: /e[q]?iksdk|iksyhl[\s\-.]*(?:vf\/k|dk;nk|vf)|e[q]?[\s\-.]+iks[\s\-.]+(?:dk|v)|e\s+iks\s+vf\/k|e\s*iks\s*dk|e[\s\-.]+iks[\s\-.]+dk/,
     MDA:   /enkdk|e[q]?[\s\-.]*nk[\s\-.]*(?:dk|vf\/k)|eqnkdk|eknkdk|nk:\s*C?canh|nk:Ckanh|nkjw\s*canh|egk[\s\-.]*nk/,
@@ -890,12 +896,12 @@ var ENG = (function () {
     ARMS:  /vkeZ\s*vWDV/,
     POCSO: /iksDlks|iksDlks/,
     IT:    /ra=a?Kku|ra=[\s\-.]*vf\/k|vk;Vh\s*(?:vWDV|,DV)/,
-    ANIMAL:/izk\.?;kpk\s*NG|izk\.?;kaps?k?\s*NG|izk\.?kh\s*N|izk[\s\-.]*N[\s\-.]|izk-funZ;rsus|funZ;rs|izk.;kl\s*Ø|ØwjrsusokxfoC|1960/,
+    ANIMAL:/izk\.?;kpk\s*NG|izk\.?;kaps?k?\s*NG|izk\.?kh\s*N|izk[\s\-.]*NG?[\s\-.]|izk-funZ;rsus|funZ;rs|izk.;kl\s*Ø|ØwjrsusokxfoC|1960/,
     ANIMAL76:/(?:izk\.?kh|i'kq|izk-)[\s\-.]*laj{k.k|egk[\s\-.]*(?:izk\.?kh|i'kq)|izk\.?kh\s*laj{k.k\s*vf\/k|vf\/k[^0-9]{0,6}1976|\b1976\b/,
     ESSEN: /vR;ko"kd|vR;koL;d|vR;ko';d|vR;koÜ;d|ftouko'|thouko'|vR;kok?'k?d|oLrq[\s\-.]*vf\/k/,
     ELEC:  /Hkk[\s\-.]*(?:fo|oh|of)[\s\-.]*(?:dk|vf\/k)|fon~?;qr|fo\|qr|fo\s*\|qr|fo\+qr|okht\s*pksjh/,
     PDPP:  /lkoZtfud\s*(?:laiRrh|ekyeRrk|ekyeRrs)|lkoZ[\s\-.]*lai|lk[\s\-.]*ek[\s\-.]*u[\s\-.]*iz/,
-    ENV:   /i;kZoj|izn"k\.?k|izn\+"k|uk\W?;yksu\s*ekat|ukW;yksu/,
+    ENV:   /(?:i|Ik);kZoj|izn"k\.?k|izn\+"k|uk\W?;yksu\s*ekat|ukW;yksu/,
     ATRO:  /vuq[\s\-.]*tkrh|v[\s\-.]*tk[\s\-.]*t?[\s\-.]*v[\s\-.]*iz|v[\s\-.]*tk[\s\-.]*r\b|vR;kpkj\s*izfr|vWVªkWflVh/,
     LABOUR:/ckydkexkj|osBfcxkjh|ckydkex/,
   };
@@ -917,14 +923,16 @@ var ENG = (function () {
   function parseSections(crimeText) {
     var t = norm(crimeText);
     // cut crime number prefix: "328/26 dye 140(3)..." -> after first 'dye'
-    var m = t.match(/(?:dye|Dye|dyE|eys)\s*(.*)$/);
-    var body = m ? m[1] : t.replace(/^[\s\-]*(?:vi[\s\-.]*(?:dz|Ø|dzz)[\s\-.]*)?\d+\s*\/\s*\d{2,4}/, '');
-    body = body.replace(/(\d)\s*[,\-\]]\s*\((,|v|ch|fc|c|[aAbB])\)/g, '$1($2)').replace(/\)\s*[,\-\]]\s*\(/g, ')(').replace(/(\d)\s*(v|ch|c|[aAbB])(?![a-zA-Z,;:])/g, '$1($2)');
+    // sections = everything after the crime number ("328/26"), else after the first "कलम"
+    var cn = t.match(/\d+\s*\/\s*\d{2,4}(?!\d)/), m = t.match(/(?:dye|Dye|dyE|eys)\s*(.*)$/);
+    var body = cn ? t.slice(cn.index + cn[0].length) : m ? m[1] : t;
+    body = body.replace(/Hkkx\s*[&\-–]*\s*\d+/g, ' ').replace(/(\d)\s*[,\-\]]\s*\((,|v|ch|fc|c|[aAbB])\)/g, '$1($2)').replace(/\)\s*[,\-\]]\s*\(/g, ')(').replace(/(\d)\s*(v|ch|c|[aAbB])(?![a-zA-Z,;:])/g, '$1($2)');
     // stop at "lg dye"? keep everything (we want all sections incl. other act) but record
     var nums = {}, order = [];
-    var re = /(\d{1,3})\s*((?:\(\s*[^)\s]{1,3}\s*\)\s*)*)/g, mm;
+    var re = /(\d+)\s*((?:\(\s*[^)\s]{1,3}\s*\)\s*)*)/g, mm;
     while ((mm = re.exec(body))) {
-      var n = mm[1];
+      var n = mm[1].replace(/^0+(?=\d)/, '');
+      if (n.length > 3) continue;   // years (1966), SID / e-sakshya numbers are not sections
       if (!nums[n]) { nums[n] = []; order.push(n); }
       var subs = (mm[2] || '').match(/\(\s*([^)\s]{1,3})\s*\)/g) || [];
       subs.forEach(function (s) { nums[n].push(subNorm(s)); });
@@ -987,6 +995,11 @@ var ENG = (function () {
   function pocso(c) { return !!c.acts.POCSO || POCSO_U.test(c.utext) || /\b2012\b/.test(c.ctext || ''); }
   // BNS written, or no act written at all (plain section numbers, e.g. "281,185")
   function B(c) { return c.bns || c.soft; }
+  var MAJOR = ['103', '105', '109', '115', '117', '118', '74', '64', '296', '303', '305', '308', '309', '310', '311', '316', '318', '319', '331', '221', '132', '121'];
+  function major(c) { return B(c) && anySec(c, MAJOR); }
+  // IPC section numbers written with a BNS label (e.g. "406-420-467 बीएनएस")
+  var IPCONLY = ['420', '406', '409', '379', '380', '354', '363', '376', '498', '457', '454', '392', '395', '323', '506', '504', '427', '447', '448', '452', '465', '467', '468', '471'];
+  function ip(c) { return c.ipc || (B(c) && anySec(c, IPCONLY) && !anySec(c, MAJOR)); }
   function only(c, allowed) { return c.sec.order.every(function (n) { return allowed.indexOf(n) >= 0; }); }
   function anySec(c, list) { for (var i = 0; i < list.length; i++) if (has(c.sec, list[i])) return true; return false; }
   var RAPE = ['64', '65', '66', '67', '68', '69', '70'];
@@ -997,16 +1010,17 @@ var ENG = (function () {
   var DEFAULT_RULES = [
     { id: 'table-marg',  head: head('मर्ग'), test: function (c) { return c.table === 'M'; } },
     { id: 'table-daru',  head: head('महाराष्ट्र दारूबंदी'), test: function (c) { return c.table === 'D'; } },
-    { id: 'ndps',   head: head('एनडीपीएस'), test: function (c) { return c.acts.NDPS; } },
+    { id: 'ndps',   head: head('एनडीपीएस'), test: function (c) { return c.acts.NDPS || (has(c.sec, '27') && only(c, ['27', '8', '20', '22', '29', '3', '5']) && !c.acts.MVA && !c.acts.ARMS); } },
     { id: 'jugar12', head: head('महाराष्ट्र जुगार'), test: function (c) { return has(c.sec, '12', 'A') && !anySec(c, ['303', '305', '309', '318', '65']) && !c.bns; } },
-    { id: 'mda',    head: head('महाराष्ट्र दारूबंदी'), test: function (c) { return c.acts.MDA || daru65(c); } },
-    { id: 'arms',   head: head('आर्म'), test: function (c) { return c.acts.ARMS; } },
-    { id: 'essen',  head: head('जिवनावश्यक'), test: function (c) { return c.acts.ESSEN; } },
+    { id: 'mda',    head: head('महाराष्ट्र दारूबंदी'), test: function (c) { return (c.acts.MDA && !major(c)) || daru65(c); } },
+    { id: 'arms',   head: head('आर्म'), test: function (c) { return c.acts.ARMS && !major(c); } },
+    { id: 'essen',  head: head('जिवनावश्यक'), test: function (c) { return c.acts.ESSEN && !major(c); } },
     { id: 'labour', head: head('वेठबिगारी'), test: function (c) { return c.acts.LABOUR; } },
+    { id: 'theft303', head: head('चोरी'), test: function (c) { return (B(c) || c.ipc || has(c.sec, '303', '2')) && has(c.sec, '303') && !anySec(c, ['309', '310', '311', '331', '332', '333', '334', '103', '109']); } },
     { id: 'it',     head: head('माहिती तंत्रज्ञान'), test: function (c) { return c.acts.IT && !(B(c) && anySec(c, ['316', '318', '319', '308', '64', '74', '75', '77', '78', '79'])); } },
     { id: 'elec',   head: head('विद्युत कायदा'), test: function (c) { return c.acts.ELEC; } },
-    { id: 'env',    head: head('पर्यावरण'), test: function (c) { return c.acts.ENV; } },
-    { id: 'pdpp',   head: head('सार्वजनिक मालमत्ता'), test: function (c) { return c.acts.PDPP && !anySec(c, ['303', '305', '309', '310', '331']); } },
+    { id: 'env',    head: head('पर्यावरण'), test: function (c) { return c.acts.ENV && !major(c); } },
+    { id: 'pdpp',   head: head('सार्वजनिक मालमत्ता'), test: function (c) { return c.acts.PDPP && !major(c) && !anySec(c, ['303', '305', '309', '310', '331']); } },
     { id: 'animal', head: head('प्राण्यांना निर्दयतेने'), test: function (c) { return c.acts.ANIMAL; } },
     { id: 'animal76', head: head('महाराष्ट्र प्राणी संरक्षण'), test: function (c) { return c.acts.ANIMAL76; } },
     { id: 'mpoka',  head: head('महाराष्ट्र पोलीस'), test: function (c) { return c.acts.MPOKA && !c.acts.BNS && !c.acts.MDA && !c.acts.MJKA; } },
@@ -1024,12 +1038,12 @@ var ENG = (function () {
     { id: 's137',   head: head('पळवून नेणे'), test: function (c) { return B(c) && has(c.sec, '137'); } },
     { id: 's140',   head: head('पळवून नेणे'), test: function (c) { return B(c) && has(c.sec, '140'); } },
     { id: 's118',   head: head('दुखापत'), test: function (c) { return B(c) && has(c.sec, '118'); } },
-    { id: 's309',   head: head('जबरी'), test: function (c) { return B(c) && has(c.sec, '309'); } },
     { id: 's311',   head: head('दरोडा'), test: function (c) { return B(c) && (has(c.sec, '310') || has(c.sec, '311')); } },
-    { id: 'burg-dw', head: head('घरफोडी दिवसा'), test: function (c) { return B(c) && !has(c.sec, '303') && has(c.sec, '331') && /fnolk/.test(c.ctext); } },
-    { id: 'burg-nw', head: head('घरफोडी रात्री'), test: function (c) { return B(c) && !has(c.sec, '303') && has(c.sec, '331') && /jk=/.test(c.ctext); } },
-    { id: 'burg-n', head: head('घरफोडी रात्री'), test: function (c) { return B(c) && !has(c.sec, '303') && has(c.sec, '331', '4'); } },
-    { id: 'burg-d', head: head('घरफोडी दिवसा'), test: function (c) { return B(c) && !has(c.sec, '303') && has(c.sec, '331', '3'); } },
+    { id: 's309',   head: head('जबरी'), test: function (c) { return B(c) && has(c.sec, '309'); } },
+    { id: 'burg-dw', head: head('घरफोडी दिवसा'), test: function (c) { return B(c) && has(c.sec, '331') && /fnolk/.test(c.ctext); } },
+    { id: 'burg-nw', head: head('घरफोडी रात्री'), test: function (c) { return B(c) && has(c.sec, '331') && /jk=/.test(c.ctext); } },
+    { id: 'burg-n', head: head('घरफोडी रात्री'), test: function (c) { return B(c) && has(c.sec, '331', '4'); } },
+    { id: 'burg-d', head: head('घरफोडी दिवसा'), test: function (c) { return B(c) && has(c.sec, '331', '3'); } },
     { id: 'burg-305', head: head('घरफोडी रात्री'), test: function (c) { return B(c) && has(c.sec, '305') && !has(c.sec, '303') && anySec(c, ['331', '332', '333', '334']) && NIGHT_RE.test(c.text + c.utext); } },
     { id: 'burg-305d', head: head('घरफोडी दिवसा'), test: function (c) { return B(c) && has(c.sec, '305') && !has(c.sec, '303') && anySec(c, ['331', '332', '333', '334']) && !has(c.sec, '74') && !has(c.sec, '118'); } },
     { id: 'theft',  head: head('चोरी'), test: function (c) { return B(c) && anySec(c, ['303', '304', '305', '306', '307']); } },
@@ -1038,37 +1052,39 @@ var ENG = (function () {
     { id: 's338',   head: head('338'), test: function (c) { return (B(c) || c.acts.MVA) && has(c.sec, '125', 'B'); } },
     { id: 's337',   head: head('337'), test: function (c) { return (B(c) || c.acts.MVA) && has(c.sec, '125', 'A'); } },
     { id: 's336',   head: head('336'), test: function (c) { return (B(c) || c.acts.MVA) && has(c.sec, '281'); } },
+    { id: 's336m',  head: head('336'), test: function (c) { return c.acts.MVA && anySec(c, ['184', '134']) && anySec(c, ['324', '125']) && !anySec(c, ['106', '103', '109']); } },
     { id: 's285',   head: head('कलम 285'), test: function (c) { return (B(c) || c.acts.MVA) && has(c.sec, '285') && !c.acts.MDA; } },
     { id: 'mva185', head: head('मोटार वाहन'), test: function (c) { return (B(c) || c.acts.MVA) && has(c.sec, '185') && only(c, ['185', '3', '181', '130', '177', '184', '134', '5', '180', '1', '2', '4', '146', '196', '39', '192', '66', '122', '50', '51']); } },
     { id: 'x298',  head: head('धर्माशी'), test: function (c) { return B(c) && anySec(c, ['298', '299', '300', '301']); } },
+    { id: 'x308',  head: head('खंडणी'), test: function (c) { return B(c) && has(c.sec, '308'); } },
     { id: 's296',   head: head('अश्लिल'), test: function (c) { return B(c) && has(c.sec, '296'); } },
     { id: 'mva',    head: head('मोटार वाहन'), test: function (c) { return c.acts.MVA && (!c.bns || only(c, ['3', '5', '39', '50', '51', '66', '122', '130', '134', '146', '177', '179', '180', '181', '184', '185', '192', '194', '196', '207'])); } },
     // ---- भादवि (IPC) written instead of BNS: same head as the matching BNS section ----
-    { id: 'ipc302', head: head('खून कलम'), test: function (c) { return c.ipc && has(c.sec, '302'); } },
-    { id: 'ipc304b', head: head('हुंडाबळी'), test: function (c) { return c.ipc && has(c.sec, '304', 'B'); } },
-    { id: 'ipc304a', head: head('निष्काळजीपणाने'), test: function (c) { return c.ipc && has(c.sec, '304', 'A'); } },
-    { id: 'ipc304', head: head('सदोष'), test: function (c) { return c.ipc && has(c.sec, '304'); } },
-    { id: 'ipc307', head: head('खुनाचा'), test: function (c) { return c.ipc && has(c.sec, '307'); } },
-    { id: 'ipc306', head: head('आत्महत्येस'), test: function (c) { return c.ipc && has(c.sec, '306'); } },
-    { id: 'ipc376', head: head('बलात्कार वयस्क'), test: function (c) { return c.ipc && has(c.sec, '376') && !pocso(c); } },
-    { id: 'ipc376m', head: head('बलात्कार अल्पवयीन'), test: function (c) { return c.ipc && has(c.sec, '376'); } },
-    { id: 'ipc354', head: head('विनयभंग वयस्क'), test: function (c) { return c.ipc && has(c.sec, '354') && !pocso(c); } },
-    { id: 'ipc354m', head: head('विनयभंग अल्पवयीन'), test: function (c) { return c.ipc && has(c.sec, '354'); } },
-    { id: 'ipc363', head: head('पळवून नेणे'), test: function (c) { return c.ipc && anySec(c, ['363', '366']); } },
-    { id: 'ipc498', head: head('पती'), test: function (c) { return c.ipc && has(c.sec, '498'); } },
-    { id: 'ipc395', head: head('दरोडा'), test: function (c) { return c.ipc && anySec(c, ['395', '396', '397', '399']); } },
-    { id: 'ipc392', head: head('जबरी'), test: function (c) { return c.ipc && anySec(c, ['392', '393', '394']); } },
-    { id: 'ipc457', head: head('घरफोडी रात्री'), test: function (c) { return c.ipc && anySec(c, ['457', '458', '460']); } },
-    { id: 'ipc454', head: head('घरफोडी दिवसा'), test: function (c) { return c.ipc && anySec(c, ['454', '455', '456']) && anySec(c, ['379', '380']); } },
-    { id: 'ipc379', head: head('चोरी'), test: function (c) { return c.ipc && anySec(c, ['379', '380', '381']); } },
-    { id: 'ipc406', head: head('विश्वासघात'), test: function (c) { return c.ipc && anySec(c, ['406', '407', '408', '409']); } },
-    { id: 'ipc420', head: head('फसवणूक'), test: function (c) { return c.ipc && anySec(c, ['420', '419', '417']); } },
-    { id: 'ipc326', head: head('दुखापत'), test: function (c) { return c.ipc && anySec(c, ['324', '326', '325', '323']); } },
-    { id: 'ipc338', head: head('338'), test: function (c) { return c.ipc && has(c.sec, '338'); } },
-    { id: 'ipc337', head: head('337'), test: function (c) { return c.ipc && has(c.sec, '337'); } },
-    { id: 'ipc279', head: head('336'), test: function (c) { return c.ipc && anySec(c, ['279', '336']); } },
-    { id: 'ipc283', head: head('कलम 285'), test: function (c) { return c.ipc && has(c.sec, '283'); } },
-    { id: 'ipc294', head: head('अश्लिल'), test: function (c) { return c.ipc && has(c.sec, '294'); } },
+    { id: 'ipc302', head: head('खून कलम'), test: function (c) { return ip(c) && has(c.sec, '302'); } },
+    { id: 'ipc304b', head: head('हुंडाबळी'), test: function (c) { return ip(c) && has(c.sec, '304', 'B'); } },
+    { id: 'ipc304a', head: head('निष्काळजीपणाने'), test: function (c) { return ip(c) && has(c.sec, '304', 'A'); } },
+    { id: 'ipc304', head: head('सदोष'), test: function (c) { return ip(c) && has(c.sec, '304'); } },
+    { id: 'ipc307', head: head('खुनाचा'), test: function (c) { return ip(c) && has(c.sec, '307'); } },
+    { id: 'ipc306', head: head('आत्महत्येस'), test: function (c) { return ip(c) && has(c.sec, '306'); } },
+    { id: 'ipc376', head: head('बलात्कार वयस्क'), test: function (c) { return ip(c) && has(c.sec, '376') && !pocso(c); } },
+    { id: 'ipc376m', head: head('बलात्कार अल्पवयीन'), test: function (c) { return ip(c) && has(c.sec, '376'); } },
+    { id: 'ipc354', head: head('विनयभंग वयस्क'), test: function (c) { return ip(c) && has(c.sec, '354') && !pocso(c); } },
+    { id: 'ipc354m', head: head('विनयभंग अल्पवयीन'), test: function (c) { return ip(c) && has(c.sec, '354'); } },
+    { id: 'ipc363', head: head('पळवून नेणे'), test: function (c) { return ip(c) && anySec(c, ['363', '366']); } },
+    { id: 'ipc498', head: head('पती'), test: function (c) { return ip(c) && has(c.sec, '498'); } },
+    { id: 'ipc395', head: head('दरोडा'), test: function (c) { return ip(c) && anySec(c, ['395', '396', '397', '399']); } },
+    { id: 'ipc392', head: head('जबरी'), test: function (c) { return ip(c) && anySec(c, ['392', '393', '394']); } },
+    { id: 'ipc457', head: head('घरफोडी रात्री'), test: function (c) { return ip(c) && anySec(c, ['457', '458', '460']); } },
+    { id: 'ipc454', head: head('घरफोडी दिवसा'), test: function (c) { return ip(c) && anySec(c, ['454', '455', '456']) && anySec(c, ['379', '380']); } },
+    { id: 'ipc379', head: head('चोरी'), test: function (c) { return ip(c) && anySec(c, ['379', '380', '381']); } },
+    { id: 'ipc406', head: head('विश्वासघात'), test: function (c) { return ip(c) && anySec(c, ['406', '407', '408', '409']); } },
+    { id: 'ipc420', head: head('फसवणूक'), test: function (c) { return ip(c) && anySec(c, ['420', '419', '417']); } },
+    { id: 'ipc326', head: head('दुखापत'), test: function (c) { return ip(c) && anySec(c, ['324', '326', '325', '323']); } },
+    { id: 'ipc338', head: head('338'), test: function (c) { return ip(c) && has(c.sec, '338'); } },
+    { id: 'ipc337', head: head('337'), test: function (c) { return ip(c) && has(c.sec, '337'); } },
+    { id: 'ipc279', head: head('336'), test: function (c) { return ip(c) && anySec(c, ['279', '336']); } },
+    { id: 'ipc283', head: head('कलम 285'), test: function (c) { return ip(c) && has(c.sec, '283'); } },
+    { id: 'ipc294', head: head('अश्लिल'), test: function (c) { return ip(c) && has(c.sec, '294'); } },
     // ---- added from the Noting/MCR head list (these only fire when no rule above matched) ----
     { id: 'x80',   head: head('हुंडाबळी'), test: function (c) { return B(c) && has(c.sec, '80'); } },
     { id: 'x107',  head: head('मुलाच्या'), test: function (c) { return B(c) && has(c.sec, '107'); } },
@@ -1091,17 +1107,16 @@ var ENG = (function () {
     { id: 'x194',  head: head('मारामारी'), test: function (c) { return B(c) && has(c.sec, '194'); } },
     { id: 'x196',  head: head('वैर वाढवणे'), test: function (c) { return B(c) && (has(c.sec, '196') || has(c.sec, '197')); } },
     { id: 'x111',  head: head('संघटित'), test: function (c) { return B(c) && anySec(c, ['111', '112', '113']); } },
-    { id: 'x308',  head: head('खंडणी'), test: function (c) { return B(c) && has(c.sec, '308'); } },
     { id: 'x312', weak: true, head: head('दरोडा'), test: function (c) { return B(c) && has(c.sec, '312'); } },
     { id: 'x317',  head: head('अप्रामाणिकपणे'), test: function (c) { return B(c) && has(c.sec, '317'); } },
     { id: 'x336f', weak: true, head: head('बनावट / खोटे'), test: function (c) { return B(c) && anySec(c, ['336', '337', '338', '339', '340', '341']) && !has(c.sec, '281') && !has(c.sec, '125'); } },
     { id: 'x178',  head: head('बनावट चलन'), test: function (c) { return B(c) && anySec(c, ['178', '179', '180', '181', '182', '183', '184', '185', '186', '187', '188']) && !c.acts.MVA; } },
+    { id: 'x324', weak: true, head: head('गैरप्रकार'), test: function (c) { return B(c) && anySec(c, ['324', '325', '326', '327', '328']); } },
     { id: 'x223', weak: true, head: head('सार्वजनिक सेवकाच्या'), test: function (c) { return B(c) && has(c.sec, '223'); } },
     { id: 'x249', weak: true, head: head('गुन्हेगारास आश्रय'), test: function (c) { return B(c) && anySec(c, ['249', '253', '254']); } },
     { id: 'x262', weak: true, head: head('कायदेशीर अटकेस'), test: function (c) { return B(c) && has(c.sec, '262'); } },
     { id: 'x281', weak: true, head: head('336'), test: function (c) { return B(c) && has(c.sec, '281'); } },
     { id: 'x294',  head: head('अश्लील वस्तूंची'), test: function (c) { return B(c) && (has(c.sec, '294') || has(c.sec, '295')); } },
-    { id: 'x324', weak: true, head: head('गैरप्रकार'), test: function (c) { return B(c) && anySec(c, ['324', '325', '326', '327', '328']); } },
     { id: 'x329', weak: true, head: head('फौजदारी अतिक्रमण'), test: function (c) { return B(c) && anySec(c, ['329', '330', '331', '332', '333', '334']); } },
     { id: 'x351', weak: true, head: head('गुन्हेगारी धमकी'), test: function (c) { return B(c) && has(c.sec, '351'); } },
     { id: 'x353', weak: true, head: head('खोट्या बातम्या'), test: function (c) { return B(c) && has(c.sec, '353'); } },
@@ -3892,6 +3907,13 @@ $('v-home').addEventListener('click', function (e) {
 });
 
 /* ---------- look: text size + theme ---------- */
+function applyMode() {
+  var full = lsGet('bps_mode') === 'full';
+  document.body.classList.toggle('simple', !full);
+  Array.prototype.forEach.call(document.querySelectorAll('#segMode button'), function (b) { b.classList.toggle('on', b.dataset.mode === (full ? 'full' : 'simple')); });
+  if (!full && ['dash', 'hbt', 'archive', 'reports', 'typing'].indexOf(S.cur) >= 0) show('home');
+}
+$('segMode').addEventListener('click', function (e) { var b = e.target.closest('[data-mode]'); if (!b) return; lsSet('bps_mode', b.dataset.mode); applyMode(); toast(b.dataset.mode === 'full' ? 'सर्व साधने दाखवली' : 'साधी पद्धत'); });
 function applyLook() {
   var th = lsGet('bps_th') || 'auto', fs = lsGet('bps_fs') || '1';
   if (th === 'auto') document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme', th);
@@ -4424,6 +4446,7 @@ function autoOpenSaved() {
     renderHome(); renderSteps();
   }).catch(function () {});
 }
+applyMode();
 call('api_bootstrap').then(function (b) {
   window._hideSplash();
   S.heads = b.heads; S.defaultHeads = b.defaultHeads; S.rules = b.rules; S.fixes = b.fixes;
