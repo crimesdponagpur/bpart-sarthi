@@ -526,6 +526,8 @@ body.simple .adv{display:none!important}
       <div class="row">
         <b>हकिगत:</b>
         <select id="dlFull"><option value="0">संक्षिप्त (साचेबद्ध वाक्ये काढून, माहिती तीच)</option><option value="1">पूर्ण (जशी PS ने दिली तशी)</option></select>
+        <b style="margin-left:8px">कागद:</b>
+        <select id="dlPaper"><option value="a4">A4 (आडवा)</option><option value="legal">Legal (आडवा)</option></select>
       </div>
       <p class="muted small" id="divSum" style="margin-bottom:0"></p>
     </div>
@@ -1255,17 +1257,110 @@ var TEXT = (function () {
     s = s.replace(/मो[\s.\-]*वा[\s.\-]*का/g, 'मोवाका').replace(/म[\s.\-]*जू?[\s.\-]*का/g, 'मजुका').replace(/म[ा]?[\s.\-]*दा[\s.\-]*का/g, 'मदाका').replace(/म[\s.\-]*पो[\s.\-]*का/g, 'मपोका');
     return s;
   }
+
+  /* ------------------------------------------------------------------ */
+  /* कलम-ओळ एकसारखी: "344/2026 कलम 126(2), 109(1), 3(5) बीएनएस सह कलम 4, 25 आर्म ॲक्ट" */
+  /* ------------------------------------------------------------------ */
+  var D = '[\\s.\\-]*';
+  var ACTS = [
+    ['बीएनएसएस', new RegExp('भा' + D + 'ना' + D + 'सु' + D + 'सं(?:हिता)?|ब[ीि]' + D + 'एनि?' + D + 'एस' + D + 'एस(?![ऀ-ॿ])|\\bBNSS\\b', 'g')],
+    ['बीएनएस', new RegExp('भारतीय\\s*न्याय\\s*संहि?ी?ता(?:\\s*,?\\s*2023)?|भा' + D + 'न्या' + D + '(?:य' + D + ')?(?:सं(?:हि?ी?ता)?|स)(?:\\s*,?\\s*2023)?(?![ऀ-ॿ])|भान्यास|ब[ीि]' + D + 'एन' + D + '(?:एस|ए)(?:' + D + '2023)?(?![ऀ-ॿ])|\\bB\\.?\\s*N\\.?\\s*S\\b\\.?(?:\\s*2023)?', 'g')],
+    ['भादवि', new RegExp('भा' + D + 'द' + D + 'वि?ी?(?![ऀ-ॿ])|भारतीय\\s*दंड\\s*विधान|\\bI\\.?\\s*P\\.?\\s*C\\b\\.?', 'g')],
+    ['मोवाका', new RegExp('मो' + D + 'वा' + D + '(?:का(?:यदा)?|अधि(?:नियम)?)(?:' + D + '1988)?|मो[ेे]?वाका|मोटा?र\\s*वाहन\\s*(?:कायदा|अधिनियम|अधि\\.?|ॲक्ट|अॅक्ट)(?:\\s*,?\\s*1988)?|एमव्ही\\s*(?:ॲक्ट|अॅक्ट)|\\bM\\.?\\s*V\\.?\\s*Act\\b', 'g')],
+    ['मदाका', new RegExp('(?:महा|मु?)' + D + 'दा' + D + 'का(?![ऀ-ॿ])|महा' + D + 'दा(?![ऀ-ॿ])|मुदाका|मदाका|म' + D + 'दा' + D + 'अधि(?:नियम)?|महा(?:राष्ट्र)?' + D + 'दारू\\s*बंदी\\s*(?:कायदा|अधिनि[यम]{1,2}[यम]?|अधि\\.?)?(?:\\s*,?\\s*1949)?|दारूबंदी\\s*(?:कायदा|अधिनियम)', 'g')],
+    ['मजुका', new RegExp('मु?' + D + '[जत]' + D + 'ु?ं?' + D + 'का(?![ऀ-ॿ])|म' + D + 'जु' + D + 'का|मुजुका|मजंका|तजुका|महा(?:राष्ट्र)?' + D + 'जुगार' + D + '(?:प्रति?ि?(?:बंधक|बधंक|बंध)?' + D + ')?(?:कायदा|अधिनियम|अधि\\.?)(?:\\s*,?\\s*1887)?|जुगार\\s*कायदा', 'g')],
+    ['मपोका', new RegExp('मु?' + D + 'पो' + D + '(?:का|अ(?:धि)?)(?![ऀ-ॿ])|मुपोका|मपोअ|(?:महा(?:राष्ट्र)?|मुंबई)' + D + 'पोलीस' + D + '(?:कायदा|अधिनी?ि?यम|अधि\\.?)(?:\\s*,?\\s*1951)?', 'g')],
+    ['एनडीपीएस ॲक्ट', new RegExp('एन' + D + 'डी?ि?' + D + 'पी?ि?' + D + 'एस(?:' + D + '(?:ॲक्ट|अॅक्ट|अक्ट|कायदा))?(?:\\s*,?\\s*1985)?|एनडीएनएस\\s*(?:ॲक्ट|अॅक्ट)|\\bNDPS\\b(?:\\s*Act)?', 'gi')],
+    ['आर्म ॲक्ट', new RegExp('आर्म्?स?\\s*(?:ॲक्ट|अॅक्ट|अक्ट)|शस्त्र\\s*(?:अधिनियम|अधि\\.?|कायदा)(?:\\s*,?\\s*1959)?|\\bArms?\\s*Act\\b', 'gi')],
+    ['माहिती तंत्रज्ञान कायदा 2000', new RegExp('मा[हि]ी?ि?ती\\s*तं?त्र\\+?त?्?रं?ज्ञान\\s*(?:अधिनियम|कायदा|अधि\\.?)?(?:\\s*,?\\s*-?\\s*2000)?|मा' + D + 'तंत्र' + D + '(?:अधि|का)|आयटी\\s*(?:ॲक्ट|अॅक्ट)', 'g')],
+    ['जीवनावश्यक वस्तू कायदा 1955', new RegExp('(?:अत्याव[^\\s]{0,4}क|जी?ि?वनावश्यक)\\s*(?:वस्तू?ु?\\s*)?(?:अधिनियम|कायदा|अधि\\.?)(?:\\s*,?\\s*-?\\s*1955)?', 'g')],
+    ['प्राणी छळ प्रतिबंधक कायदा 1960', new RegExp('(?:प्रा(?:णी|ण्यांचा|ण्याचा|णि)?' + D + 'छ(?:ळ)?' + D + 'प्रति?ी?(?:बंधक|बंध)?' + D + '(?:कायदा|अधिनियम|अधि\\.?)?|प्रा' + D + 'निर्दयतेने\\s*वागविण्यास\\s*प्रती?ि?बंध\\s*अधि\\.?)(?:\\s*,?\\s*-?\\s*1960)?', 'g')],
+    ['महाराष्ट्र प्राणी संरक्षण कायदा 1976', new RegExp('महा(?:राष्ट्र)?' + D + '(?:प्राणी|पशु)' + D + '(?:सं?र?ं?क्षण|सर)' + D + '(?:अधिनियम|कायदा|अधि\\.?)?(?:\\s*,?\\s*1976)?', 'g')],
+    ['पोक्सो', new RegExp('पोक्ं?सं?ो(?:\\s*(?:ॲक्ट|कायदा))?(?:\\s*,?\\s*2012)?|बालकांचे\\s*लैं?गी?िक\\s*अपराधा?पासू?ु?न\\s*सं?रं?क्षण\\s*(?:अधिनियम|कायदा)(?:\\s*,?\\s*2012)?', 'g')],
+    ['विद्युत कायदा 2003', new RegExp('भा' + D + 'वी?ि?' + D + '(?:का|अधि)(?![ऀ-ॿ])|भाविका|भावीका|(?:भारतीय\\s*)?वि[द|]?्?\\|?युत\\s*(?:कायदा|अधिनियम)(?:\\s*(?:सुधारणा|सुधारित)?\\s*,?\\s*2003)?', 'g')]
+  ];
+  function hasAct(l) { return ACTS.some(function (a) { a[1].lastIndex = 0; var r = a[1].test(l); a[1].lastIndex = 0; return r; }); }
+  function canonLine(line) {
+    var t = ' ' + line + ' ';
+    // junk: ई-साक्ष / SID numbers, "भाग - 6"
+    t = t.replace(/E\s*-?\s*Saksh[^\d]{0,12}\d{6,}/gi, ' ').replace(/(?:ई\s*-?\s*साक्ष|एसआयडी|SID)\s*(?:क्र\.?|नंबर|नं\.?)?\s*[-:]?\s*\d{6,}/gi, ' ').replace(/ई\s*साक्ष(?:\s*क्र\.?)?/g, ' ').replace(/भाग\s*[-–]?\s*0?\d+\s*(?:बीएनएस|इतर\s*कायदे)?/g, ' ');
+    var notes0 = [];
+    t = t.replace(/कलम\s*वाढ\s*(?:दि\.?\s*-?\s*)?(\d{1,2}\s*[\/.\-]\s*\d{1,2}\s*[\/.\-]\s*\d{2,4})?/g, function (m0, dt) { notes0.push('कलम वाढ' + (dt ? ' दि. ' + dt.replace(/\s+/g, '') : '')); return ' \u0007 '; });
+    t = t.replace(/(?:दि\.?\s*-?\s*)?\d{1,2}\s*[\/.\-]\s*\d{1,2}\s*[\/.\-]\s*\d{2,4}/g, function (m0) { notes0.push(m0.trim()); return ' '; });
+    var acts = [];
+    ACTS.forEach(function (a) { t = t.replace(a[1], function () { acts.push(a[0]); return ' \u0005' + (acts.length - 1) + '\u0006 '; }); });
+    if (!acts.length && !/\d/.test(t)) return null;
+    t = t.replace(/सह\s*क(?:लम)?\s*\.?-?|सहकलम|स्ह\s*कलम/g, ' \u0007 ').replace(/क्?ल?म?ले?\s*कलम|कलम|क्लम|मले/g, ' ');
+    // split into pieces: act markers, "सह", and text
+    var parts = t.split(/(\u0005\d+\u0006|\u0007)/).map(function (x) { return x.trim(); }).filter(function (x) { return x; });
+    var segs = [], cur = { secs: [], act: '' }, notes = notes0;
+    function secTokens(x) {
+      x = x.replace(/\(\s*(?:र्ई|ई्?र?)\s*\)/g, '(ई)').replace(/[(（]\s*ं+/g, '(').replace(/\(\(/g, '(').replace(/\(\s*/g, '(').replace(/\s*\)/g, ')').replace(/(\d)\s+\(/g, '$1(');
+      x = x.replace(/\)\s+\(/g, ')(').replace(/(^|[^\d])(\d{1,3})\s*(अ|ब|क|ड|ई|इ|फ|एफ|ए|बी|सी|डी)(?![ऀ-ॿ(])/g, '$1$2($3)');
+      var SEC = /(?<!\d)\d{1,3}(?!\d)(?:\([^)\s]{1,5}\))*(?:\s*\/\s*\d{1,3}(?!\d)(?:\([^)\s]{1,5}\))*)*/g;
+      var toks = x.match(SEC) || [];
+      var rest = x.replace(SEC, ' ').replace(/[\s,;।\-–.()]+/g, ' ').trim();
+      return { toks: toks.map(function (k) { return k.replace(/\s+/g, ''); }), rest: rest };
+    }
+    parts.forEach(function (p) {
+      var am = p.match(/^\u0005(\d+)\u0006$/);
+      if (am) {
+        var a = acts[+am[1]];
+        if (cur.act && !cur.secs.length) { if (cur.act === 'बीएनएसएस' && a === 'बीएनएस') cur.act = a; return; }
+        if (cur.act) { segs.push(cur); cur = { secs: [], act: '' }; }
+        cur.act = a; return;
+      }
+      if (p === '\u0007') { if (cur.act || cur.secs.length) { segs.push(cur); cur = { secs: [], act: '' }; } return; }
+      var st = secTokens(p);
+      if (st.toks.length && !cur.act) { cur.secs = cur.secs.concat(st.toks); if (st.rest) cur.extra = (cur.extra ? cur.extra + ' ' : '') + st.rest; }
+      else if (st.toks.length && cur.act) { segs.push(cur); cur = { secs: st.toks, act: '' }; if (st.rest) cur.extra = st.rest; }
+      else if (st.rest) { if (cur.act || !cur.secs.length) notes.push(st.rest); else cur.extra = (cur.extra ? cur.extra + ' ' : '') + st.rest; }
+    });
+    if (cur.act || cur.secs.length) segs.push(cur);
+    segs = segs.filter(function (g) { return g.secs.length || g.act; });
+    for (var si = 0; si < segs.length - 1; si++) if (segs[si].act && !segs[si].secs.length && !segs[si + 1].act && segs[si + 1].secs.length) { segs[si + 1].act = segs[si].act; segs.splice(si, 1); si--; }
+    if (!segs.length) return null;
+    if (!acts.length && segs.some(function (g) { return g.extra && g.extra.length > 12; })) return null;
+    // 125(ए)/(बी) -> 125(अ)/(ब)
+    var fix = function (k) { return k.replace(/^125\((?:ए|a|A|अ)\)/, '125(अ)').replace(/^125\((?:बी|बि|b|B|ब)\)/, '125(ब)').replace(/\((?:र्ई|ई)\)/g, '(ई)'); };
+    var out = segs.map(function (g, i) {
+      var sx = g.secs.map(fix).join(', ');
+      // a section group with an unknown act keeps that act's words
+      var act = g.act || (g.extra || '');
+      if (g.act && g.extra) notes.push(g.extra);
+      return (i ? 'सह ' : '') + (sx ? 'कलम ' + sx : '') + (act ? ' ' + act : '');
+    }).join(' ').replace(/\s{2,}/g, ' ').trim();
+    return { text: out, notes: notes.join(' ').replace(/\s{2,}/g, ' ').trim() };
+  }
   function normCrime(u, yyyy) {
     u = digits(u || '').replace(/ /g, ' ');
     var lines = u.split('\n').map(function (l) { return l.trim(); }).filter(function (l) { return l; });
     if (!lines.length) return '';
+    // crime-number line continued on the next lines ("85 मदाका सह" / "कलम 110 मपोका")
+    while (lines.length > 1 && (/(?:सह|कलम|,|सहकलम)\s*$/.test(lines[0]) || /^\D{0,30}\d+\s*\/\s*\d{2,4}\s*$/.test(lines[0]) || /^(?:सह\s*)?कलम(?![ऀ-ॿ])|^सहकलम|^\d{1,3}\s*[,(]/.test(lines[1]) || (!hasAct(lines[0]) && hasAct(lines[1]) && !/उघड|अपघात|चोरी|घरफोडी/.test(lines[1])))) {
+      lines.splice(0, 2, lines[0] + ' ' + lines[1]);
+    }
     var first = lines[0].replace(/^(अप\.?\s*क्र\.?|अपराध\s*क्र\.?)\s*[-:]*\s*/, '').replace(/^[-\s]+/, '');
-    var m = first.match(/^(\d+)\s*\/\s*(\d{2,4})/);
+    var pre = first.match(/^([^\d]{1,30}?)\s*(\d+\s*\/\s*\d{2,4}(?!\d))/);
+    if (pre && /क्र|पोस्टे|मर्ग|अप/.test(pre[1])) first = first.slice(pre[1].length).trim();
+    first = first.replace(/^0+(\d)/, '$1');
+    var m = first.match(/^(\d+(?:\s*[,+]\s*\d+)*)\s*\/\s*(\d{2,4})(?!\d)/);
     if (m) {
       var yy = m[2].length === 2 ? '20' + m[2] : m[2];
-      first = m[1] + '/' + yy + first.slice(m[0].length);
+      first = m[1].replace(/\s*,\s*/g, ',').replace(/\s*\+\s*/g, '+') + '/' + yy + first.slice(m[0].length);
     } else if ((m = first.match(/^(\d+)\b/)) && yyyy) {
       first = m[1] + '/' + yyyy + first.slice(m[0].length);
+    }
+    var nm = first.match(/^\d+(?:[,+]\d+)*\/\d{4}/), cl = null;
+    try { cl = canonLine(nm ? first.slice(nm[0].length) : first); } catch (e) { cl = null; }
+    if (cl) {
+      var rest0 = lines.slice(1).map(normAct).map(function (l) { return l.replace(/\s{2,}/g, ' '); });
+      rest0 = rest0.map(function (l) { return l.replace(/^[\s\-–]+|[\s\-–]+$/g, ''); }).filter(function (l) {
+        // a line that only repeats an act name ("बीएनएस", "दारूबंदी अधिनियम")
+        if (hasAct(l)) { var left = l; ACTS.forEach(function (x) { x[1].lastIndex = 0; left = left.replace(x[1], ' '); x[1].lastIndex = 0; }); if (!left.replace(/[\s\-–.,()]+/g, '')) return false; }
+        return true;
+      }).filter(function (l) { return l && !/^भाग\s*[-–]?\s*0?\d+$/.test(l) && !/^(?:एस\s*आय\s*डी|ई\s*-?\s*साक्ष)[^ऀ-ॿ]*(?:नंबर|क्र\.?)?\s*\d*$/.test(l); });
+      return [(nm ? nm[0] + ' ' : '') + cl.text].concat(cl.notes ? [cl.notes] : []).concat(rest0).join('\n');
     }
     first = normAct(first);
     first = first.replace(/\(\(/g, '(').replace(/\(\s*र्ई\s*\)/g, '(ई)').replace(/(\d)\s+\(/g, '$1(').replace(/\s*,\s*/g, ', ').replace(/(बीएनएस)[-\s]*$/, '$1').replace(/\s{2,}/g, ' ').trim();
@@ -1821,7 +1916,8 @@ var REPORT = (function () {
   function buildDocx(model, opts) {
     opts = opts || {};
     var o = { kruti: !!opts.kruti };
-    var PW = 20160, PH = 12240, M = 600; // Legal landscape
+    var paper = opts.paper === 'legal' ? 'legal' : 'a4';
+    var PW = paper === 'legal' ? 20160 : 16838, PH = paper === 'legal' ? 12240 : 11906, M = 567; // landscape, 1 cm margins
     var usable = PW - 2 * M;
     var body = '';
     (model.titles || []).forEach(function (t, i) { body += paraXml(t, { bold: true, size: i === 0 ? 17 : 13, align: 'center', after: i === (model.titles.length - 1) ? 160 : 40, kruti: o.kruti }); });
@@ -2991,7 +3087,7 @@ function api_generate(payload) {
   var model = payload.kind === 'hbt'
     ? REPORT.hbtModel(payload.records, payload.month, fixes)
     : REPORT.divisionModel(payload.records, payload.heads || getHeads_(), payload.month, fixes, { full: !!payload.full });
-  var files = REPORT.buildDocx(model, { kruti: !!payload.kruti });
+  var files = REPORT.buildDocx(model, { kruti: !!payload.kruti, paper: payload.paper });
   var blobs = Object.keys(files).map(function (path) { return Utilities.newBlob(files[path], 'application/xml', path); });
   var mm = (payload.month || '').replace('/20', '-').replace('/', '-');
   var base = payload.kind === 'hbt' ? ('HBT, THEFT, HURT LIST ND ' + mm) : ('NAGPUR DIVISION B PART ' + mm);
@@ -3575,7 +3671,7 @@ function showFile(box, res) {
 function gen(kindName, kruti) {
   if (!S.month) { var m = prompt('माहे लिहा (उदा. 09/2026)'); if (!m) return; S.month = m.trim(); $('monthIn').value = S.month; $('monthTag').textContent = 'माहे ' + S.month; }
   busy(true, 'Word फाईल बनवत आहे…');
-  call('api_generate', { kind: kindName, kruti: kruti, full: $('dlFull').value === '1', month: S.month, records: plainRecs(), heads: headOrder() }).then(function (res) {
+  call('api_generate', { kind: kindName, kruti: kruti, paper: $('dlPaper').value, full: $('dlFull').value === '1', month: S.month, records: plainRecs(), heads: headOrder() }).then(function (res) {
     busy(false);
     res.mime = res.mime || 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
     showFile($('res-' + kindName), res);
@@ -3635,6 +3731,8 @@ $('ahList').addEventListener('click', function (e) {
 });
 $('ahClose').addEventListener('click', function () { $('ahPrevCard').classList.add('hide'); });
 $('ahPrint').addEventListener('click', function () { window.print(); });
+try { var pp = lsGet('bps_paper'); if (pp) $('dlPaper').value = pp; } catch (e) {}
+$('dlPaper').addEventListener('change', function () { lsSet('bps_paper', this.value); });
 $('psSend').addEventListener('click', function (e) {
   var b = e.target.closest('[data-pssend]'); if (!b) return;
   var k = b.dataset.pssend, list = (S.warnByPs || {})[k] || [], by = {};
