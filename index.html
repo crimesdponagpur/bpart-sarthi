@@ -17,23 +17,25 @@
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root{
-  --bg:#f3f5f9; --surface:#ffffff; --surface2:#f8fafc; --line:#e2e7ef; --text:#142033; --muted:#5b6b82;
-  --brand:#1d3a6e; --brand2:#2c5aa0; --brandSoft:#e6eef9; --ok:#1f7a4d; --okSoft:#e3f4eb; --warn:#a15c00; --warnSoft:#fff2dc;
-  --bad:#b42318; --badSoft:#fde8e6; --chip:#eef2f7; --shadow:0 1px 2px rgba(16,24,40,.06),0 1px 3px rgba(16,24,40,.08);
-  --radius:12px;
+  --bg:#f3f6fb; --surface:#ffffff; --surface2:#f7f9fc; --line:#e2e8f1; --text:#0f1b2d; --muted:#5b6a80;
+  --brand:#0f2a5c; --brand2:#1f57c3; --brandSoft:#e9f0fd; --accent:#e8791d; --accentSoft:#fff1e4;
+  --ok:#147a4a; --okSoft:#e1f5ea; --warn:#9a5600; --warnSoft:#fff3dd; --bad:#c0352b; --badSoft:#fdecea; --chip:#eef2f8;
+  --shadow:0 1px 2px rgba(15,27,45,.05),0 2px 6px rgba(15,27,45,.05); --shadow2:0 10px 30px -12px rgba(15,27,45,.25);
+  --radius:14px; --topbg:linear-gradient(115deg,#0a1d42 0%,#123476 60%,#1a4597 100%); --navw:236px;
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --grid:#e8edf4;
 }
 @media (prefers-color-scheme: dark){
-  :root:not([data-theme="light"]){ --bg:#0e1420; --surface:#161e2d; --surface2:#1b2536; --line:#27324a; --text:#e6ebf3; --muted:#9aa8bd;
-    --brand:#8fb3ff; --brand2:#a9c4ff; --brandSoft:#1e2b45; --ok:#5ed39a; --okSoft:#15342a; --warn:#f5b75a; --warnSoft:#3a2c14;
-    --bad:#ff8a80; --badSoft:#3d1d1b; --chip:#212c40; --shadow:none; }
-  :root:not([data-theme="light"]) .top{background:#111a2b;border-bottom:1px solid var(--line)}
-  :root:not([data-theme="light"]) .btn.pri{background:#2c5aa0;border-color:#2c5aa0}
+  :root:not([data-theme="light"]){ --bg:#0a111e; --surface:#111a2a; --surface2:#162033; --line:#233049; --text:#e8edf6; --muted:#97a5ba;
+    --brand:#a8c3ff; --brand2:#4b83ef; --brandSoft:#18284a; --accent:#f39a4c; --accentSoft:#3a2512;
+    --ok:#4dcb8b; --okSoft:#123323; --warn:#f2b35a; --warnSoft:#38290f; --bad:#ff8a7e; --badSoft:#3b1a18; --chip:#1d2840;
+    --shadow:0 1px 2px rgba(0,0,0,.3); --shadow2:0 12px 32px -12px rgba(0,0,0,.6); --topbg:linear-gradient(115deg,#070f22 0%,#0d2150 60%,#13306b 100%);
+    --s1:#3987e5; --s2:#d95926; --s3:#199e70; --grid:#1f2a40; color-scheme:dark; }
 }
-:root[data-theme="dark"]{ --bg:#0e1420; --surface:#161e2d; --surface2:#1b2536; --line:#27324a; --text:#e6ebf3; --muted:#9aa8bd;
-  --brand:#8fb3ff; --brand2:#a9c4ff; --brandSoft:#1e2b45; --ok:#5ed39a; --okSoft:#15342a; --warn:#f5b75a; --warnSoft:#3a2c14;
-  --bad:#ff8a80; --badSoft:#3d1d1b; --chip:#212c40; --shadow:none; color-scheme:dark; }
-:root[data-theme="dark"] .top{background:#111a2b;border-bottom:1px solid var(--line)}
-:root[data-theme="dark"] .btn.pri{background:#2c5aa0;border-color:#2c5aa0}
+:root[data-theme="dark"]{ --bg:#0a111e; --surface:#111a2a; --surface2:#162033; --line:#233049; --text:#e8edf6; --muted:#97a5ba;
+  --brand:#a8c3ff; --brand2:#4b83ef; --brandSoft:#18284a; --accent:#f39a4c; --accentSoft:#3a2512;
+  --ok:#4dcb8b; --okSoft:#123323; --warn:#f2b35a; --warnSoft:#38290f; --bad:#ff8a7e; --badSoft:#3b1a18; --chip:#1d2840;
+  --shadow:0 1px 2px rgba(0,0,0,.3); --shadow2:0 12px 32px -12px rgba(0,0,0,.6); --topbg:linear-gradient(115deg,#070f22 0%,#0d2150 60%,#13306b 100%);
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --grid:#1f2a40; color-scheme:dark; }
 :root[data-theme="light"]{color-scheme:light}
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--bg);color:var(--text);font-family:"Noto Sans Devanagari",system-ui,-apple-system,"Segoe UI",sans-serif;font-size:15px;line-height:1.5}
@@ -182,8 +184,6 @@ table.rt tfoot td{font-weight:600;background:var(--surface2)}
 @media (max-width:600px){.steps{padding:8px 10px}.steps button{gap:6px;padding:2px 2px}.steps small{display:none}}
 /* ----- home ----- */
 .hero{background:linear-gradient(135deg,var(--brand) 0,var(--brand2) 100%);color:#fff;border-radius:16px;padding:18px 18px 16px;margin-bottom:14px}
-:root[data-theme="dark"] .hero{background:linear-gradient(135deg,#1d3a6e,#2c5aa0)}
-@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .hero{background:linear-gradient(135deg,#1d3a6e,#2c5aa0)}}
 .hero h2{margin:0 0 2px;font-size:19px;color:#fff}.hero p{margin:0 0 12px;opacity:.88;font-size:13.5px}
 .hero .btn{background:#fff;color:#14294d;border-color:#fff;font-weight:700}
 .tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:14px}
@@ -220,6 +220,112 @@ table.rt tfoot td{font-weight:600;background:var(--surface2)}
 .bcard{border:1px solid var(--warn);background:var(--warnSoft);border-radius:12px;padding:10px 14px;margin-bottom:12px;color:var(--text)}
 .bcard b{color:var(--warn)}
 @media print{body{zoom:1!important}.steps{display:none!important}}
+
+/* ================= design v2 ================= */
+body{font-feature-settings:"tnum" 1;-webkit-font-smoothing:antialiased}
+.top{background:var(--topbg);box-shadow:0 2px 12px rgba(5,15,40,.25);min-height:58px;border-bottom:0}
+.top h1{font-size:17.5px;font-weight:700;letter-spacing:.1px}
+.top .month{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.18);backdrop-filter:blur(6px);font-weight:500}
+.top select{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);border-radius:9px;padding:5px 8px}
+.card{border-radius:var(--radius);padding:18px;transition:box-shadow .2s}
+.card h2{font-size:16.5px;font-weight:700;letter-spacing:.1px;display:flex;align-items:center;gap:8px}
+.btn{border-radius:10px;transition:background .15s,box-shadow .15s,transform .05s}
+.btn:active{transform:translateY(1px)}
+.btn.pri{background:linear-gradient(180deg,#2a66d6,#1f57c3);border-color:#1b4fb3;box-shadow:0 1px 0 rgba(255,255,255,.2) inset,0 2px 6px -2px rgba(31,87,195,.6)}
+.btn:focus-visible,button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--brand2);outline-offset:2px}
+input[type=text],select,textarea{border-radius:10px;transition:border-color .15s,box-shadow .15s}
+input[type=text]:focus,select:focus,textarea:focus{border-color:var(--brand2);box-shadow:0 0 0 3px var(--brandSoft);outline:none}
+/* nav with icons */
+nav.tabs button{display:inline-flex;align-items:center;gap:8px;font-weight:600;font-size:14px;transition:background .15s,color .15s}
+nav.tabs button svg{width:18px;height:18px;flex:none;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;opacity:.9}
+nav.tabs button:hover{background:var(--surface2);color:var(--text)}
+nav.tabs button.on{background:var(--brandSoft);color:var(--brand2)}
+:root[data-theme="dark"] nav.tabs button.on{color:var(--brand)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) nav.tabs button.on{color:var(--brand)}}
+nav.tabs .navh{display:none}
+@media (min-width:1024px){
+  nav.tabs{position:fixed;left:0;top:58px;bottom:0;width:var(--navw);flex-direction:column;gap:2px;padding:14px 12px;border-bottom:0;border-right:1px solid var(--line);overflow-y:auto;z-index:15}
+  nav.tabs button{width:100%;padding:9px 12px;border-radius:10px}
+  nav.tabs button.on{box-shadow:inset 3px 0 0 var(--brand2)}
+  nav.tabs button .n{margin-left:auto}
+  nav.tabs .navh{display:block;font-size:11.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;padding:14px 12px 4px}
+  nav.tabs .navh:first-child{padding-top:2px}
+  .steps,main{margin-left:var(--navw)}
+  .steps{padding:12px 28px}
+  main{padding:22px 28px;max-width:calc(1180px + var(--navw))}
+}
+/* stepper */
+.steps{background:var(--surface);box-shadow:var(--shadow)}
+/* hero */
+.hero{background:var(--topbg);border-radius:18px;padding:22px 22px 20px;position:relative;overflow:hidden;box-shadow:var(--shadow2)}
+.hero:after{content:"";position:absolute;right:-60px;top:-60px;width:240px;height:240px;border-radius:50%;background:radial-gradient(circle,rgba(243,154,76,.35),rgba(243,154,76,0) 70%)}
+.hero h2{font-size:21px;font-weight:700}
+.hero .btn{position:relative;z-index:1;box-shadow:0 4px 14px -4px rgba(0,0,0,.4)}
+/* tiles / stats */
+.tile,.stat{border-radius:14px;box-shadow:var(--shadow);transition:transform .15s,box-shadow .15s;position:relative;overflow:hidden}
+.tile:hover{transform:translateY(-2px);box-shadow:var(--shadow2)}
+.tile b,.stat b{font-weight:700;letter-spacing:-.3px}
+.tile:before,.stat:before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--brand2);opacity:.85}
+.tile.bad:before,.stat.bad:before{background:var(--bad)} .tile.warn:before,.stat.warn:before{background:var(--warn)} .tile.ok:before,.stat.ok:before{background:var(--ok)}
+/* groups & items */
+.group{border-radius:14px;box-shadow:var(--shadow)}
+.group>header{background:var(--surface);border-left:4px solid var(--brand2)}
+.group.unc>header{border-left-color:var(--bad)}
+.group>header h3{font-weight:700}
+.item{transition:background .15s}
+.item:hover{background:var(--surface2)}
+.badge{border-radius:7px;font-weight:500}
+.chipbtn{font-weight:500;transition:background .15s}
+.chipbtn:hover{background:var(--surface2)}
+.chipbtn.on:hover{background:var(--brand2)}
+.qcard{border-radius:14px;box-shadow:var(--shadow)}
+.psc{border-radius:14px}
+.toast{border-radius:12px;box-shadow:var(--shadow2);font-weight:500}
+.overlay{backdrop-filter:blur(3px)}
+.overlay .box{border-radius:16px;box-shadow:var(--shadow2)}
+.pv h3{background:var(--surface);border-left:4px solid var(--brand2);box-shadow:var(--shadow)}
+/* ================= dashboard ================= */
+.dgrid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:14px;align-items:start}
+.dgrid>.card{margin:0;min-width:0}
+.c12{grid-column:span 12}.c8{grid-column:span 8}.c7{grid-column:span 7}.c6{grid-column:span 6}.c5{grid-column:span 5}.c4{grid-column:span 4}
+@media (max-width:900px){.c8,.c7,.c6,.c5,.c4{grid-column:span 12}}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:14px}
+@media (max-width:800px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px;box-shadow:var(--shadow)}
+.kpi .lb{font-size:13px;color:var(--muted);font-weight:500}
+.kpi .v{font-size:30px;font-weight:700;letter-spacing:-.5px;line-height:1.15;margin-top:2px}
+.kpi .d{font-size:12.5px;margin-top:4px;color:var(--muted)}
+.kpi .d .up{color:var(--bad);font-weight:600}.kpi .d .dn{color:var(--ok);font-weight:600}
+.dsub{font-size:12.5px;color:var(--muted);margin:-6px 0 10px}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--muted);margin-bottom:8px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.hbars{display:grid;gap:7px}
+.hbar{display:grid;grid-template-columns:minmax(120px,38%) 1fr 44px;gap:10px;align-items:center;font-size:13px;cursor:default}
+.hbar .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hbar .tr{height:14px;position:relative}
+.hbar .fl{position:absolute;left:0;top:0;bottom:0;border-radius:0 4px 4px 0;background:var(--s1);min-width:2px}
+.hbar .pm{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--text);opacity:.55;border-radius:1px}
+.hbar .vl{text-align:right;font-weight:600}
+.hbar:hover .fl{filter:brightness(1.1)}
+.stk{display:flex;height:14px;gap:2px}
+.stk>span{display:block;height:100%}
+.stk>span:last-child{border-radius:0 4px 4px 0}
+.vtip{position:fixed;pointer-events:none;background:var(--surface);color:var(--text);border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:12.5px;box-shadow:var(--shadow2);z-index:120;display:none;max-width:260px}
+.vtip b{display:block;margin-bottom:2px}
+.ins{display:grid;gap:8px}
+.ins div{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:10px;background:var(--surface2);border:1px solid var(--line);font-size:13.5px}
+.ins i{font-style:normal;flex:none;width:24px;height:24px;border-radius:7px;display:grid;place-items:center;font-size:13px;background:var(--brandSoft);color:var(--brand2)}
+.ins i.up{background:var(--badSoft);color:var(--bad)}.ins i.dn{background:var(--okSoft);color:var(--ok)}
+.trend svg{width:100%;height:auto;display:block;overflow:visible}
+.trend text{fill:var(--muted);font-size:11px;font-family:inherit}
+.cats{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.cat{border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--surface2)}
+.cat b{font-size:22px;display:block}.cat span{font-size:12.5px;color:var(--muted)}
+.cat .d{font-size:12px;margin-top:2px}
+.tblv{width:100%;border-collapse:collapse;font-size:13px}
+.tblv th,.tblv td{border-bottom:1px solid var(--line);padding:6px 8px;text-align:right}
+.tblv th:first-child,.tblv td:first-child{text-align:left}
+.tblv th{color:var(--muted);font-weight:600;font-size:12px}
 </style>
 </head>
 <body>
@@ -254,6 +360,7 @@ table.rt tfoot td{font-weight:600;background:var(--surface2)}
 </div>
 <nav class="tabs" id="tabs">
   <button data-v="home" class="on">मुख्य</button>
+  <button data-v="dash">डॅशबोर्ड</button>
   <button data-v="files">फाईल्स</button>
   <button data-v="queue">तपासणी रांग <span class="n hide" id="qN"></span></button>
   <button data-v="review">वर्गीकरण <span class="n hide" id="uncN"></span></button>
@@ -284,6 +391,22 @@ table.rt tfoot td{font-weight:600;background:var(--surface2)}
         <div><div class="small muted" style="margin-bottom:4px">अक्षरांचा आकार</div><div class="seg" id="segFs"><button data-fs="1">अ</button><button data-fs="1.15" style="font-size:1.1em">अ</button><button data-fs="1.3" style="font-size:1.25em">अ</button></div></div>
         <div><div class="small muted" style="margin-bottom:4px">रंगसंगती</div><div class="seg" id="segTh"><button data-th="auto">आपोआप</button><button data-th="light">उजळ</button><button data-th="dark">गडद</button></div></div>
       </div>
+    </div>
+  </section>
+
+  <!-- DASHBOARD -->
+  <section id="v-dash" class="hide">
+    <div class="row" style="margin-bottom:14px;align-items:flex-end">
+      <div style="flex:1;min-width:200px"><h2 style="margin:0;font-size:22px;font-weight:700">डॅशबोर्ड</h2><div class="small muted" id="dSub">—</div></div>
+      <label class="small muted">महिना<br><select id="dMonth"></select></label>
+      <label class="small muted">तुलना<br><select id="dCmp"><option value="prev">मागील महिना</option><option value="yoy">मागील वर्षी हाच महिना</option><option value="avg">मागील 6 महिन्यांची सरासरी</option></select></label>
+      <label class="small muted">PS<br><select id="dPs"><option value="">सर्व PS</option><option value="bela">बेला</option><option value="bori">बोरी</option><option value="midc">एमआयडीसी</option></select></label>
+    </div>
+    <div id="dBody"></div>
+    <div class="card" style="margin-top:14px">
+      <h2>इतिहास जोडा</h2>
+      <p class="muted small" style="margin-top:0">जुने <b>विभाग B Part</b> (head-wise, .docx – कितीही महिने एकदम) निवडा. app प्रत्येक महिन्याचे head-wise आकडे काढून ठेवेल – मग डॅशबोर्डवर वर्षभराचा कल व तुलना दिसेल. फक्त आकडे साठवले जातात, नावे/हकिगत नाही.</p>
+      <div class="row"><label class="btn pri" style="cursor:pointer">विभाग B Part निवडा<input type="file" id="histIn" accept=".docx" multiple hidden></label><span class="small muted" id="histInfo"></span></div>
     </div>
   </section>
 
@@ -443,6 +566,8 @@ table.rt tfoot td{font-weight:600;background:var(--surface2)}
       <h2>त्रुटी / माहिती राहिलेली यादी <span class="count" id="warnCount">0</span></h2>
       <div id="warnList" class="list"></div>
       <div class="row" style="margin-top:10px"><button class="btn sm" id="copyWarn">यादी कॉपी</button></div>
+      <div class="small muted" style="margin-top:12px">PS ला दुरुस्तीसाठी पाठवा (WhatsApp / शेअर):</div>
+      <div class="row" style="margin-top:6px" id="psSend"></div>
     </div>
   </section>
 
@@ -609,7 +734,7 @@ window.BPS_PWA = true;
 
   /* ---------------- google.script.run stand-in ---------------- */
   async function prepare(fn, args) {
-    if (fn !== 'api_process') return;
+    if (fn !== 'api_process' && fn !== 'api_histImport') return;
     for (var i = 0; i < args[0].length; i++) {
       var f = args[0][i];
       if (!f.b64) continue;
@@ -2516,6 +2641,12 @@ var CHECKS = (function () {
     return h;
   }
 
+  var RISKY = [
+    [/घरफोडी/, /घरफोडी|^चोरी$/], [/^चोरी$/, /घरफोडी|जबरी/], [/विश्वासघात/, /फसवणूक/], [/फसवणूक/, /विश्वासघात/],
+    [/जबरी/, /दरोडा/], [/दरोडा/, /जबरी/], [/आर्म/, /दुखापत|खुनाचा|खून/], [/खुनाचा/, /^खून/], [/^खून/, /खुनाचा/], [/दुखापत/, /खुनाचा/],
+    [/जिवनावश्यक|पर्यावरण|खाणी|सार्वजनिक मालमत्ता/, /फसवणूक|चोरी/], [/बेकायदेशीर सभा/, /दंगल/], [/दंगल/, /बेकायदेशीर सभा/],
+    [/आत्महत्येस/, /हुंडाबळी/], [/सदोष/, /^खून/]
+  ];
   function kindOf(h) { return /घरफोडी/.test(h || '') ? 'H' : /चोरी/.test(h || '') ? 'T' : /दुखापत/.test(h || '') ? 'U' : ''; }
 
   var FIX = {
@@ -2543,10 +2674,9 @@ var CHECKS = (function () {
     if (h && r.rule && !r.manual && !/^learned/.test(r.rule) && !/^table-/.test(r.rule)) {
       try {
         var c = ENG.candidates({ table: r.table, crimeText: r.crime, extraText: [r.stolen, r.details, r.party].join(' ') });
-        var fam = {}; c.forEach(function (x) { fam[family(x)] = 1; });
-        if (Object.keys(fam).length > 1) {
-          out.push({ lv: 'hi', k: 'amb', t: 'एकापेक्षा जास्त head बसतात – "' + h + '" बरोबर आहे का?', alt: c.filter(function (x) { return x !== h; }) });
-        }
+        // only pairs that really get mixed up in past division B Parts (2024-26); the rest are settled by rule order
+        var alt = c.filter(function (x) { return x !== h && RISKY.some(function (p) { return p[0].test(h) && p[1].test(x); }); });
+        if (alt.length) out.push({ lv: 'hi', k: 'amb', t: 'एकापेक्षा जास्त head बसतात – "' + h + '" बरोबर आहे का?', alt: alt });
       } catch (e) {}
     }
     if (r.table !== 'M') {
@@ -2569,6 +2699,25 @@ var CHECKS = (function () {
     if (fd && od && od.k > fd.k) out.push({ lv: 'mid', k: 'order', t: 'घटनेची तारीख दाखल तारखेनंतरची आहे' });
     // duplicate
     if (ctx.dups && ctx.dups[r.id]) out.push({ lv: 'hi', k: 'dup', t: ctx.dups[r.id] });
+    // already reported in an earlier month (same PS, same year, same crime no.)
+    if (ctx.prev && r.no && fd) { var pk = r.ps + '|' + (r.table === 'M' ? 'M' : '') + fd.y + '|' + (+r.no), pm = ctx.prev[pk]; if (pm) out.push({ lv: 'hi', k: 'prevm', t: 'हा गुन्हा क्र. ' + (+r.no) + ' माहे ' + pm + ' च्या B Part मध्ये आधीच आला होता – दुबार?' }); }
+    if (r.table !== 'M' && r.crime) {
+      try {
+        var nt = ENG.norm(r.crime), ac = ENG.acts(nt), sec = ENG.parseSections(r.crime);
+        // भादवि after 1 July 2024
+        if (ac.IPC && !ac.BNS && fd && fd.k >= 20240701 && (!od || od.k >= 20240701)) out.push({ lv: 'mid', k: 'ipc', t: 'भादवि (IPC) लिहिले आहे – 1 जुलै 2024 नंतरच्या घटनेस बीएनएस कलम हवे' });
+        // BNS has sections 1–358 only
+        if (ac.BNS && !Object.keys(ac).some(function (k) { return k !== 'BNS' && k !== 'IPC'; })) {
+          var big = sec.order.filter(function (n) { return +n > 358; });
+          if (big.length) out.push({ lv: 'mid', k: 'bnsno', t: 'कलम ' + big.join(', ') + ' बीएनएसमध्ये नाही (बीएनएस 1–358) – भादवि कलम तर लिहिले नाही?' });
+        }
+        if (sec.order.length && !Object.keys(ac).length && !Object.keys(ENG.acts(ENG.norm([r.crime, r.details].join(' ')))).length) out.push({ lv: 'mid', k: 'noact', t: 'कलमासोबत कायद्याचे नाव (बीएनएस / मोवाका / ...) लिहिलेले नाही' });
+      } catch (e) {}
+      // arrest before the incident
+      var ad = pdate(u.arrest);
+      if (ad && od && ad.k < od.k) out.push({ lv: 'mid', k: 'arrord', t: 'अटकेची तारीख घटनेच्या तारखेपूर्वीची आहे' });
+      if (fd && ctx.today && fd.k > ctx.today) out.push({ lv: 'mid', k: 'future', t: 'दाखल तारीख भविष्यातील आहे' });
+    }
     return out;
   }
 
@@ -2880,6 +3029,51 @@ function test_converter() {
   Logger.log(KD.convert('?kVukLFkG'));          // घटनास्थळ
 }
 
+/* ---------------- API: इतिहास – जुने विभाग B Part (head-wise) वाचून महिन्याचा सारांश ---------------- */
+// files: [{name,b64}] -> [{key, month, rows:[{ps, head, det}]}]
+function api_histImport(files) {
+  var PSN = { 'बेला': 'bela', 'बोरी': 'bori', 'बुटीबोरी': 'bori', 'एमआयडीसी': 'midc' };
+  var U = function (x) { return KD.convert(ENG.norm(x || '')).replace(/\s+/g, ' ').trim(); };
+  return files.map(function (f) {
+    var blob = Utilities.newBlob(Utilities.base64Decode(f.b64), 'application/zip', f.name);
+    var parts = Utilities.unzip(blob);
+    var docPart = parts.filter(function (b) { return b.getName() === 'word/document.xml'; })[0];
+    if (!docPart) throw new Error(f.name + ': Word document सापडला नाही.');
+    var stylesPart = parts.filter(function (b) { return b.getName() === 'word/styles.xml'; })[0];
+    var parsed = CORE.parseDocumentXml(docPart.getDataAsString('UTF-8'), CORE.defaultIsLegacy(stylesPart ? stylesPart.getDataAsString('UTF-8') : ''));
+    var mo = CORE.detectMonth(parsed.paras.map(U));
+    if (!mo) { var fm = f.name.match(/(\d{1,2})\s*[-_ .]\s*(20\d\d|\d\d)(?!\d)/); if (fm) mo = { mm: ('0' + fm[1]).slice(-2), yyyy: fm[2].length === 2 ? '20' + fm[2] : fm[2] }; }
+    if (!mo) throw new Error(f.name + ': माहे ओळखता आला नाही (फाईलच्या नावात 08-2025 असे लिहा).');
+    var rows = [];
+    parsed.tables.forEach(function (t) {
+      if (t.rows.length < 2) return;
+      var hdr = t.rows[0].map(U), hj = hdr.join('|');
+      var ci = -1; hdr.forEach(function (h, i) { if (ci < 0 && /अप.*क्र|मर्ग.*क्र|कलम/.test(h)) ci = i; });
+      if (ci < 0) return;
+      var pick = function (re) { for (var i = 0; i < hdr.length; i++) if (re.test(hdr[i])) return i; return -1; };
+      var psi = pick(/पोस्टे|पो.स्टे/), di = pick(/हकि?ी?कत|हकीगत|विवरण|कारण/), pi = pick(/फिर्यादी/), si = pick(/चोरीस/), ai = pick(/अटक/);
+      var marg = /मर्ग/.test(hj);
+      t.rows.slice(1).forEach(function (row) {
+        var crime = row[ci] || ''; if (!/\d/.test(crime)) return;
+        var res = ENG.classify({ table: marg ? 'M' : 'A', crimeText: crime, extraText: [row[si] || '', row[di] || '', row[pi] || ''].join(' ') }, null, getRules_());
+        var cu = U(crime), au = ai >= 0 ? U(row[ai]) : '';
+        var nm = cu.match(/(\d+)\s*\/\s*(\d{2,4})/); rows.push({ no: nm ? +nm[1] : 0, y: nm ? (nm[2].length === 2 ? 2000 + +nm[2] : +nm[2]) : 0, marg: marg, ps: PSN[U(row[psi]).replace(/\s|उघड/g, '')] || '', head: res.head || 'अवर्गीकृत', det: detOf(cu, au, pi >= 0 ? U(row[pi]) : '') });
+      });
+    });
+    return { key: mo.yyyy + '-' + mo.mm, month: mo.mm + '/' + mo.yyyy, rows: rows, name: f.name };
+  });
+}
+// उघड / अउघड from crime text and arrest column
+function detOf(cu, au, pu) {
+  if (/अ\s*-?\s*उघड|अनडिटेक्ट/.test(cu)) return 0;
+  if (/उघड|डिटेक्ट/.test(cu)) return 1;
+  au = au || '';
+  if (/अटक/.test(au) && /\d/.test(au) && !/नाही|बाकी|नसून/.test(au)) return 1;
+  if (/सु?ू?च?ा?नापत्र|नोटीस|35\s*\(?3/.test(au) && !/बाकी/.test(au)) return 1;
+  if (pu) { try { var k = TEXT.accusedKnown(pu); if (k === true) return 1; if (k === false) return 0; } catch (e) {} }
+  return -1;
+}
+
 </script>
 <script>
 var S = { heads: [], rules: [], fixes: [], files: [], records: [], month: '', filter: 'all', ps: '', q: '', collapsed: {}, open: {}, ruleOpen: {}, pvDone: false, cur: 'home', qIds: [], qTotal: 0, gen: false, batch: { gaps: [], dups: {}, dupList: [] }, batchOk: false, log: [], edOpen: {}, lastMerge: null };
@@ -2919,12 +3113,12 @@ function copyText(t) {
 function warnsOf(r) { try { return TEXT.validate(r); } catch (e) { return []; } }
 
 /* ---------- tabs ---------- */
-var VIEWS = ['home', 'files', 'queue', 'review', 'hbt', 'preview', 'download', 'archive', 'reports', 'typing', 'rules'];
+var VIEWS = ['home', 'dash', 'files', 'queue', 'review', 'hbt', 'preview', 'download', 'archive', 'reports', 'typing', 'rules'];
 function show(v) {
   S.cur = v;
   VIEWS.forEach(function (x) { $('v-' + x).classList.toggle('hide', x !== v); });
   Array.prototype.forEach.call(document.querySelectorAll('#tabs button'), function (b) { b.classList.toggle('on', b.dataset.v === v); });
-  if (v === 'home') renderHome(); if (v === 'files') { renderPsStatus(); updateMergeBox(); renderLog(); } if (v === 'queue') { buildQueue(); renderQueue(); }
+  if (v === 'home') renderHome(); if (v === 'dash') renderDash(); if (v === 'files') { renderPsStatus(); updateMergeBox(); renderLog(); } if (v === 'queue') { buildQueue(); renderQueue(); }
   if (v === 'archive') renderArchive(); if (v === 'review') renderReview(); if (v === 'hbt') renderHbt(); if (v === 'preview') renderPreview(); if (v === 'download') renderDownload(); if (v === 'reports') renderReports(); if (v === 'rules') renderRules();
   renderSteps();
   window.scrollTo(0, 0);
@@ -2934,10 +3128,23 @@ $('steps').addEventListener('click', function (e) { var b = e.target.closest('bu
 function refreshView() { if (S.cur === 'queue') renderQueue(); else renderReview(); renderSteps(); }
 
 /* ---------- checks, queue state, stepper ---------- */
-function issuesOf(r) { try { return CHECKS.issues(r, { month: S.month, dups: S.batch.dups }); } catch (e) { return []; } }
+var TODAY = (function () { var d = new Date(); return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate(); })();
+function issuesOf(r) { try { return CHECKS.issues(r, { month: S.month, dups: S.batch.dups, prev: S.prevNos, today: TODAY }); } catch (e) { return []; } }
+// crime numbers already sent in earlier months (from saved months and history) – for the "दुबार" check
+var _prevFor = null;
+function ensurePrev() {
+  var key = monthKey(S.month); if (!key || _prevFor === key) return; _prevFor = key;
+  var idx = {}, add = function (mk, nos) { if (!nos || mk >= key) return; Object.keys(nos).forEach(function (k) { (nos[k] || []).forEach(function (n) { idx[k + n] = keyLabel(mk); }); }); };
+  var hist = lsJSON('bps_hist', {}); Object.keys(hist).forEach(function (k) { add(k, hist[k].sum && hist[k].sum.nos); });
+  ARC.all().catch(function () { return []; }).then(function (list) {
+    (list || []).forEach(function (m) { add(m.key, m.records ? monthSum(m.records).nos : m.sum && m.sum.nos); });
+    S.prevNos = idx; if (S.records.length) { renderSteps(); if (S.cur === 'queue' || S.cur === 'review') refreshView(); }
+  });
+}
 function needsLook(r) { return !r.ok && issuesOf(r).some(function (i) { return i.lv === 'hi' || i.lv === 'mid'; }); }
 function pendingCount() { return S.records.filter(needsLook).length; }
 function renderSteps() {
+  ensurePrev();
   var n = S.records.length, pend = n ? pendingCount() : 0, unc = S.records.filter(function (r) { return !r.head; }).length;
   var d1 = n > 0, d2 = n > 0 && pend === 0 && unc === 0, d3 = !!S.gen;
   var cur = !d1 ? 1 : !d2 ? 2 : !d3 ? 3 : 0;
@@ -3373,8 +3580,14 @@ function renderReports() {
   }).join('');
   Array.prototype.forEach.call(document.querySelectorAll('[data-ahv],[data-ahd]'), function (b) { b.disabled = !S.records.length; });
   if (!S.records.length) { $('warnList').innerHTML = '<div class="muted small">आधी फाईल्स प्रक्रिया करा.</div>'; $('warnCount').textContent = 0; return; }
-  var wl = [];
-  S.records.forEach(function (r) { warnsOf(r).forEach(function (w) { if (w !== 'head ठरलेला नाही' || !r.head) wl.push({ ps: PSU[r.ps], no: r.no, head: r.head || UNC, w: w }); }); });
+  var wl = [], seen = {};
+  S.records.forEach(function (r) {
+    warnsOf(r).forEach(function (w) { if (w !== 'head ठरलेला नाही' || !r.head) { seen[r.id + w] = 1; wl.push({ ps: PSU[r.ps], pk: r.ps, no: r.no, head: r.head || UNC, w: w }); } });
+    issuesOf(r).forEach(function (i) { if (/^(prevm|ipc|bnsno|noact|arrord|future|month|order|arrdate|dup)$/.test(i.k) && !seen[r.id + i.t]) { seen[r.id + i.t] = 1; wl.push({ ps: PSU[r.ps], pk: r.ps, no: r.no, head: r.head || UNC, w: i.t }); } });
+  });
+  var byPs = {}; wl.forEach(function (x) { (byPs[x.pk] = byPs[x.pk] || []).push(x); });
+  $('psSend').innerHTML = Object.keys(PSU).filter(function (k) { return byPs[k]; }).map(function (k) { return '<button class="btn sm" data-pssend="' + k + '">' + PSU[k] + ' (' + byPs[k].length + ')</button>'; }).join('') || '<span class="small muted">पाठवण्यासारखे काही नाही ✓</span>';
+  S.warnByPs = byPs;
   S.warnRows = wl;
   $('warnCount').textContent = wl.length;
   $('warnList').innerHTML = wl.map(function (x) { return '<div class="li"><span class="badge ps">' + x.ps + '</span><div class="tx"><b>' + esc(x.no) + '</b> <span class="small muted">' + esc(x.head) + '</span><div class="small" style="color:var(--warn)">⚠ ' + esc(x.w) + '</div></div></div>'; }).join('') || '<div class="muted small">कोणतीही त्रुटी नाही ✓</div>';
@@ -3407,6 +3620,15 @@ $('ahList').addEventListener('click', function (e) {
 });
 $('ahClose').addEventListener('click', function () { $('ahPrevCard').classList.add('hide'); });
 $('ahPrint').addEventListener('click', function () { window.print(); });
+$('psSend').addEventListener('click', function (e) {
+  var b = e.target.closest('[data-pssend]'); if (!b) return;
+  var k = b.dataset.pssend, list = (S.warnByPs || {})[k] || [], by = {};
+  list.forEach(function (x) { (by[x.no] = by[x.no] || []).push(x.w); });
+  var txt = 'पोलीस स्टेशन ' + PSU[k] + ' – B Part माहे ' + (S.month || '') + '\nखालील नोंदींची दुरुस्ती करून सुधारित B Part पाठवावा:\n\n' +
+    Object.keys(by).map(function (no, i) { return (i + 1) + ') अप.क्र. ' + no + ' – ' + by[no].join('; '); }).join('\n') + '\n\n– उपविभागीय पोलीस अधिकारी कार्यालय, नागपूर विभाग';
+  if (navigator.share) navigator.share({ text: txt }).catch(function () {});
+  else { copyText(txt); window.open('https://wa.me/?text=' + encodeURIComponent(txt), '_blank'); toast('संदेश कॉपी झाला'); }
+});
 $('copyWarn').addEventListener('click', function () { copyText((S.warnRows || []).map(function (x) { return [x.ps, x.no, x.head, x.w].join('\t'); }).join('\n')); toast('कॉपी झाले'); });
 
 /* ---------- typing tool ---------- */
@@ -3749,7 +3971,7 @@ function monthKey(m) { var x = String(m || '').match(/(\d{1,2})\s*[\/\-]\s*(\d{4
 function fmtDT(t) { var d = new Date(t); return d.toLocaleDateString('en-GB') + ' ' + d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }); }
 function psCounts(recs) { var c = {}; recs.forEach(function (r) { c[r.ps] = (c[r.ps] || 0) + 1; }); return c; }
 function psLine(c) { return Object.keys(PSU).filter(function (k) { return c[k]; }).map(function (k) { return PSU[k] + ' ' + c[k]; }).join(' · '); }
-function metaOf(m) { return { key: m.key, month: m.month, savedAt: m.savedAt, n: m.n, counts: m.counts, gen: m.gen, ok: m.ok }; }
+function metaOf(m) { return { key: m.key, month: m.month, savedAt: m.savedAt, n: m.n, counts: m.counts, gen: m.gen, ok: m.ok, sum: m.sum || (m.records ? monthSum(m.records) : null) }; }
 var ARCS = [], ARC_OK = true;
 
 // Drive वर पाठवा; यशस्वी झाले तर जुने (सर्वात नवीन सोडून) महिने फक्त Drive मध्ये ठेवा
@@ -3760,7 +3982,7 @@ function rotateOld() {
   return ARC.all().then(function (list) {
     var newest = list.reduce(function (a, m) { return m.key > a ? m.key : a; }, ''), jobs = [];
     list.forEach(function (m) {
-      if (m.key < newest && m.drive && m.records) { var c = metaOf(m); c.drive = true; c.cold = true; c.records = null; jobs.push(ARC.put(c)); }
+      if (m.key < newest && m.drive && m.records) { var c = metaOf(m); c.drive = true; c.sum = c.sum || monthSum(m.records); c.cold = true; c.records = null; jobs.push(ARC.put(c)); }
     });
     return Promise.all(jobs).then(function () { return jobs.length; });
   });
@@ -3769,7 +3991,7 @@ function saveMonth() {
   if (!S.records.length) { toast('आधी फाईल्स प्रक्रिया करा', true); return; }
   var key = monthKey(S.month);
   if (!key) { toast('आधी "माहे" लिहा (उदा. 09/2026) – फाईल्स टॅबमध्ये', true); return; }
-  var m = { key: key, month: S.month, savedAt: Date.now(), n: S.records.length, counts: psCounts(S.records), gen: !!S.gen, ok: S.records.filter(function (r) { return r.ok; }).length, records: S.records, log: S.log };
+  var m = { key: key, month: S.month, savedAt: Date.now(), n: S.records.length, counts: psCounts(S.records), sum: monthSum(S.records), gen: !!S.gen, ok: S.records.filter(function (r) { return r.ok; }).length, records: S.records, log: S.log };
   var msg = 'जतन झाले ✓';
   ARC.get(key).then(function (old) {
     if (old && !confirm('माहे ' + S.month + ' आधीच जतन आहे (' + fmtDT(old.savedAt) + '). नवीन कामाने बदलायचे?')) return;
@@ -3807,7 +4029,7 @@ function pullDriveList() {
       var have = {}; cur.forEach(function (m) { have[m.key] = 1; }); var jobs = [];
       (j.items || []).forEach(function (x) {
         if (have[x.key]) return; var mt = x.meta || {};
-        jobs.push(ARC.put({ key: x.key, month: mt.month || x.key, savedAt: mt.savedAt || 0, n: mt.n || 0, counts: mt.counts || {}, gen: mt.gen, ok: mt.ok, drive: true, cold: true, records: null }));
+        jobs.push(ARC.put({ key: x.key, month: mt.month || x.key, savedAt: mt.savedAt || 0, n: mt.n || 0, counts: mt.counts || {}, sum: mt.sum || null, gen: mt.gen, ok: mt.ok, drive: true, cold: true, records: null }));
       });
       return Promise.all(jobs).then(function () { return jobs.length; });
     });
@@ -3944,12 +4166,249 @@ if (window.BPS_PWA) document.body.classList.add('pwa');
 })();
 /* ---------- boot ---------- */
 applyLook(); renderSteps(); renderHome();
+
+/* ================= डॅशबोर्ड ================= */
+// महिन्याचा सारांश: { heads: { head: {bela, bori, midc, x, d, u} } }  (d = उघड, u = अउघड)
+function monthSum(recs) {
+  var heads = {}, nos = {};
+  (recs || []).forEach(function (r) {
+    var fy = CHECKS.pdate(r.u ? r.u.filed : r.filed);
+    if (r.no && fy && PSU[r.ps]) { var nk = r.ps + '|' + (r.table === 'M' ? 'M' : ''); (nos[nk] = nos[nk] || []).push(fy.y + '|' + (+r.no)); }
+    var h = r.head || UNC, o = heads[h] = heads[h] || { bela: 0, bori: 0, midc: 0, x: 0, d: 0, u: 0 };
+    o[PSU[r.ps] ? r.ps : 'x']++;
+    var cu = '', au = r.u ? r.u.arrest : '', pu = r.u ? r.u.party : '';
+    try { cu = KD.convert(ENG.norm(r.crime)); if (!r.u) { au = KD.convert(ENG.norm(r.arrest)); pu = KD.convert(ENG.norm(r.party)); } } catch (e) {}
+    var d = /दारू|जुगार|एनडीपीएस|आर्म|पोलीस अधिनियम|कलम 285|मर्ग/.test(h) ? 1 : detOf(cu || '', au || '', pu || ''); if (d === 1) o.d++; else if (d === 0) o.u++;
+  });
+  return { heads: heads, nos: nos };
+}
+function rowsSum(rows) {
+  var heads = {}, nos = {};
+  rows.forEach(function (r) {
+    if (r.no && r.y && PSU[r.ps]) { var nk = r.ps + '|' + (r.marg ? 'M' : ''); (nos[nk] = nos[nk] || []).push(r.y + '|' + r.no); } var o = heads[r.head] = heads[r.head] || { bela: 0, bori: 0, midc: 0, x: 0, d: 0, u: 0 }; o[PSU[r.ps] ? r.ps : 'x']++; if (r.det === 1 || /दारू|जुगार|एनडीपीएस|आर्म|पोलीस अधिनियम|कलम 285|मर्ग/.test(r.head)) o.d++; else if (r.det === 0) o.u++; });
+  return { heads: heads, nos: nos };
+}
+var DCAT = [
+  ['शरीराविरुद्ध', /खून|सदोष|खुनाचा|आत्महत्येस|दुखापत|अॅसिड|बंदिस्त|लोकसेवकावर|गर्भपात|मुलांना|दंगल|मारामारी|सभा|धमकी|अश्लिल|वैर|धर्माशी|राज्याविरुद्ध|संघटित/],
+  ['महिला व बालके', /विनयभंग|बलात्कार|नम्रतेचा|पती|हुंडा|पळवून|तस्करी|वेश्या|पोक्सो|लैंगिक|कौटुंबिक|बालविवाह|अनैतिक|बाल न्याय|वेठबिगारी/],
+  ['मालमत्ता', /चोरी|घरफोडी|दरोडा|खंडणी|विश्वासघात|फसवणूक|अप्रामाणिक|बनावट|गैरप्रकार|अतिक्रमण|माहिती तंत्रज्ञान/],
+  ['अपघात', /^33[678]|निष्काळजी|सार्वजनिक मार्गावर|मोटार वाहन/],
+  ['प्रतिबंधक कारवाई', /दारू|जुगार|एनडीपीएस|आर्म|पोलीस अधिनियम|कलम 285|जिवनावश्यक|प्राण्यांना|प्राणी संरक्षण|विद्युत|पर्यावरण|खाणी|अन्न|सिगारेट|लॉटरी|स्फोटक/],
+  ['मर्ग', /^मर्ग/],
+  ['इतर', /./]
+];
+var SERIOUS = /खून|सदोष|खुनाचा|बलात्कार|दरोडा|जबरी|अॅसिड|हुंडाबळी|पळवून|घरफोडी/;
+function catOf(h) { for (var i = 0; i < DCAT.length; i++) if (DCAT[i][1].test(h)) return DCAT[i][0]; return 'इतर'; }
+function hval(o, ps) { return o ? (ps ? o[ps] || 0 : (o.bela || 0) + (o.bori || 0) + (o.midc || 0) + (o.x || 0)) : 0; }
+function sumBy(sum, ps, f) { var t = 0; if (!sum) return 0; for (var h in sum.heads) if (!f || f(h)) t += hval(sum.heads[h], ps); return t; }
+function lsJSON(k, d) { try { return JSON.parse(lsGet(k) || 'null') || d; } catch (e) { return d; } }
+function keyLabel(k) { var m = String(k).split('-'); return m[1] + '/' + m[0]; }
+function prevKey(k, back) { var m = String(k).split('-'), y = +m[0], mo = +m[1] - (back || 1); while (mo < 1) { mo += 12; y--; } return y + '-' + ('0' + mo).slice(-2); }
+var DM = {};   // key -> sum
+function loadDashData() {
+  DM = {};
+  var hist = lsJSON('bps_hist', {});
+  Object.keys(hist).forEach(function (k) { DM[k] = { sum: hist[k].sum, src: 'इतिहास' }; });
+  return ARC.all().catch(function () { return []; }).then(function (list) {
+    (list || []).forEach(function (m) { var sm = m.records ? monthSum(m.records) : m.sum; if (sm) DM[m.key] = { sum: sm, src: 'जतन' }; });
+    var ck = monthKey(S.month);
+    if (S.records.length && ck) DM[ck] = { sum: monthSum(S.records), src: 'चालू' };
+  });
+}
+function cmpSum(key, mode) {
+  if (mode === 'yoy') { var y = prevKey(key, 12); return DM[y] ? { sum: DM[y].sum, label: 'माहे ' + keyLabel(y) } : null; }
+  if (mode === 'avg') {
+    var ks = []; for (var i = 1; i <= 6; i++) { var k = prevKey(key, i); if (DM[k]) ks.push(k); }
+    if (!ks.length) return null;
+    var heads = {};
+    ks.forEach(function (k) { var hs = DM[k].sum.heads; for (var h in hs) { var o = heads[h] = heads[h] || { bela: 0, bori: 0, midc: 0, x: 0, d: 0, u: 0 }; for (var f in o) o[f] += (hs[h][f] || 0) / ks.length; } });
+    return { sum: { heads: heads }, label: ks.length + ' महिन्यांची सरासरी', avg: true };
+  }
+  var p = prevKey(key, 1); return DM[p] ? { sum: DM[p].sum, label: 'माहे ' + keyLabel(p) } : null;
+}
+function fmtN(v) { return Math.round(v * 10) / 10 % 1 ? (Math.round(v * 10) / 10).toFixed(1) : String(Math.round(v)); }
+function deltaHtml(cur, prev, goodDown) {
+  if (prev == null) return '<span class="muted">तुलनेसाठी माहिती नाही</span>';
+  var d = cur - prev; if (Math.abs(d) < 0.05) return 'बदल नाही';
+  var pc = prev ? Math.round(100 * d / prev) : null, up = d > 0;
+  var cls = (goodDown === false) ? (up ? 'dn' : 'up') : (up ? 'up' : 'dn');
+  return '<span class="' + cls + '">' + (up ? '▲ ' : '▼ ') + fmtN(Math.abs(d)) + (pc !== null && isFinite(pc) ? ' (' + Math.abs(pc) + '%)' : '') + '</span>';
+}
+function renderDash() {
+  loadDashData().then(function () {
+    var keys = Object.keys(DM).sort().reverse(), sel = $('dMonth'), cur = sel.value;
+    sel.innerHTML = keys.map(function (k) { return '<option value="' + k + '">' + keyLabel(k) + ' · ' + DM[k].src + '</option>'; }).join('');
+    if (cur && DM[cur]) sel.value = cur;
+    if (!keys.length) { $('dSub').textContent = 'अजून माहिती नाही'; $('dBody').innerHTML = '<div class="card empty">आधी PS फाईल्स प्रक्रिया करा, किंवा खाली "इतिहास जोडा" मधून जुने विभाग B Part निवडा.</div>'; return; }
+    drawDash();
+  });
+}
+function drawDash() {
+  var key = $('dMonth').value, ps = $('dPs').value, mode = $('dCmp').value;
+  var curS = DM[key].sum, C = cmpSum(key, mode), P = C ? C.sum : null;
+  var noM = function (h) { return !/^मर्ग/.test(h); };
+  $('dSub').textContent = 'माहे ' + keyLabel(key) + (ps ? ' · ' + PSU[ps] : ' · नागपूर उपविभाग') + (C ? ' · तुलना: ' + C.label : '');
+  var tot = sumBy(curS, ps, noM), ptot = P ? sumBy(P, ps, noM) : null;
+  var ser = sumBy(curS, ps, function (h) { return SERIOUS.test(h); }), pser = P ? sumBy(P, ps, function (h) { return SERIOUS.test(h); }) : null;
+  var marg = sumBy(curS, ps, function (h) { return !noM(h); }), pmarg = P ? sumBy(P, ps, function (h) { return !noM(h); }) : null;
+  var dd = 0, du = 0; for (var h in curS.heads) if (noM(h) && catOf(h) !== 'प्रतिबंधक कारवाई' && (!ps || hval(curS.heads[h], ps))) { var o = curS.heads[h]; var share = ps ? hval(o, ps) / (hval(o) || 1) : 1; dd += o.d * share; du += o.u * share; }
+  var detP = dd + du ? Math.round(100 * dd / (dd + du)) : null;
+  var html = '<div class="kpis">' +
+    '<div class="kpi"><div class="lb">एकूण गुन्हे</div><div class="v">' + tot + '</div><div class="d">' + deltaHtml(tot, ptot) + '</div></div>' +
+    '<div class="kpi"><div class="lb">गंभीर गुन्हे</div><div class="v">' + ser + '</div><div class="d">' + deltaHtml(ser, pser) + '</div></div>' +
+    '<div class="kpi"><div class="lb">उघड प्रमाण <span class="small">(प्रतिबंधक वगळून)</span></div><div class="v">' + (detP === null ? '—' : detP + '%') + '</div><div class="d">' + (detP === null ? 'उघड/अउघड नोंद नाही' : Math.round(dd) + ' उघड · ' + Math.round(du) + ' अउघड') + '</div></div>' +
+    '<div class="kpi"><div class="lb">मर्ग</div><div class="v">' + marg + '</div><div class="d">' + deltaHtml(marg, pmarg) + '</div></div></div>';
+  html += '<div class="dgrid">';
+  html += '<div class="card c7"><h2>Head नुसार गुन्हे</h2><div class="dsub">पट्टी = या महिन्यातील संख्या' + (C ? ' · उभी रेघ = ' + esc(C.label) : '') + '</div><div class="hbars" id="dHeads"></div>' +
+    '<details style="margin-top:10px"><summary class="small" style="cursor:pointer">सर्व heads तक्ता</summary><div style="overflow:auto;margin-top:6px"><table class="tblv" id="dTbl"></table></div></details></div>';
+  html += '<div class="card c5"><h2>हुशार निरीक्षणे</h2><div class="ins" id="dIns"></div></div>';
+  html += '<div class="card c7"><h2>12 महिन्यांचा कल</h2><div class="dsub">एकूण गुन्हे (मर्ग वगळून)' + (ps ? ' · ' + PSU[ps] : '') + '</div><div class="trend" id="dTrend"></div></div>';
+  html += '<div class="card c5"><h2>प्रकारानुसार</h2><div class="cats" id="dCats"></div></div>';
+  html += '<div class="card c12"><h2>PS नुसार – प्रकारवार</h2><div class="legend"><span><i style="background:var(--s1)"></i>बेला</span><span><i style="background:var(--s2)"></i>बोरी</span><span><i style="background:var(--s3)"></i>एमआयडीसी</span></div><div class="hbars" id="dPsc"></div></div>';
+  html += '</div>';
+  $('dBody').innerHTML = html;
+  // head bars
+  var hs = Object.keys(curS.heads).filter(function (h) { return hval(curS.heads[h], ps) > 0; }).sort(function (a, b) { return hval(curS.heads[b], ps) - hval(curS.heads[a], ps); });
+  var all = hs.slice(); if (P) Object.keys(P.heads).forEach(function (h) { if (all.indexOf(h) < 0 && hval(P.heads[h], ps) > 0) all.push(h); });
+  var top = hs.slice(0, 14), mx = 1;
+  top.forEach(function (h) { mx = Math.max(mx, hval(curS.heads[h], ps), P ? hval(P.heads[h], ps) : 0); });
+  $('dHeads').innerHTML = top.map(function (h) {
+    var v = hval(curS.heads[h], ps), pv = P ? hval(P.heads[h], ps) : null, o = curS.heads[h];
+    var tip = '<b>' + esc(h) + '</b>' + v + ' गुन्हे' + (pv != null ? ' · ' + esc(C.label) + ': ' + fmtN(pv) : '') + (ps ? '' : '<br>बेला ' + o.bela + ' · बोरी ' + o.bori + ' · एमआयडीसी ' + o.midc);
+    return '<div class="hbar" data-tip="' + esc(tip) + '"><span class="nm">' + esc(h) + '</span><span class="tr"><span class="fl" style="width:' + (100 * v / mx) + '%"></span>' + (pv != null ? '<span class="pm" style="left:' + Math.min(99.5, 100 * pv / mx) + '%"></span>' : '') + '</span><span class="vl">' + v + '</span></div>';
+  }).join('') + (hs.length > top.length ? '<div class="small muted">+ आणखी ' + (hs.length - top.length) + ' heads (तक्त्यात)</div>' : '');
+  $('dTbl').innerHTML = '<tr><th>Head</th><th>चालू</th>' + (P ? '<th>' + esc(C.label) + '</th><th>फरक</th>' : '') + '</tr>' + all.map(function (h) {
+    var v = hval(curS.heads[h], ps), pv = P ? hval(P.heads[h], ps) : 0; return '<tr><td>' + esc(h) + '</td><td>' + v + '</td>' + (P ? '<td>' + fmtN(pv) + '</td><td>' + (v - pv > 0 ? '+' : '') + fmtN(v - pv) + '</td>' : '') + '</tr>';
+  }).join('');
+  // categories
+  $('dCats').innerHTML = DCAT.map(function (c) {
+    var f = function (h) { return catOf(h) === c[0]; }, v = sumBy(curS, ps, f), pv = P ? sumBy(P, ps, f) : null;
+    if (!v && !pv) return '';
+    return '<div class="cat"><b>' + v + '</b><span>' + c[0] + '</span><div class="d">' + deltaHtml(v, pv) + '</div></div>';
+  }).join('');
+  // PS × category stacked
+  var cmx = 1, rows = DCAT.map(function (c) { var f = function (h) { return catOf(h) === c[0]; }; var r = { c: c[0], v: ['bela', 'bori', 'midc'].map(function (p) { return sumBy(curS, p, f); }) }; cmx = Math.max(cmx, r.v[0] + r.v[1] + r.v[2]); return r; }).filter(function (r) { return r.v[0] + r.v[1] + r.v[2]; });
+  $('dPsc').innerHTML = rows.map(function (r) {
+    var t = r.v[0] + r.v[1] + r.v[2];
+    return '<div class="hbar" data-tip="' + esc('<b>' + r.c + '</b>बेला ' + r.v[0] + ' · बोरी ' + r.v[1] + ' · एमआयडीसी ' + r.v[2]) + '"><span class="nm">' + r.c + '</span><span class="tr"><span class="stk" style="width:' + (100 * t / cmx) + '%">' +
+      r.v.map(function (x, i) { return x ? '<span style="flex:' + x + ';background:var(--s' + (i + 1) + ')"></span>' : ''; }).join('') + '</span></span><span class="vl">' + t + '</span></div>';
+  }).join('');
+  drawTrend(key, ps);
+  $('dIns').innerHTML = insights(curS, P, C, ps, key, detP, dd, du).map(function (x) { return '<div><i class="' + (x[0] || '') + '">' + x[1] + '</i><span>' + x[2] + '</span></div>'; }).join('') || '<div><i>i</i><span>तुलनेसाठी आणखी महिने जोडा – मग इथे वाढ/घट दिसेल.</span></div>';
+}
+function insights(curS, P, C, ps, key, detP, dd, du) {
+  var out = [], noM = function (h) { return !/^मर्ग/.test(h); };
+  var tot = sumBy(curS, ps, noM);
+  if (P) {
+    var pt = sumBy(P, ps, noM), d = tot - pt;
+    if (Math.abs(d) >= 1) out.push([d > 0 ? 'up' : 'dn', d > 0 ? '▲' : '▼', 'एकूण गुन्हे ' + esc(C.label) + 'पेक्षा <b>' + fmtN(Math.abs(d)) + '</b> ने ' + (d > 0 ? 'वाढले' : 'घटले') + (pt ? ' (' + Math.abs(Math.round(100 * d / pt)) + '%)' : '') + '.']);
+    var ch = []; var hs = {}; Object.keys(curS.heads).concat(Object.keys(P.heads)).forEach(function (h) { hs[h] = 1; });
+    Object.keys(hs).forEach(function (h) { if (!noM(h)) return; ch.push([h, hval(curS.heads[h], ps) - hval(P.heads[h], ps), hval(curS.heads[h], ps)]); });
+    ch.sort(function (a, b) { return b[1] - a[1]; });
+    ch.filter(function (x) { return x[1] >= 2; }).slice(0, 3).forEach(function (x) { out.push(['up', '▲', '<b>' + esc(x[0]) + '</b>: ' + x[2] + ' गुन्हे (+' + fmtN(x[1]) + ')']); });
+    ch.slice().reverse().filter(function (x) { return x[1] <= -2; }).slice(0, 2).forEach(function (x) { out.push(['dn', '▼', '<b>' + esc(x[0]) + '</b>: ' + x[2] + ' गुन्हे (' + fmtN(x[1]) + ')']); });
+  }
+  var ser = Object.keys(curS.heads).filter(function (h) { return SERIOUS.test(h) && !/घरफोडी/.test(h) && hval(curS.heads[h], ps); });
+  if (ser.length) out.push(['up', '!', 'गंभीर: ' + ser.map(function (h) { return esc(h.replace(/ कलम.*$/, '')) + ' ' + hval(curS.heads[h], ps); }).join(', ')]);
+  var prop = 0, propU = 0; for (var h in curS.heads) if (/चोरी|घरफोडी|दरोडा/.test(h)) { var o = curS.heads[h], sh = ps ? hval(o, ps) / (hval(o) || 1) : 1; prop += hval(o, ps); propU += o.u * sh; }
+  if (prop && propU >= 1) out.push(['', '₹', 'मालमत्तेचे ' + prop + ' गुन्हे – त्यापैकी <b>' + Math.round(propU) + '</b> अउघड.']);
+  if (!ps) {
+    var pc = ['bela', 'bori', 'midc'].map(function (p) { return [p, sumBy(curS, p, noM)]; }).sort(function (a, b) { return b[1] - a[1]; });
+    if (pc[0][1]) out.push(['', 'PS', 'सर्वाधिक गुन्हे: <b>' + PSU[pc[0][0]] + '</b> (' + pc[0][1] + ') · ' + PSU[pc[1][0]] + ' ' + pc[1][1] + ' · ' + PSU[pc[2][0]] + ' ' + pc[2][1]]);
+  }
+  // compared with own 6-month average: unusual heads
+  var ks = []; for (var i = 1; i <= 6; i++) { var k = prevKey(key, i); if (DM[k]) ks.push(k); }
+  if (ks.length >= 3) {
+    Object.keys(curS.heads).forEach(function (h) {
+      if (!noM(h)) return; var v = hval(curS.heads[h], ps), av = ks.reduce(function (t, k) { return t + hval(DM[k].sum.heads[h], ps); }, 0) / ks.length;
+      if (v >= 3 && v >= 1.6 * av + 1) out.push(['up', '↗', '<b>' + esc(h) + '</b> नेहमीपेक्षा जास्त: ' + v + ' (सरासरी ' + fmtN(av) + ')']);
+    });
+  }
+  return out.slice(0, 9);
+}
+function drawTrend(key, ps) {
+  var ks = []; for (var i = 11; i >= 0; i--) ks.push(prevKey(key, i));
+  var pts = ks.map(function (k) { return DM[k] ? sumBy(DM[k].sum, ps, function (h) { return !/^मर्ग/.test(h); }) : null; });
+  var have = pts.filter(function (v) { return v != null; });
+  if (have.length < 2) { $('dTrend').innerHTML = '<div class="empty small">कल दाखवण्यासाठी किमान 2 महिने हवेत – "इतिहास जोडा" वापरा.</div>'; return; }
+  var W = 640, H = 220, L = 34, R = 10, T = 12, B = 26, mx = Math.max.apply(null, have), mn = 0;
+  var step = Math.pow(10, Math.floor(Math.log10(mx || 1))), top = Math.ceil(mx / step) * step; if (top / step > 5) step *= 2; top = Math.ceil(mx / step) * step || 1;
+  var x = function (i) { return L + (W - L - R) * i / 11; }, y = function (v) { return T + (H - T - B) * (1 - (v - mn) / (top - mn)); };
+  var g = '';
+  for (var t = 0; t <= top; t += step) g += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y(t) + '" y2="' + y(t) + '" stroke="var(--grid)" stroke-width="1"/><text x="' + (L - 6) + '" y="' + (y(t) + 4) + '" text-anchor="end">' + t + '</text>';
+  ks.forEach(function (k, i) { if (i % 2 === 0 || i === 11) g += '<text x="' + x(i) + '" y="' + (H - 6) + '" text-anchor="middle">' + keyLabel(k).replace('/20', '/') + '</text>'; });
+  var d = '', seg = false;
+  pts.forEach(function (v, i) { if (v == null) { seg = false; return; } d += (seg ? 'L' : 'M') + x(i) + ' ' + y(v) + ' '; seg = true; });
+  var dots = '', hits = '';
+  pts.forEach(function (v, i) {
+    if (v == null) return;
+    var last = i === 11;
+    dots += '<circle cx="' + x(i) + '" cy="' + y(v) + '" r="' + (last ? 5 : 4) + '" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"/>';
+    if (last) dots += '<text x="' + x(i) + '" y="' + (y(v) - 10) + '" text-anchor="middle" style="fill:var(--text);font-weight:700;font-size:12px">' + v + '</text>';
+    hits += '<rect x="' + (x(i) - 24) + '" y="' + T + '" width="48" height="' + (H - T - B) + '" fill="transparent" data-tip="' + esc('<b>माहे ' + keyLabel(ks[i]) + '</b>' + v + ' गुन्हे') + '"/>';
+  });
+  $('dTrend').innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="12 महिन्यांचा कल">' + g + '<path d="' + d + '" fill="none" stroke="var(--s1)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>' + dots + hits + '</svg>';
+}
+['dMonth', 'dCmp', 'dPs'].forEach(function (id) { $(id).addEventListener('change', drawDash); });
+// tooltip for any [data-tip]
+(function () {
+  var tip = document.createElement('div'); tip.className = 'vtip'; document.body.appendChild(tip);
+  document.addEventListener('mousemove', function (e) {
+    var t = e.target.closest && e.target.closest('[data-tip]');
+    if (!t) { tip.style.display = 'none'; return; }
+    tip.innerHTML = t.getAttribute('data-tip'); tip.style.display = 'block';
+    var x = e.clientX + 14, y = e.clientY + 14, w = tip.offsetWidth, h = tip.offsetHeight;
+    if (x + w > innerWidth - 8) x = e.clientX - w - 14; if (y + h > innerHeight - 8) y = e.clientY - h - 14;
+    tip.style.left = x + 'px'; tip.style.top = y + 'px';
+  });
+  document.addEventListener('click', function (e) { if (!(e.target.closest && e.target.closest('[data-tip]'))) tip.style.display = 'none'; });
+  document.addEventListener('touchstart', function (e) {
+    var t = e.target.closest && e.target.closest('[data-tip]'); if (!t) { tip.style.display = 'none'; return; }
+    var r = t.getBoundingClientRect(); tip.innerHTML = t.getAttribute('data-tip'); tip.style.display = 'block';
+    tip.style.left = Math.max(8, Math.min(innerWidth - tip.offsetWidth - 8, r.left)) + 'px'; tip.style.top = Math.max(8, r.top - tip.offsetHeight - 8) + 'px';
+  }, { passive: true });
+})();
+$('histIn').addEventListener('change', function () {
+  var fl = Array.prototype.slice.call(this.files); this.value = '';
+  if (!fl.length) return;
+  busy(true, fl.length + ' फाईल्स वाचत आहे…');
+  Promise.all(fl.map(function (f) { return new Promise(function (res) { var rd = new FileReader(); rd.onload = function () { res({ name: f.name, b64: String(rd.result).split(',')[1] }); }; rd.readAsDataURL(f); }); }))
+    .then(function (files) { return call('api_histImport', files); })
+    .then(function (list) {
+      busy(false);
+      var hist = lsJSON('bps_hist', {}), msg = [];
+      list.forEach(function (m) { hist[m.key] = { month: m.month, sum: rowsSum(m.rows), at: Date.now() }; msg.push(keyLabel(m.key) + ' (' + m.rows.length + ')'); });
+      lsSet('bps_hist', JSON.stringify(hist));
+      $('histInfo').textContent = 'जोडले: ' + msg.join(', ');
+      toast(list.length + ' महिने इतिहासात जोडले ✓'); renderDash();
+    }).catch(fail);
+});
+/* nav icons + sections */
+(function () {
+  var I = {
+    home: '<path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/>',
+    dash: '<path d="M4 20V10"/><path d="M10 20V4"/><path d="M16 20v-7"/><path d="M22 20H2"/>',
+    files: '<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/><path d="M12 18v-6"/><path d="M9 15l3-3 3 3"/>',
+    queue: '<path d="M9 6h12"/><path d="M9 12h12"/><path d="M9 18h12"/><path d="M3 6l1.5 1.5L7 5"/><path d="M3 12l1.5 1.5L7 11"/><path d="M3 18l1.5 1.5L7 17"/>',
+    review: '<path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 13l9 5 9-5"/>',
+    hbt: '<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1"/><path d="M9 10h6"/><path d="M9 14h6"/>',
+    preview: '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+    download: '<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/><path d="M12 11v6"/><path d="M9 14l3 3 3-3"/>',
+    archive: '<rect x="3" y="4" width="18" height="5" rx="1"/><path d="M5 9v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9"/><path d="M10 13h4"/>',
+    reports: '<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/><path d="M8 13h8"/><path d="M8 17h5"/>',
+    typing: '<rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10"/>',
+    rules: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>'
+  };
+  Array.prototype.forEach.call(document.querySelectorAll('#tabs button[data-v]'), function (b) { if (I[b.dataset.v]) b.insertAdjacentHTML('afterbegin', '<svg viewBox="0 0 24 24" aria-hidden="true">' + I[b.dataset.v] + '</svg>'); });
+  var sec = { home: 'काम', preview: 'निकाल', archive: 'साधने' };
+  Object.keys(sec).forEach(function (v) { var b = document.querySelector('#tabs button[data-v="' + v + '"]'); if (b) b.insertAdjacentHTML('beforebegin', '<div class="navh">' + sec[v] + '</div>'); });
+})();
 /* न जतन केलेले काम: वरच्या माहे-चिपवर खूण + बंद करताना इशारा */
 function unsaved() { return !!(S.records.length && S.arcDirty); }
 setInterval(function () {
   var t = $('monthTag'), u = unsaved(), base = 'माहे ' + (S.month || '—');
   t.textContent = u ? base + ' ● न जतन – जतन करा' : base;
-  t.style.cursor = u ? 'pointer' : ''; t.style.color = u ? 'var(--warn)' : ''; t.style.fontWeight = u ? '700' : '';
+  t.style.cursor = u ? 'pointer' : ''; t.style.color = u ? '#ffc067' : ''; t.style.fontWeight = u ? '700' : '';
 }, 700);
 $('monthTag').addEventListener('click', function () { if (unsaved()) saveMonth(); });
 window.addEventListener('beforeunload', function (e) { if (unsaved()) { e.preventDefault(); e.returnValue = ''; return ''; } });
