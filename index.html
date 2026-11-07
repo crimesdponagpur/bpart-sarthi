@@ -1427,7 +1427,9 @@ var TEXT = (function () {
   /* फक्त हकिगतीत असलेली माहिती वापरली जाते; काही सापडले नाही तर '' परत  */
   /* ------------------------------------------------------------------ */
   function num(x) { return +String(x || '').replace(/[,\s]/g, ''); }
-  function rs(v) { return v ? v.toLocaleString('en-IN') + ' रु.' : ''; }
+  // Indian digit grouping (1,23,456) without depending on the browser's locale data
+  function inr(v) { var x = String(Math.round(v)), last = x.slice(-3), rest = x.slice(0, -3); return (rest ? rest.replace(/\B(?=(\d{2})+(?!\d))/g, ',') + ',' : '') + last; }
+  function rs(v) { return v ? inr(v) + ' रु.' : ''; }
   function amountTotal(t) {
     var m, best = 0, re = /एकु?ू?[णन]\s*(?:कि[ंम]?मती?|कि\.?|किं\.?)?\s*[-:]?\s*(?:रू\.?|रु\.?)?\s*([\d,]{2,9})\s*(?:\/-|ध-|\/|-)?\s*(?:रू|रु|रूपये|रुपये)/g;
     while ((m = re.exec(t))) best = Math.max(best, num(m[1]));
