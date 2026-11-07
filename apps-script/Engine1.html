@@ -1,0 +1,599 @@
+/* बी-पार्ट सारथी – installable (PWA) build.
+   Runs Code.gs + Engine entirely in the browser: no server, data never leaves the device.
+   Provides minimal stand-ins for the Apps Script services Code.gs uses. */
+window.BPS_PWA = true;
+(function () {
+  /* ---------------- bytes / base64 ---------------- */
+  function b64ToBytes(s) { var bin = atob(s), a = new Uint8Array(bin.length); for (var i = 0; i < bin.length; i++) a[i] = bin.charCodeAt(i); return a; }
+  function bytesToB64(a) { var s = '', CH = 0x8000; for (var i = 0; i < a.length; i += CH) s += String.fromCharCode.apply(null, a.subarray(i, i + CH)); return btoa(s); }
+  var enc = new TextEncoder(), dec = new TextDecoder('utf-8');
+
+  /* ---------------- ZIP read (async, DecompressionStream) ---------------- */
+  function u16(a, o) { return a[o] | (a[o + 1] << 8); }
+  function u32(a, o) { return (a[o] | (a[o + 1] << 8) | (a[o + 2] << 16) | (a[o + 3] << 24)) >>> 0; }
+  async function inflateRaw(data) {
+    if (typeof DecompressionStream === 'undefined') throw new Error('हा ब्राउझर जुना आहे – iPhone वर iOS 16.4+ / नवीन Chrome, Safari वापरा.');
+    var ds = new DecompressionStream('deflate-raw');
+    var out = new Response(new Blob([data]).stream().pipeThrough(ds));
+    return new Uint8Array(await out.arrayBuffer());
+  }
+  async function readZip(bytes) {
+    var eocd = -1;
+    for (var i = bytes.length - 22; i >= Math.max(0, bytes.length - 65557); i--) if (u32(bytes, i) === 0x06054b50) { eocd = i; break; }
+    if (eocd < 0) throw new Error('ही .docx फाईल वाचता आली नाही (zip नाही). जुनी .doc असल्यास Word मध्ये .docx म्हणून सेव्ह करा.');
+    var n = u16(bytes, eocd + 10), off = u32(bytes, eocd + 16), out = [];
+    for (var k = 0; k < n; k++) {
+      if (u32(bytes, off) !== 0x02014b50) break;
+      var method = u16(bytes, off + 10), csize = u32(bytes, off + 20), nlen = u16(bytes, off + 28), xlen = u16(bytes, off + 30), clen = u16(bytes, off + 32), loff = u32(bytes, off + 42);
+      var name = dec.decode(bytes.subarray(off + 46, off + 46 + nlen));
+      off += 46 + nlen + xlen + clen;
+      if (!/^word\/(document|styles)\.xml$/.test(name)) continue; // only what the parser needs
+      var lnlen = u16(bytes, loff + 26), lxlen = u16(bytes, loff + 28), start = loff + 30 + lnlen + lxlen;
+      var raw = bytes.subarray(start, start + csize);
+      out.push({ name: name, bytes: method === 0 ? raw.slice() : await inflateRaw(raw) });
+    }
+    return out;
+  }
+
+  /* ---------------- ZIP write (sync, stored) ---------------- */
+  var CRC = (function () { var t = new Uint32Array(256); for (var n = 0; n < 256; n++) { var c = n; for (var k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+  function crc32(a) { var c = 0xFFFFFFFF; for (var i = 0; i < a.length; i++) c = CRC[(c ^ a[i]) & 0xFF] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
+  function zipStore(files) {
+    var parts = [], central = [], off = 0;
+    function w16(v) { return [v & 255, (v >>> 8) & 255]; }
+    function w32(v) { return [v & 255, (v >>> 8) & 255, (v >>> 16) & 255, (v >>> 24) & 255]; }
+    var d = new Date(), dt = ((d.getFullYear() - 1980) << 9) | ((d.getMonth() + 1) << 5) | d.getDate(), tm = (d.getHours() << 11) | (d.getMinutes() << 5) | (d.getSeconds() >> 1);
+    files.forEach(function (f) {
+      var nm = enc.encode(f.name), data = f.bytes, crc = crc32(data);
+      var head = [].concat(w32(0x04034b50), w16(20), w16(0x0800), w16(0), w16(tm), w16(dt), w32(crc), w32(data.length), w32(data.length), w16(nm.length), w16(0));
+      parts.push(new Uint8Array(head), nm, data);
+      central.push(new Uint8Array([].concat(w32(0x02014b50), w16(20), w16(20), w16(0x0800), w16(0), w16(tm), w16(dt), w32(crc), w32(data.length), w32(data.length), w16(nm.length), w16(0), w16(0), w16(0), w16(0), w32(0), w32(off))), nm);
+      off += head.length + nm.length + data.length;
+    });
+    var csize = central.reduce(function (s, a) { return s + a.length; }, 0);
+    var end = new Uint8Array([].concat(w32(0x06054b50), w16(0), w16(0), w16(files.length), w16(files.length), w32(csize), w32(off), w16(0)));
+    var all = parts.concat(central, [end]), len = all.reduce(function (s, a) { return s + a.length; }, 0), out = new Uint8Array(len), p = 0;
+    all.forEach(function (a) { out.set(a, p); p += a.length; });
+    return out;
+  }
+
+  /* ---------------- Apps Script stand-ins ---------------- */
+  function GBlob(bytes, ct, name) { this.bytes = bytes; this.ct = ct || ''; this.name = name || ''; }
+  GBlob.prototype = {
+    getName: function () { return this.name; }, setName: function (n) { this.name = n; return this; },
+    getContentType: function () { return this.ct; }, setContentType: function (c) { this.ct = c; return this; },
+    getBytes: function () { return this.bytes; }, getDataAsString: function () { return dec.decode(this.bytes); },
+    getAs: function () { throw new Error('PDF_PRINT'); }
+  };
+  var UNZIPPED = {};
+  window.Utilities = {
+    base64Decode: function (s) { var a = b64ToBytes(s); a._b64 = s.length + ':' + s.slice(0, 64) + s.slice(-64); return a; },
+    base64Encode: function (a) { return bytesToB64(a); },
+    newBlob: function (d, ct, name) { var b = typeof d === 'string' ? enc.encode(d) : d; var g = new GBlob(b, ct, name); g._key = d && d._b64; return g; },
+    unzip: function (blob) {
+      var e = UNZIPPED[blob._key];
+      if (!e) throw new Error('unzip');
+      return e.map(function (x) { return new GBlob(x.bytes, '', x.name); });
+    },
+    zip: function (blobs, name) { return new GBlob(zipStore(blobs.map(function (b) { return { name: b.name, bytes: b.bytes }; })), 'application/zip', name); }
+  };
+  var PFX = 'bps:';
+  var props = {
+    getProperty: function (k) { try { var v = localStorage.getItem(PFX + k); return v === null ? null : v; } catch (e) { return null; } },
+    setProperty: function (k, v) { try { localStorage.setItem(PFX + k, String(v)); } catch (e) {} },
+    setProperties: function (o) { Object.keys(o).forEach(function (k) { props.setProperty(k, o[k]); }); },
+    deleteProperty: function (k) { try { localStorage.removeItem(PFX + k); } catch (e) {} }
+  };
+  window.PropertiesService = { getUserProperties: function () { return props; } };
+  window.Session = { getActiveUser: function () { return { getEmail: function () { return ''; } }; } };
+  var noIter = { hasNext: function () { return false; } };
+  var folder = { getFilesByName: function () { return noIter; }, createFile: function () { return { getUrl: function () { return ''; }, getId: function () { return ''; } }; } };
+  window.DriveApp = {
+    getFoldersByName: function () { return noIter; }, createFolder: function () { return folder; },
+    getFileById: function () { throw new Error('Drive मधून फाईल घेणे फक्त Google आवृत्तीत चालते. फाईल थेट निवडा.'); },
+    getFolderById: function () { throw new Error('Drive फोल्डर फक्त Google आवृत्तीत चालते.'); }
+  };
+
+  /* ---------------- google.script.run stand-in ---------------- */
+  async function prepare(fn, args) {
+    if (fn !== 'api_process' && fn !== 'api_histImport') return;
+    for (var i = 0; i < args[0].length; i++) {
+      var f = args[0][i];
+      if (!f.b64) continue;
+      var key = f.b64.length + ':' + f.b64.slice(0, 64) + f.b64.slice(-64);
+      if (!UNZIPPED[key]) UNZIPPED[key] = await readZip(b64ToBytes(f.b64));
+    }
+  }
+  function runner(ok, bad) {
+    return new Proxy({}, {
+      get: function (_, k) {
+        if (k === 'withSuccessHandler') return function (h) { return runner(h, bad); };
+        if (k === 'withFailureHandler') return function (h) { return runner(ok, h); };
+        return function () {
+          var args = JSON.parse(JSON.stringify(Array.prototype.slice.call(arguments)));
+          setTimeout(async function () {
+            try {
+              await prepare(k, args);
+              var fn = window[k]; if (typeof fn !== 'function') throw new Error('API नाही: ' + k);
+              var res = fn.apply(null, args);
+              ok && ok(res === undefined ? null : JSON.parse(JSON.stringify(res)));
+            } catch (e) { console.error(e); bad && bad(e); }
+          }, 20);
+        };
+      }
+    });
+  }
+  window.google = { script: { run: runner(null, null) } };
+
+  /* ---------------- service worker (offline + install) ---------------- */
+  if ('serviceWorker' in navigator && location.protocol === 'https:') {
+    window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); });
+  }
+})();
+
+;
+/* Kruti Dev 010 -> Unicode Devanagari (greedy tokenizer). Works in Apps Script (V8) and node. */
+var KD = (function () {
+  var FULL = { // full consonants (and conjuncts)
+    'd':'क','Dk':'क','[k':'ख','x':'ग','Xk':'ग','?k':'घ','³':'ङ','p':'च','Pk':'च','N':'छ','t':'ज','Tk':'ज','>':'झ','¥':'ञ',
+    'V':'ट','B':'ठ','M':'ड','<':'ढ','.k':'ण','r':'त','Rk':'त','Fk':'थ','n':'द','/k':'ध','u':'न','Uk':'न',
+    'i':'प','Ik':'प','Q':'फ','c':'ब','Ck':'ब','Hk':'भ','e':'म','Ek':'म',';':'य','j':'र','y':'ल','Yk':'ल','G':'ळ',
+    'o':'व','Ok':'व',"'k":'श',"\"k":'ष','l':'स','Lk':'स','g':'ह','{k':'क्ष','K':'ज्ञ','=':'त्र','J':'श्र','Ø':'क्र',
+    'Ùk':'त्त','Ù':'त्त','ç':'प्र','æ':'द्र','ê':'ट्ट','}':'द्व'
+  };
+  var HALF = { // half forms (consonant + halant)
+    'D':'क्','[':'ख्','X':'ग्','?':'घ्','P':'च्','T':'ज्','F':'थ्','/':'ध्','U':'न्','I':'प्','¶':'फ्','C':'ब्','H':'भ्','E':'म्',
+    '¸':'य्','L':'स्','Y':'ल्','O':'व्',"'":'श्','"':'ष्','R':'त्','{':'क्ष्','Ú':'ऱ्','.':'ण्','?':'घ्','<':'ढ्','>':'झ्','N':'छ्'
+  };
+  var VOW = { 'vkW':'ऑ','vks':'ओ','vkS':'औ','vk':'आ','v':'अ','bZ':'ई','b':'इ','m':'उ','Å':'ऊ',',s':'ऐ',',':'ए','_':'ऋ' };
+  var MATRA = { 'kW':'ॉ','‚':'ॉ','ks':'ो','kS':'ौ','k':'ा','h':'ी','q':'ु','w':'ू','`':'ृ','s':'े','S':'ै','W':'ॅ','a':'ं','¡':'ँ','%':'ः','~':'्' };
+  var OTHER = { 'z':'्र','ª':'्र','Z':'REPH','f':'PREI','¼':'(','½':')',']':',','@':'/','&':'-','#':'रु',':':'रू','A':'।','Ñ':'-','–':'-','—':'-' };
+  var toks = [], map = {};
+  function add(o, type) { for (var k in o) { map[k] = { u: o[k], t: type }; } }
+  // note: HALF first so FULL overrides identical keys (e.g. "<" ) - FULL keys are distinct from HALF keys except none
+  add(HALF, 'half'); add(FULL, 'full'); add(VOW, 'vowel'); add(MATRA, 'matra'); add(OTHER, 'other');
+  var keys = Object.keys(map).sort(function (a, b) { return b.length - a.length; });
+  var maxLen = keys[0].length;
+
+  function convert(src) {
+    if (!src) return '';
+    if (src.indexOf('\u0001') >= 0) {
+      return src.split(/(\u0001[^\u0002]*\u0002)/).map(function (seg) {
+        return seg.charAt(0) === '\u0001' ? seg.slice(1, -1) : convert(seg);
+      }).join('');
+    }
+    src = src.replace(/[‘’]/g, "'").replace(/[“”]/g, '"').replace(/ /g, ' ');
+    var out = []; // each element {u,t}
+    var i = 0, pendingI = false;
+    function lastSyllableStart() {
+      var j = out.length - 1;
+      // trailing matras/anusvara/etc
+      while (j >= 0 && (out[j].t === 'matra' || out[j].t === 'rakar')) j--;
+      if (j < 0 || (out[j].t !== 'full' && out[j].t !== 'vowel')) return -1;
+      // the consonant itself
+      var s = j;
+      // preceding half consonants
+      while (s - 1 >= 0 && out[s - 1].t === 'half') s--;
+      return s;
+    }
+    while (i < src.length) {
+      var m = null, k = null;
+      for (var L = Math.min(maxLen, src.length - i); L >= 1; L--) {
+        var c = src.substr(i, L);
+        if (map[c] !== undefined && Object.prototype.hasOwnProperty.call(map, c)) { m = map[c]; k = c; break; }
+      }
+      if (!m) { out.push({ u: src[i], t: 'raw' }); i++; continue; }
+      i += k.length;
+      if (m.u === 'PREI') { pendingI = true; continue; }
+      if (m.u === 'REPH') {
+        var s = lastSyllableStart();
+        if (s >= 0) out.splice(s, 0, { u: 'र्', t: 'half' }); else out.push({ u: 'र्', t: 'raw' });
+        continue;
+      }
+      if (m.u === '्र') { out.push({ u: '्र', t: 'rakar' }); continue; }
+      if ((m.t === 'matra' && m.u !== '्') || m.t === 'other' || m.t === 'vowel') {
+        var pv = out[out.length - 1];
+        if (pv && pv.t === 'half' && pv.u.length > 1 && pv.u.slice(-1) === '्' && pv.u !== 'र्') {
+          if (pv.k === '.') { pv.u = '.'; pv.t = 'raw'; } else { pv.u = pv.u.slice(0, -1); pv.t = 'full'; }
+        }
+      }
+      out.push({ u: m.u, t: m.t, k: k });
+      if (pendingI && m.t === 'full') {
+        // consume following half->full cluster: legacy writes [f][half..][full]; we already pushed full if first token full.
+        // handle cluster: ि goes after final full consonant of the cluster; look ahead for half... no: halves precede full.
+        // Since 'f' precedes the whole cluster, we need to defer until cluster ends: handled below.
+      }
+      if (pendingI && m.t === 'full') {
+        // check whether this full is the end of cluster: cluster = halves* full ; halves were pushed before pendingI resolved
+        out.push({ u: 'ि', t: 'matra' }); pendingI = false;
+      }
+    }
+    var lv = out[out.length - 1];
+    if (lv && lv.t === 'half' && lv.u !== 'र्' && lv.u.slice(-1) === '्') { if (lv.k === '.') lv.u = '.'; else lv.u = lv.u.slice(0, -1); }
+    var res = out.map(function (o) { return o.u; }).join('');
+    res = res.replace(/बिएनएस/g, 'बीएनएस').replace(/(^|[\s(\[\/,.\-])[ंॅ]+(?=[अ-औ])/g, '$1').replace(/अॅ/g, 'ॲ').replace(/आॅ/g, 'ऑ');
+    return res;
+  }
+  return { convert: convert };
+})();
+if (typeof module !== 'undefined') module.exports = KD;
+
+;
+/* Classification engine. Pure JS, runs in node and Apps Script. Works on raw Kruti text (digits survive). */
+var ENG = (function () {
+  var PS_NAMES = { bela: 'बेला', bori: 'बोरी', midc: 'एमआयडीसी' };
+
+  // Unicode (Mangal) / English text typed by a PS is turned into Kruti Dev first, so every rule below works on one alphabet
+  var LAT_ACT = [[/\bB\.?\s*N\.?\s*S\.?\b(?!\s*S)/gi, 'ch,u,l'], [/\bI\.?\s*P\.?\s*C\.?\b/gi, 'Hkknfo'], [/\bM\.?\s*V\.?\s*Act\b/gi, 'eksokdk'], [/\bN\.?\s*D\.?\s*P\.?\s*S\b/gi, ',uMhih,l'], [/\bArms?\s*Act\b/gi, 'vkeZ vWDV'], [/\bPOCSO\b/gi, 'iksDlks']];
+  function u2kd(x) {
+    if (typeof TEXT === 'undefined' || !TEXT.u2k) return x;
+    x = x.replace(/[ऀ-ॿ][ऀ-ॿ‌‍]*(?:[\s\-.,:()\/0-9]+[ऀ-ॿ][ऀ-ॿ‌‍]*)*/g, function (w) { try { return TEXT.u2k(w); } catch (e) { return w; } });
+    LAT_ACT.forEach(function (p) { x = x.replace(p[0], p[1]); });
+    return x;
+  }
+  function norm(s) {
+    s = s || '';
+    if (s.indexOf('\u0001') >= 0) s = s.replace(/\u0001([^\u0002]*)\u0002?/g, function (m, x) { return u2kd(x); });
+    if (/[ऀ-ॿ]/.test(s)) s = u2kd(s);
+    // Kruti Dev font variants: curly quotes for ' and ", ç for iz (प्र), U+k for न
+    s = s.replace(/[’‘`]/g, "'").replace(/[”“]/g, '"').replace(/ç/g, 'iz').replace(/Uk/g, 'u');
+    return s.replace(/[\u0001\u0002]/g, '').replace(/¼/g, '(').replace(/½/g, ')').replace(/@/g, '/').replace(/\s+/g, ' ');
+  }
+
+  // ---- Acts -------------------------------------------------------------
+  var ACT_RE = {
+    BNS:   /\bBNS\b|\bB\.\s*N\.\s*S\b|(?:ch|fc|chh|ck)\s*-?\s*,\s*u\s*-?\s*,\s*l|Hkk[\s\-.]*U;k(?![a-zA-Z])|Hkk[\s\-.]*U;k;?[\s\-.]*(?:l|la)|Hkkjrh;\s*U;k;\s*la|Hkk[\s\-.]*U;k[\s\-.]*la/,
+    MVA:   /eks[\s\-.]*ok[\s\-.]*dk|ekssokdk|eksVkj\s*okgu|eksVj\s*okgu|,e\s*Ogh\s*vWDV|,eOgh|eks[\s\-.]*ok[\s\-.]*dk;nk|eks[\s\-.]*ok[\s\-.]*vf\/k|eksVkj\s*okgu/,
+    MPOKA: /e[q]?iksdk|iksyhl[\s\-.]*(?:vf\/k|dk;nk|vf)|e[q]?[\s\-.]+iks[\s\-.]+(?:dk|v)|e\s+iks\s+vf\/k|e\s*iks\s*dk|e[\s\-.]+iks[\s\-.]+dk/,
+    MDA:   /enkdk|e[q]?[\s\-.]*nk[\s\-.]*(?:dk|vf\/k)|eqnkdk|eknkdk|nk:\s*C?canh|nk:Ckanh|nkjw\s*canh|egk[\s\-.]*nk/,
+    MJKA:  /etqdk|etwdk|e[q]?[\s\-.]*t[qw][\s\-.]*dk|rtqdk|egk[\s\-.]*tqxkj|e\s*tqxkj|tqxkj\s*(?:izfrca|dk;nk|vf\/k)/,
+    NDPS:  /,[uy][\s\-.]*(?:Mh|fM|Mha)[\s\-.]*(?:ih|fi|,u)(?:[\s\-.]*,l|[\s\-.]*v[W]?DV)|,uMhih,l|NDPS|xq[a]?xhdkjd|Xkaqxhdkjd|xaqxhdkjd|eukscy|euksO;kikj/,
+    IPC:   /Hkk[\s\-.]*n[\s\-.]*fo|Hkknoh|Hkk[\s\-.]*n[\s\-.]*oh/,
+    ARMS:  /vkeZ\s*vWDV/,
+    POCSO: /iksDlks|iksDlks/,
+    IT:    /ra=a?Kku|ra=[\s\-.]*vf\/k|vk;Vh\s*(?:vWDV|,DV)/,
+    ANIMAL:/izk\.?;kpk\s*NG|izk\.?;kaps?k?\s*NG|izk\.?kh\s*N|izk[\s\-.]*NG?[\s\-.]|izk-funZ;rsus|funZ;rs|izk.;kl\s*Ø|ØwjrsusokxfoC|1960/,
+    ANIMAL76:/(?:izk\.?kh|i'kq|izk-)[\s\-.]*laj{k.k|egk[\s\-.]*(?:izk\.?kh|i'kq)|izk\.?kh\s*laj{k.k\s*vf\/k|vf\/k[^0-9]{0,6}1976|\b1976\b/,
+    ESSEN: /vR;ko"kd|vR;koL;d|vR;ko';d|vR;koÜ;d|ftouko'|thouko'|vR;kok?'k?d|oLrq[\s\-.]*vf\/k/,
+    ELEC:  /Hkk[\s\-.]*(?:fo|oh|of)[\s\-.]*(?:dk|vf\/k)|fon~?;qr|fo\|qr|fo\s*\|qr|fo\+qr|okht\s*pksjh/,
+    PDPP:  /lkoZtfud\s*(?:laiRrh|ekyeRrk|ekyeRrs)|lkoZ[\s\-.]*lai|lk[\s\-.]*ek[\s\-.]*u[\s\-.]*iz/,
+    ENV:   /(?:i|Ik);kZoj|izn"k\.?k|izn\+"k|uk\W?;yksu\s*ekat|ukW;yksu/,
+    ATRO:  /vuq[\s\-.]*tkrh|v[\s\-.]*tk[\s\-.]*t?[\s\-.]*v[\s\-.]*iz|v[\s\-.]*tk[\s\-.]*r\b|vR;kpkj\s*izfr|vWVªkWflVh/,
+    LABOUR:/ckydkexkj|osBfcxkjh|ckydkex/,
+  };
+  function acts(text) {
+    var r = {};
+    for (var k in ACT_RE) if (ACT_RE[k].test(text)) r[k] = true;
+    return r;
+  }
+
+  // ---- Sections ---------------------------------------------------------
+  function subNorm(x) {
+    x = x.replace(/[\s()]/g, '');
+    if (x.length > 1) x = x.replace(/a/g, '') || 'a';
+    if (/^(a?v|av|vk|a|A|,)$/.test(x)) return 'A';
+    if (/^(c|ch|cc|b|B|ch-|fc)$/.test(x)) return 'B';
+    return x;
+  }
+  // returns {nums:{'125':['A','B']}, order:[...]}
+  function parseSections(crimeText) {
+    var t = norm(crimeText);
+    // cut crime number prefix: "328/26 dye 140(3)..." -> after first 'dye'
+    // sections = everything after the crime number ("328/26"), else after the first "कलम"
+    var cn = t.match(/\d+\s*\/\s*\d{2,4}(?!\d)/), m = t.match(/(?:dye|Dye|dyE|eys)\s*(.*)$/);
+    var body = cn ? t.slice(cn.index + cn[0].length) : m ? m[1] : t;
+    body = body.replace(/Hkkx\s*[&\-–]*\s*\d+/g, ' ').replace(/(\d)\s*[,\-\]]\s*\((,|v|ch|fc|c|[aAbB])\)/g, '$1($2)').replace(/\)\s*[,\-\]]\s*\(/g, ')(').replace(/(\d)\s*(v|ch|c|[aAbB])(?![a-zA-Z,;:])/g, '$1($2)');
+    // stop at "lg dye"? keep everything (we want all sections incl. other act) but record
+    var nums = {}, order = [];
+    var re = /(\d+)\s*((?:\(\s*[^)\s]{1,3}\s*\)\s*)*)/g, mm;
+    while ((mm = re.exec(body))) {
+      var n = mm[1].replace(/^0+(?=\d)/, '');
+      if (n.length > 3) continue;   // years (1966), SID / e-sakshya numbers are not sections
+      if (!nums[n]) { nums[n] = []; order.push(n); }
+      var subs = (mm[2] || '').match(/\(\s*([^)\s]{1,3})\s*\)/g) || [];
+      subs.forEach(function (s) { nums[n].push(subNorm(s)); });
+    }
+    return { nums: nums, order: order, body: body };
+  }
+  function has(sec, n, sub) {
+    if (!sec.nums[n]) return false;
+    return sub === undefined ? true : sec.nums[n].indexOf(sub) >= 0;
+  }
+
+  // ---- Default rules (head list, in report order) -------------------------
+  // Each rule: id, head, type:'A'|'B'|'D'|'M'|'*' (table type or any) , test: function(ctx)->bool
+  var HEADS = [
+    'खून कलम 103(1) बीएनएस', 'सदोष मनुष्यवध कलम 105 बीएनएस', 'निष्काळजीपणाने मृत्यू कलम 106(1) बीएनएस',
+    'हुंडाबळी मृत्यू कलम 80(2) बीएनएस', 'आत्महत्येस प्रवृत्त करणे कलम 108 बीएनएस',
+    'मुलाच्या / अस्वस्थ व्यक्तीच्या आत्महत्येस प्रवृत्त करणे कलम 107 बीएनएस',
+    'खुनाचा प्रयत्न कलम 109 बीएनएस', 'सदोष मनुष्यवधाचा प्रयत्न कलम 110 बीएनएस',
+    'गर्भपात / भ्रूणहत्या कलम 88 ते 94 बीएनएस', 'मुलांना गुन्ह्यात गुंतवणे कलम 95 बीएनएस',
+    'दुखापत कलम 118(1) बीएनएस', 'अॅसिड हल्ला कलम 124 बीएनएस', 'चुकीचा प्रतिबंध / बंदिस्त कलम 126/127 बीएनएस',
+    'लोकसेवकावर हल्ला कलम 132 बीएनएस',
+    'विनयभंग वयस्क', 'विनयभंग अल्पवयीन (पोक्सो)', 'स्त्रीच्या नम्रतेचा अपमान कलम 79 बीएनएस',
+    'पती / नातेवाईकांकडून क्रूरता कलम 85 बीएनएस',
+    'पळवून नेणे कलम 137/140 बीएनएस', 'मानवी तस्करी कलम 143/144 बीएनएस', 'वेश्याव्यवसायासाठी मुलाची विक्री / खरेदी कलम 98/99 बीएनएस',
+    'बलात्कार वयस्क', 'बलात्कार अल्पवयीन (पोक्सो)',
+    'राज्याविरुद्ध गुन्हे कलम 147 ते 158 बीएनएस',
+    'बेकायदेशीर सभा कलम 189 बीएनएस', 'दंगल कलम 191 बीएनएस', 'मारामारी (Affray) कलम 194 बीएनएस', 'वैर वाढवणे / राष्ट्रीय एकात्मतेविरुद्ध कलम 196/197 बीएनएस',
+    'चोरी', 'घरफोडी रात्री', 'घरफोडी दिवसा', 'खंडणी / ब्लॅकमेलिंग कलम 308 बीएनएस', 'जबरी चोरी कलम 309 बीएनएस', 'दरोडा कलम 310/311 बीएनएस',
+    'विश्वासघात कलम 316 बीएनएस', 'अप्रामाणिकपणे मालमत्ता स्वीकारणे कलम 317 बीएनएस',
+    'फसवणूक कलम 318 बीएनएस', 'बनावट / खोटे दस्तऐवज कलम 336 ते 341 बीएनएस', 'बनावट चलन / नाणे / मुद्रांक कलम 178 ते 188 बीएनएस',
+    'सार्वजनिक सेवकाच्या आदेशाची अवज्ञा कलम 223 बीएनएस', 'गुन्हेगारास आश्रय देणे कलम 249/253/254 बीएनएस', 'कायदेशीर अटकेस विरोध कलम 262 बीएनएस',
+    'सार्वजनिक मार्गावर बेदरकार वाहन चालविणे कलम 281 बीएनएस',
+    '336 भादवि (281, 125/324/185 बीएनएस)', '337 भादवि (125 अ बीएनएस)', '338 भादवि (125 ब बीएनएस)', 'कलम 285 बीएनएस',
+    'अश्लील वस्तूंची विक्री कलम 294/295 बीएनएस', 'अश्लिल शिवीगाळ कलम 296 बीएनएस', 'धर्माशी संबंधित गुन्हे कलम 298 ते 301 बीएनएस',
+    'गैरप्रकार (मिस्चिफ) / जाळपोळ कलम 324 ते 328 बीएनएस', 'फौजदारी अतिक्रमण कलम 329 बीएनएस',
+    'गुन्हेगारी धमकी कलम 351 बीएनएस', 'खोट्या बातम्या / अफवा कलम 353 बीएनएस', 'निवडणुकीशी संबंधित गुन्हे कलम 173 ते 177 बीएनएस',
+    'संघटित गुन्हा / दहशतवाद कलम 111 ते 113 बीएनएस',
+    'वेठबिगारी बाल मजुरी', 'इतर बीएनएस गुन्हे',
+    'प्राण्यांना निर्दयतेने वागविणे अधिनियम 1960', 'महाराष्ट्र प्राणी संरक्षण अधिनियम 1976',
+    'आर्म ॲक्ट', 'जिवनावश्यक वस्तु अधिनियम 1955', 'एनडीपीएस ॲक्ट', 'महाराष्ट्र पोलीस अधिनियम 1951',
+    'माहिती तंत्रज्ञान अधिनियम, 2000', 'मोटार वाहन कायदा 1988', 'महाराष्ट्र जुगार कायदा', 'महाराष्ट्र दारूबंदी कायदा',
+    'हुंडा बंदी कायदा 1961', 'अनैतिक वाहतूक (प्रतिबंध) कायदा 1956', 'कौटुंबिक हिंसाचारापासून महिलांचे संरक्षण कायदा 2005',
+    'लैंगिक गुन्ह्यांपासून मुलांचे संरक्षण (पोक्सो) कायदा 2012', 'बाल न्याय कायदा 2015', 'बालविवाह प्रतिबंध कायदा 2006',
+    'अनुसूचित जाती/जमाती (अत्याचार प्रतिबंधक) कायदा 1989', 'नागरी हक्क संरक्षण कायदा 1955',
+    'सार्वजनिक मालमत्ता नुकसान प्रतिबंधक कायदा 1984', 'महाराष्ट्र मालमत्ता विद्रूपीकरण प्रतिबंधक कायदा 1995',
+    'स्फोटक कायदा 1884 / स्फोटक पदार्थ कायदा 1908', 'कॉपीराइट / ट्रेडमार्क कायदा', 'लॉटरी (नियमन) कायदा 1998',
+    'खाणी व खनिजे (विकास व नियमन) कायदा 1957', 'भ्रष्टाचार प्रतिबंधक कायदा 1988',
+    'वन / वन्यजीव संरक्षण कायदा', 'पर्यावरण / हवा / पाणी प्रदूषण प्रतिबंधक कायदा', 'सिगारेट व तंबाखू उत्पादने (COTPA) कायदा 2003',
+    'फॉरेनर्स / पासपोर्ट / इमिग्रेशन कायदा', 'भारतीय रेल्वे कायदा 1989', 'टेलिग्राफ / सिनेमॅटोग्राफ / केबल टीव्ही कायदा',
+    'अन्न सुरक्षा व मानक कायदा 2006', 'कॅटल ट्रेसपास कायदा 1871', 'मकोका 1999', 'विद्युत कायदा 2003',
+    'महाराष्ट्र मुद्रा-कर्ज (नियमन) अधिनियम 2014', 'महाराष्ट्र प्रादेशिक व नगररचना अधिनियम 1966', 'महाराष्ट्र सामाजिक बहिष्कार (प्रतिबंध) कायदा 2016',
+    'महाराष्ट्र छळवाद प्रतिबंध (रॅगिंग) अधिनियम 1999', 'इतर एसएलएल गुन्हे',
+    'मर्ग'
+  ];
+  function head(prefix) { for (var i = 0; i < HEADS.length; i++) if (HEADS[i].indexOf(prefix) === 0) return HEADS[i]; return prefix; }
+
+  function ut(c, re) { return re.test(c.utext || '') || re.test(c.text || ''); }
+  var NIGHT_RE = /jk=|रात्र/;
+  var POCSO_U = /पोक्सो|पॉक्सो|पोस्को|पोक्ं?सं?ो|अल्पवयीन|लैं?गी?िक\s*अपराधा|बालकांचे\s*लैं?गी?िक|POCSO/i;
+  function pocso(c) { return !!c.acts.POCSO || POCSO_U.test(c.utext) || /\b2012\b/.test(c.ctext || ''); }
+  // BNS written, or no act written at all (plain section numbers, e.g. "281,185")
+  function B(c) { return c.bns || c.soft; }
+  var MAJOR = ['103', '105', '109', '115', '117', '118', '74', '64', '296', '303', '305', '308', '309', '310', '311', '316', '318', '319', '331', '221', '132', '121'];
+  function major(c) { return B(c) && anySec(c, MAJOR); }
+  // IPC section numbers written with a BNS label (e.g. "406-420-467 बीएनएस")
+  var IPCONLY = ['420', '406', '409', '379', '380', '354', '363', '376', '498', '457', '454', '392', '395', '323', '506', '504', '427', '447', '448', '452', '465', '467', '468', '471'];
+  function ip(c) { return c.ipc || (B(c) && anySec(c, IPCONLY) && !anySec(c, MAJOR)); }
+  function only(c, allowed) { return c.sec.order.every(function (n) { return allowed.indexOf(n) >= 0; }); }
+  function anySec(c, list) { for (var i = 0; i < list.length; i++) if (has(c.sec, list[i])) return true; return false; }
+  var RAPE = ['64', '65', '66', '67', '68', '69', '70'];
+  function daru65(c) { return has(c.sec, '65') && (c.sec.nums['65'].some(function (x) { return !/^\d+$/.test(x); }) || /\b65\s*\(?\s*(?:bZ|,Q|b|[eEfF])(?![a-zA-Z])/.test(c.ctext)) && !anySec(c, ['64', '70']) && !c.acts.POCSO; }
+  function rapeSec(c) { return anySec(c, ['64', '68', '69', '70']) || (anySec(c, ['65', '67']) && !c.acts.MDA && !c.acts.IT && !c.acts.MVA && !daru65(c)); }
+  var MODESTY = ['74', '75', '76', '77', '78'];
+
+  var DEFAULT_RULES = [
+    { id: 'table-marg',  head: head('मर्ग'), test: function (c) { return c.table === 'M'; } },
+    { id: 'table-daru',  head: head('महाराष्ट्र दारूबंदी'), test: function (c) { return c.table === 'D'; } },
+    { id: 'ndps',   head: head('एनडीपीएस'), test: function (c) { return c.acts.NDPS || (has(c.sec, '27') && only(c, ['27', '8', '20', '22', '29', '3', '5']) && !c.acts.MVA && !c.acts.ARMS); } },
+    { id: 'jugar12', head: head('महाराष्ट्र जुगार'), test: function (c) { return has(c.sec, '12', 'A') && !anySec(c, ['303', '305', '309', '318', '65']) && !c.bns; } },
+    { id: 'mda',    head: head('महाराष्ट्र दारूबंदी'), test: function (c) { return (c.acts.MDA && !major(c)) || daru65(c); } },
+    { id: 'arms',   head: head('आर्म'), test: function (c) { return c.acts.ARMS && !major(c); } },
+    { id: 'essen',  head: head('जिवनावश्यक'), test: function (c) { return c.acts.ESSEN && !major(c); } },
+    { id: 'labour', head: head('वेठबिगारी'), test: function (c) { return c.acts.LABOUR; } },
+    { id: 'theft303', head: head('चोरी'), test: function (c) { return (B(c) || c.ipc || has(c.sec, '303', '2')) && has(c.sec, '303') && !anySec(c, ['309', '310', '311', '331', '332', '333', '334', '103', '109']); } },
+    { id: 'it',     head: head('माहिती तंत्रज्ञान'), test: function (c) { return c.acts.IT && !(B(c) && anySec(c, ['316', '318', '319', '308', '64', '74', '75', '77', '78', '79'])); } },
+    { id: 'elec',   head: head('विद्युत कायदा'), test: function (c) { return c.acts.ELEC; } },
+    { id: 'env',    head: head('पर्यावरण'), test: function (c) { return c.acts.ENV && !major(c); } },
+    { id: 'pdpp',   head: head('सार्वजनिक मालमत्ता'), test: function (c) { return c.acts.PDPP && !major(c) && !anySec(c, ['303', '305', '309', '310', '331']); } },
+    { id: 'animal', head: head('प्राण्यांना निर्दयतेने'), test: function (c) { return c.acts.ANIMAL; } },
+    { id: 'animal76', head: head('महाराष्ट्र प्राणी संरक्षण'), test: function (c) { return c.acts.ANIMAL76; } },
+    { id: 'mpoka',  head: head('महाराष्ट्र पोलीस'), test: function (c) { return c.acts.MPOKA && !c.acts.BNS && !c.acts.MDA && !c.acts.MJKA; } },
+    { id: 'jugar',  head: head('महाराष्ट्र जुगार'), test: function (c) { return c.acts.MJKA || (has(c.sec, '12') && /tqxkj|lV~Vk|lVkiVh|ojyh|rkl\s*iRr/.test(c.text) && !anySec(c, ['303', '305', '309', '318'])); } },
+    { id: 's103',   head: head('खून कलम'), test: function (c) { return B(c) && has(c.sec, '103'); } },
+    { id: 's105',   head: head('सदोष'), test: function (c) { return B(c) && has(c.sec, '105'); } },
+    { id: 's109',   head: head('खुनाचा'), test: function (c) { return B(c) && has(c.sec, '109'); } },
+    { id: 's108',   head: head('आत्महत्येस'), test: function (c) { return B(c) && has(c.sec, '108'); } },
+    { id: 's106',   head: head('निष्काळजीपणाने'), test: function (c) { return (B(c) || c.acts.MVA) && has(c.sec, '106'); } },
+    { id: 'x146',  head: head('वेठबिगारी'), test: function (c) { return B(c) && has(c.sec, '146') && !c.acts.MVA; } },
+    { id: 'rape-m', head: head('बलात्कार अल्पवयीन'), test: function (c) { return (B(c) || pocso(c)) && rapeSec(c) && pocso(c); } },
+    { id: 'rape-a', head: head('बलात्कार वयस्क'), test: function (c) { return B(c) && rapeSec(c); } },
+    { id: 'mod-m',  head: head('विनयभंग अल्पवयीन'), test: function (c) { return B(c) && anySec(c, MODESTY) && pocso(c); } },
+    { id: 'mod-a',  head: head('विनयभंग वयस्क'), test: function (c) { return B(c) && anySec(c, MODESTY); } },
+    { id: 's137',   head: head('पळवून नेणे'), test: function (c) { return B(c) && has(c.sec, '137'); } },
+    { id: 's140',   head: head('पळवून नेणे'), test: function (c) { return B(c) && has(c.sec, '140'); } },
+    { id: 's118',   head: head('दुखापत'), test: function (c) { return B(c) && has(c.sec, '118'); } },
+    { id: 's311',   head: head('दरोडा'), test: function (c) { return B(c) && (has(c.sec, '310') || has(c.sec, '311')); } },
+    { id: 's309',   head: head('जबरी'), test: function (c) { return B(c) && has(c.sec, '309'); } },
+    { id: 'burg-dw', head: head('घरफोडी दिवसा'), test: function (c) { return B(c) && has(c.sec, '331') && /fnolk/.test(c.ctext); } },
+    { id: 'burg-nw', head: head('घरफोडी रात्री'), test: function (c) { return B(c) && has(c.sec, '331') && /jk=/.test(c.ctext); } },
+    { id: 'burg-n', head: head('घरफोडी रात्री'), test: function (c) { return B(c) && has(c.sec, '331', '4'); } },
+    { id: 'burg-d', head: head('घरफोडी दिवसा'), test: function (c) { return B(c) && has(c.sec, '331', '3'); } },
+    { id: 'burg-305', head: head('घरफोडी रात्री'), test: function (c) { return B(c) && has(c.sec, '305') && !has(c.sec, '303') && anySec(c, ['331', '332', '333', '334']) && NIGHT_RE.test(c.text + c.utext); } },
+    { id: 'burg-305d', head: head('घरफोडी दिवसा'), test: function (c) { return B(c) && has(c.sec, '305') && !has(c.sec, '303') && anySec(c, ['331', '332', '333', '334']) && !has(c.sec, '74') && !has(c.sec, '118'); } },
+    { id: 'theft',  head: head('चोरी'), test: function (c) { return B(c) && anySec(c, ['303', '304', '305', '306', '307']); } },
+    { id: 's316',   head: head('विश्वासघात'), test: function (c) { return B(c) && has(c.sec, '316'); } },
+    { id: 's318',   head: head('फसवणूक'), test: function (c) { return B(c) && (has(c.sec, '318') || has(c.sec, '319')); } },
+    { id: 's338',   head: head('338'), test: function (c) { return (B(c) || c.acts.MVA) && has(c.sec, '125', 'B'); } },
+    { id: 's337',   head: head('337'), test: function (c) { return (B(c) || c.acts.MVA) && has(c.sec, '125', 'A'); } },
+    { id: 's336',   head: head('336'), test: function (c) { return (B(c) || c.acts.MVA) && has(c.sec, '281'); } },
+    { id: 's336m',  head: head('336'), test: function (c) { return c.acts.MVA && anySec(c, ['184', '134']) && anySec(c, ['324', '125']) && !anySec(c, ['106', '103', '109']); } },
+    { id: 's285',   head: head('कलम 285'), test: function (c) { return (B(c) || c.acts.MVA) && has(c.sec, '285') && !c.acts.MDA; } },
+    { id: 'mva185', head: head('मोटार वाहन'), test: function (c) { return (B(c) || c.acts.MVA) && has(c.sec, '185') && only(c, ['185', '3', '181', '130', '177', '184', '134', '5', '180', '1', '2', '4', '146', '196', '39', '192', '66', '122', '50', '51']); } },
+    { id: 'x298',  head: head('धर्माशी'), test: function (c) { return B(c) && anySec(c, ['298', '299', '300', '301']); } },
+    { id: 'x308',  head: head('खंडणी'), test: function (c) { return B(c) && has(c.sec, '308'); } },
+    { id: 's296',   head: head('अश्लिल'), test: function (c) { return B(c) && has(c.sec, '296'); } },
+    { id: 'mva',    head: head('मोटार वाहन'), test: function (c) { return c.acts.MVA && (!c.bns || only(c, ['3', '5', '39', '50', '51', '66', '122', '130', '134', '146', '177', '179', '180', '181', '184', '185', '192', '194', '196', '207'])); } },
+    // ---- भादवि (IPC) written instead of BNS: same head as the matching BNS section ----
+    { id: 'ipc302', head: head('खून कलम'), test: function (c) { return ip(c) && has(c.sec, '302'); } },
+    { id: 'ipc304b', head: head('हुंडाबळी'), test: function (c) { return ip(c) && has(c.sec, '304', 'B'); } },
+    { id: 'ipc304a', head: head('निष्काळजीपणाने'), test: function (c) { return ip(c) && has(c.sec, '304', 'A'); } },
+    { id: 'ipc304', head: head('सदोष'), test: function (c) { return ip(c) && has(c.sec, '304'); } },
+    { id: 'ipc307', head: head('खुनाचा'), test: function (c) { return ip(c) && has(c.sec, '307'); } },
+    { id: 'ipc306', head: head('आत्महत्येस'), test: function (c) { return ip(c) && has(c.sec, '306'); } },
+    { id: 'ipc376', head: head('बलात्कार वयस्क'), test: function (c) { return ip(c) && has(c.sec, '376') && !pocso(c); } },
+    { id: 'ipc376m', head: head('बलात्कार अल्पवयीन'), test: function (c) { return ip(c) && has(c.sec, '376'); } },
+    { id: 'ipc354', head: head('विनयभंग वयस्क'), test: function (c) { return ip(c) && has(c.sec, '354') && !pocso(c); } },
+    { id: 'ipc354m', head: head('विनयभंग अल्पवयीन'), test: function (c) { return ip(c) && has(c.sec, '354'); } },
+    { id: 'ipc363', head: head('पळवून नेणे'), test: function (c) { return ip(c) && anySec(c, ['363', '366']); } },
+    { id: 'ipc498', head: head('पती'), test: function (c) { return ip(c) && has(c.sec, '498'); } },
+    { id: 'ipc395', head: head('दरोडा'), test: function (c) { return ip(c) && anySec(c, ['395', '396', '397', '399']); } },
+    { id: 'ipc392', head: head('जबरी'), test: function (c) { return ip(c) && anySec(c, ['392', '393', '394']); } },
+    { id: 'ipc457', head: head('घरफोडी रात्री'), test: function (c) { return ip(c) && anySec(c, ['457', '458', '460']); } },
+    { id: 'ipc454', head: head('घरफोडी दिवसा'), test: function (c) { return ip(c) && anySec(c, ['454', '455', '456']) && anySec(c, ['379', '380']); } },
+    { id: 'ipc379', head: head('चोरी'), test: function (c) { return ip(c) && anySec(c, ['379', '380', '381']); } },
+    { id: 'ipc406', head: head('विश्वासघात'), test: function (c) { return ip(c) && anySec(c, ['406', '407', '408', '409']); } },
+    { id: 'ipc420', head: head('फसवणूक'), test: function (c) { return ip(c) && anySec(c, ['420', '419', '417']); } },
+    { id: 'ipc326', head: head('दुखापत'), test: function (c) { return ip(c) && anySec(c, ['324', '326', '325', '323']); } },
+    { id: 'ipc338', head: head('338'), test: function (c) { return ip(c) && has(c.sec, '338'); } },
+    { id: 'ipc337', head: head('337'), test: function (c) { return ip(c) && has(c.sec, '337'); } },
+    { id: 'ipc279', head: head('336'), test: function (c) { return ip(c) && anySec(c, ['279', '336']); } },
+    { id: 'ipc283', head: head('कलम 285'), test: function (c) { return ip(c) && has(c.sec, '283'); } },
+    { id: 'ipc294', head: head('अश्लिल'), test: function (c) { return ip(c) && has(c.sec, '294'); } },
+    // ---- added from the Noting/MCR head list (these only fire when no rule above matched) ----
+    { id: 'x80',   head: head('हुंडाबळी'), test: function (c) { return B(c) && has(c.sec, '80'); } },
+    { id: 'x107',  head: head('मुलाच्या'), test: function (c) { return B(c) && has(c.sec, '107'); } },
+    { id: 'x110',  head: head('सदोष मनुष्यवधाचा'), test: function (c) { return B(c) && has(c.sec, '110'); } },
+    { id: 'x88',   head: head('गर्भपात'), test: function (c) { return B(c) && anySec(c, ['88', '89', '90', '91', '92', '93', '94']); } },
+    { id: 'x95', weak: true, head: head('मुलांना गुन्ह्यात'), test: function (c) { return B(c) && has(c.sec, '95'); } },
+    { id: 'x124',  head: head('अॅसिड'), test: function (c) { return B(c) && has(c.sec, '124'); } },
+    { id: 'x333',  weak: true, head: head('फौजदारी अतिक्रमण'), test: function (c) { return B(c) && anySec(c, ['329', '330', '332', '333']) && !anySec(c, ['118', '117', '109', '74', '64', '303', '305']); } },
+    { id: 'xhurt', weak: true, head: head('दुखापत'), test: function (c) { return B(c) && anySec(c, ['115', '117', '119', '120', '121', '122', '123']); } },
+    { id: 'x132', weak: true, head: head('लोकसेवकावर'), test: function (c) { return B(c) && (has(c.sec, '132') || has(c.sec, '121')); } },
+    { id: 'x126', weak: true, head: head('चुकीचा प्रतिबंध'), test: function (c) { return B(c) && (has(c.sec, '126') || has(c.sec, '127')); } },
+    { id: 'x79', weak: true, head: head('स्त्रीच्या नम्रतेचा'), test: function (c) { return B(c) && has(c.sec, '79'); } },
+    { id: 'x85',   head: head('पती'), test: function (c) { return B(c) && (has(c.sec, '85') || has(c.sec, '86')); } },
+    { id: 'xkid',  head: head('पळवून नेणे'), test: function (c) { return B(c) && anySec(c, ['87', '96', '97', '139', '141', '142']); } },
+    { id: 'x143',  head: head('मानवी तस्करी'), test: function (c) { return B(c) && (has(c.sec, '143') || has(c.sec, '144')); } },
+    { id: 'x98', weak: true, head: head('वेश्याव्यवसायासाठी'), test: function (c) { return B(c) && (has(c.sec, '98') || has(c.sec, '99')); } },
+    { id: 'x147',  head: head('राज्याविरुद्ध'), test: function (c) { return B(c) && anySec(c, ['147', '148', '149', '150', '151', '152', '153', '154', '155', '156', '157', '158']); } },
+    { id: 'x189',  head: head('बेकायदेशीर सभा'), test: function (c) { return B(c) && has(c.sec, '189'); } },
+    { id: 'x191',  head: head('दंगल कलम'), test: function (c) { return B(c) && anySec(c, ['191', '192', '193', '195']); } },
+    { id: 'x194',  head: head('मारामारी'), test: function (c) { return B(c) && has(c.sec, '194'); } },
+    { id: 'x196',  head: head('वैर वाढवणे'), test: function (c) { return B(c) && (has(c.sec, '196') || has(c.sec, '197')); } },
+    { id: 'x111',  head: head('संघटित'), test: function (c) { return B(c) && anySec(c, ['111', '112', '113']); } },
+    { id: 'x312', weak: true, head: head('दरोडा'), test: function (c) { return B(c) && has(c.sec, '312'); } },
+    { id: 'x317',  head: head('अप्रामाणिकपणे'), test: function (c) { return B(c) && has(c.sec, '317'); } },
+    { id: 'x336f', weak: true, head: head('बनावट / खोटे'), test: function (c) { return B(c) && anySec(c, ['336', '337', '338', '339', '340', '341']) && !has(c.sec, '281') && !has(c.sec, '125'); } },
+    { id: 'x178',  head: head('बनावट चलन'), test: function (c) { return B(c) && anySec(c, ['178', '179', '180', '181', '182', '183', '184', '185', '186', '187', '188']) && !c.acts.MVA; } },
+    { id: 'x324', weak: true, head: head('गैरप्रकार'), test: function (c) { return B(c) && anySec(c, ['324', '325', '326', '327', '328']); } },
+    { id: 'x223', weak: true, head: head('सार्वजनिक सेवकाच्या'), test: function (c) { return B(c) && has(c.sec, '223'); } },
+    { id: 'x249', weak: true, head: head('गुन्हेगारास आश्रय'), test: function (c) { return B(c) && anySec(c, ['249', '253', '254']); } },
+    { id: 'x262', weak: true, head: head('कायदेशीर अटकेस'), test: function (c) { return B(c) && has(c.sec, '262'); } },
+    { id: 'x281', weak: true, head: head('336'), test: function (c) { return B(c) && has(c.sec, '281'); } },
+    { id: 'x294',  head: head('अश्लील वस्तूंची'), test: function (c) { return B(c) && (has(c.sec, '294') || has(c.sec, '295')); } },
+    { id: 'x329', weak: true, head: head('फौजदारी अतिक्रमण'), test: function (c) { return B(c) && anySec(c, ['329', '330', '331', '332', '333', '334']); } },
+    { id: 'x351', weak: true, head: head('गुन्हेगारी धमकी'), test: function (c) { return B(c) && has(c.sec, '351'); } },
+    { id: 'x353', weak: true, head: head('खोट्या बातम्या'), test: function (c) { return B(c) && has(c.sec, '353'); } },
+    { id: 'x173',  head: head('निवडणुकीशी'), test: function (c) { return B(c) && anySec(c, ['173', '174', '175', '176', '177']) && !c.acts.MVA; } },
+    // special & local laws (matched on the Unicode text)
+    { id: 'l-dowry', head: head('हुंडा बंदी'), test: function (c) { return ut(c, /हुंडा\s*(?:बंदी|प्रतिबंध)/); } },
+    { id: 'l-immoral', head: head('अनैतिक वाहतूक'), test: function (c) { return ut(c, /अनैतिक\s*(?:वाहतूक|व्यापार)/); } },
+    { id: 'l-dv', head: head('कौटुंबिक हिंसाचार'), test: function (c) { return ut(c, /कौटुंबिक\s*हिंसाचार/); } },
+    { id: 'l-atro', head: head('अनुसूचित जाती'), test: function (c) { return c.acts.ATRO || ut(c, /अ\s*[-.]?\s*जा\s*[-.]?\s*ज\s*[-.]?\s*अ|अत्याचार\s*प्रति|ॲट्रॉसिटी|अॅट्रॉसिटी/); } },
+    { id: 'l-pocso', weak: true, head: head('लैंगिक गुन्ह्यांपासून'), test: function (c) { return pocso(c); } },
+    { id: 'l-jj', head: head('बाल न्याय'), test: function (c) { return ut(c, /बाल\s*न्याय|जुवेनाईल/); } },
+    { id: 'l-cm', head: head('बालविवाह'), test: function (c) { return ut(c, /बालविवाह|बाल\s*विवाह/); } },
+    { id: 'l-civil', head: head('नागरी हक्क'), test: function (c) { return ut(c, /नागरी\s*हक्क/); } },
+    { id: 'l-pdpp', head: head('सार्वजनिक मालमत्ता'), test: function (c) { return ut(c, /सार्वजनिक\s*मालमत्ते?चे?\s*नुकसान|सा\.?\s*मा\.?\s*न\.?\s*प्र/); } },
+    { id: 'l-deface', head: head('महाराष्ट्र मालमत्ता विद्रूपीकरण'), test: function (c) { return ut(c, /विद्रू?पीकरण/); } },
+    { id: 'l-expl', head: head('स्फोटक कायदा'), test: function (c) { return ut(c, /स्फोटक/); } },
+    { id: 'l-copy', head: head('कॉपीराइट'), test: function (c) { return ut(c, /कॉपी\s*राइट|कॉपीराईट|ट्रेड\s*मार्क/); } },
+    { id: 'l-lott', head: head('लॉटरी'), test: function (c) { return ut(c, /लॉटरी|लाॅटरी/); } },
+    { id: 'l-mine', head: head('खाणी व खनिजे'), test: function (c) { return ut(c, /खान\s*(?:आणि|व)\s*खनि|खाणी\s*(?:आणि|व)\s*खनि|खनिज/); } },
+    { id: 'l-acb', head: head('भ्रष्टाचार प्रतिबंधक'), test: function (c) { return ut(c, /भ्रष्टाचार/); } },
+    { id: 'l-forest', head: head('वन / वन्यजीव'), test: function (c) { return ut(c, /वन\s*(?:अधिनियम|कायदा)|वन्य\s*जीव|वन्यप्राणी|वनसंवर्धन|भारतीय\s*वन/); } },
+    { id: 'l-env', head: head('पर्यावरण'), test: function (c) { return ut(c, /पर्यावरण|प्रदूषण/); } },
+    { id: 'l-cotpa', head: head('सिगारेट'), test: function (c) { return ut(c, /कोटपा|सिगारेट|तंबाखू\s*उत्पाद|COTPA/i); } },
+    { id: 'l-foreign', head: head('फॉरेनर्स'), test: function (c) { return ut(c, /फॉरेनर|परदेशी\s*नागरिक|पासपोर्ट|इमिग्रेशन|नागरिकत्व/); } },
+    { id: 'l-rly', head: head('भारतीय रेल्वे'), test: function (c) { return ut(c, /रेल्वे\s*(?:अधिनियम|कायदा|अॅक्ट|ॲक्ट)/); } },
+    { id: 'l-tele', head: head('टेलिग्राफ'), test: function (c) { return ut(c, /टेलिग्राफ|सिनेमॅटोग्राफ|केबल\s*टी/); } },
+    { id: 'l-food', head: head('अन्न सुरक्षा'), test: function (c) { return ut(c, /अन्न\s*सुरक्षा|अन्न\s*व\s*औषध|गुटखा|FSSA/i); } },
+    { id: 'l-cattle', head: head('कॅटल ट्रेसपास'), test: function (c) { return ut(c, /कॅटल\s*ट्रेस|गुरे\s*अतिक्रमण/); } },
+    { id: 'l-mcoca', head: head('मकोका'), test: function (c) { return ut(c, /मकोका|म\.?\s*को\.?\s*का|संघटित\s*गुन्हेगारी\s*(?:नियंत्रण|प्रतिबंध)/); } },
+    { id: 'l-elec', head: head('विद्युत कायदा'), test: function (c) { return ut(c, /विद्युत\s*(?:कायदा|अधिनियम)|वीज\s*चोरी/); } },
+    { id: 'l-lend', head: head('महाराष्ट्र मुद्रा-कर्ज'), test: function (c) { return ut(c, /मुद्रा\s*[-]?\s*कर्ज|सावकार/); } },
+    { id: 'l-town', head: head('महाराष्ट्र प्रादेशिक'), test: function (c) { return ut(c, /प्रादेशिक\s*(?:आणि|व)\s*नगर/); } },
+    { id: 'l-boycott', head: head('महाराष्ट्र सामाजिक बहिष्कार'), test: function (c) { return ut(c, /सामाजिक\s*बहिष्कार/); } },
+    { id: 'l-ragging', head: head('महाराष्ट्र छळवाद'), test: function (c) { return ut(c, /छळवाद|रॅगिंग/); } },
+    // catch-alls (never counted as "ambiguous")
+    { id: 'bns-other', weak: true, head: head('इतर बीएनएस'), test: function (c) { return c.bns && c.table !== 'M'; } },
+    { id: 'sll-other', weak: true, head: head('इतर एसएलएल'), test: function (c) { return !c.bns && c.table !== 'M' && ut(c, /अधिनियम|कायदा|ॲक्ट|अॅक्ट|अधि\./); } },
+  ];
+
+  // उप-प्रकार (note shown under the section) for heads where it can be derived from sections
+  function subOf(rec, headName) {
+    var c = ctxOf(rec), notes = [];
+    if (/आर्म/.test(headName || '')) {
+      if (has(c.sec, '4')) notes.push('इतर हत्यार'); else if (has(c.sec, '3')) notes.push('अग्निशस्त्र');
+    }
+    if (/पळवून/.test(headName || '')) {
+      if (has(c.sec, '137')) notes.push('अल्पवयीन'); else if (has(c.sec, '140')) notes.push('वयस्क');
+    }
+    if (/एनडीपीएस/.test(headName || '')) {
+      if (has(c.sec, '8')) notes.push('व्यवहारीक वापर'); else if (has(c.sec, '27')) notes.push('पिणे');
+    }
+    return notes.join(', ');
+  }
+
+  function ctxOf(rec) {
+    var crime = rec.crimeText || '';
+    var sec = parseSections(crime);
+    var a = acts(norm(crime));
+    var text = norm(crime + ' ' + (rec.extraText || ''));
+    // if title (col1) has no act marker, search full row
+    var a2 = acts(text);
+    var anyAct = Object.keys(a).length > 0;
+    var utext = '';
+    try { utext = (typeof KD !== 'undefined') ? KD.convert(text) : ''; } catch (e) {}
+    if (a2.ANIMAL76 && !a.ANIMAL76) a.ANIMAL76 = true;
+    var soft = !anyAct && !Object.keys(a2).length;
+    var ctext = norm(crime);
+    var ipc = !!a.IPC && !a.BNS;
+    return { table: rec.table, sec: sec, acts: a, bns: !!a.BNS || (!anyAct && !!a2.BNS), soft: soft, ipc: ipc, ctext: ctext, anyAct: anyAct, text: text, utext: utext, bnsMajor: false, bnsOnly281: false };
+  }
+
+  function classify(rec, rules, learned) {
+    var c = ctxOf(rec);
+    var i;
+    // learned/user rules first
+    if (learned && learned.length) {
+      learned = learned.slice().sort(function (a, b) { return ((b.sections || []).length + (b.keywords || []).length + (b.act ? 1 : 0)) - ((a.sections || []).length + (a.keywords || []).length + (a.act ? 1 : 0)); });
+      for (i = 0; i < learned.length; i++) {
+        var L = learned[i];
+        if (learnedMatch(L, c, rec)) return { head: L.head, rule: 'learned:' + (L.id || i), learned: true };
+      }
+    }
+    rules = rules || DEFAULT_RULES;
+    for (i = 0; i < rules.length; i++) {
+      try { if (rules[i].test(c)) return { head: rules[i].head, rule: rules[i].id }; } catch (e) {}
+    }
+    return { head: null, rule: 'none' };
+  }
+
+  // every default rule that matches (to spot ambiguous classification)
+  function candidates(rec, rules) {
+    var c = ctxOf(rec), out = [];
+    (rules || DEFAULT_RULES).forEach(function (r) { try { if (!r.weak && r.test(c) && out.indexOf(r.head) < 0) out.push(r.head); } catch (e) {} });
+    return out;
+  }
+
+  // learned rule: {head, sections:['103','125:B'], act:'BNS'|'', keywords:[..], table:'A|B|D|M|*'}
+  function learnedMatch(L, c, rec) {
+    if (L.table && L.table !== '*' && L.table !== c.table) return false;
+    if (L.act && !c.acts[L.act]) return false;
+    var ok = true;
+    (L.sections || []).forEach(function (s) {
+      var p = String(s).split(':');
+      if (!has(c.sec, p[0], p[1])) ok = false;
+    });
+    if (!ok) return false;
+    (L.keywords || []).forEach(function (k) { k = String(k).trim(); if (k && c.text.indexOf(k) < 0 && c.utext.indexOf(k) < 0) ok = false; });
+    if (!(L.sections && L.sections.length) && !(L.keywords && L.keywords.length)) return false;
+    return ok;
+  }
+
+  // old head names (earlier versions) -> current names
+  var RENAMED = {
+    'पळवून नेणे अल्पवयीन (137 बीएनएस)': 'पळवून नेणे कलम 137/140 बीएनएस', 'पळवून नेणे वयस्क (140 बीएनएस)': 'पळवून नेणे कलम 137/140 बीएनएस',
+    'मपोका': 'महाराष्ट्र पोलीस अधिनियम 1951', 'जुगार कायदा': 'महाराष्ट्र जुगार कायदा'
+  };
+  return { candidates: candidates, RENAMED: RENAMED, subOf: subOf, classify: classify, parseSections: parseSections, acts: acts, HEADS: HEADS, DEFAULT_RULES: DEFAULT_RULES, norm: norm, PS_NAMES: PS_NAMES };
+})();
+if (typeof module !== 'undefined') module.exports = ENG;
+
+;
+/* Text utilities: normalisers, short hakikat, theft kinds, validation, Unicode->Kruti Dev, Roman->Marathi.
+   Pure JS (browser, node, Apps Script). */
+;(window.__BPS_PARTS = window.__BPS_PARTS || []).push('Engine1'); /* ===== END OF Engine1 ===== */

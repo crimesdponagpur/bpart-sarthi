@@ -1,0 +1,677 @@
+/* ---------- queue (तपासणी रांग) ---------- */
+var FIXLBL = { 'hx.stolen': 'चोरीस गेलेला माल', 'hx.desc': 'चोरीस गेलेल्या मालाचे विवरण', 'hx.value': 'चोरीचा माल (रु.)', 'hx.recovered': 'वसुल माल', 'hx.weapon': 'हत्यार', 'hx.reason': 'कारण', 'hx.cAge': 'फिर्यादी वय', 'hx.aAge': 'आरोपी वय' };
+function lookIssues(r) { return issuesOf(r).filter(function (i) { return i.lv === 'hi' || i.lv === 'mid'; }); }
+function buildQueue() {
+  var list = S.records.filter(function (r) { return !r.ok; }).map(function (r) { var is = lookIssues(r); return { r: r, is: is, w: CHECKS.weight(is) }; }).filter(function (x) { return x.is.length; });
+  list.sort(function (a, b) { return b.w - a.w || (a.r.ps < b.r.ps ? -1 : a.r.ps > b.r.ps ? 1 : (parseInt(a.r.no, 10) || 0) - (parseInt(b.r.no, 10) || 0)); });
+  S.qIds = list.map(function (x) { return x.r.id; });
+  S.qTotal = list.length + S.records.filter(function (r) { return r.ok; }).length;
+}
+function chipsHtml(r) {
+  var is = lookIssues(r);
+  if (!is.length) return '<span class="chip2 fixed">✓ सर्व त्रुटी दूर – "ठीक आहे" दाबा</span>';
+  return is.map(function (i) { return '<span class="chip2' + (i.lv === 'hi' ? ' hi' : '') + '">' + (i.lv === 'hi' ? '● ' : '⚠ ') + esc(i.t) + '</span>'; }).join('');
+}
+function updateChips(card, r) {
+  var is = lookIssues(r);
+  card.querySelector('.chips').innerHTML = chipsHtml(r);
+  card.classList.toggle('clean', !is.length); card.classList.toggle('hi', is.some(function (i) { return i.lv === 'hi'; }));
+}
+function diffHtml(r) {
+  if (!r.chg || !r.chg.length) return '';
+  var cut = function (t) { t = String(t || '—').replace(/\n/g, ' '); return t.length > 150 ? t.slice(0, 150) + '…' : t; };
+  return '<div class="simbox" style="border-color:var(--warn)"><div class="ttl">PS च्या नवीन फाईलमध्ये काय बदलले</div>' + r.chg.map(function (c) { return '<div class="small"><b>' + esc(c.label) + ':</b> <s class="muted">' + esc(cut(c.was)) + '</s> → ' + esc(cut(c.now)) + '</div>'; }).join('') + '</div>';
+}
+function qCardHtml(r) {
+  var is = lookIssues(r), id = esc(r.id), fixes = [], alts = [];
+  is.forEach(function (i) { if (i.fix && fixes.indexOf(i.fix) < 0) fixes.push(i.fix); (i.alt || []).forEach(function (a) { if (alts.indexOf(a) < 0) alts.push(a); }); });
+  var fx = fixes.map(function (k) {
+    var key = k.slice(3), v = (r.hx && r.hx[key]) || '', big = /stolen|desc/.test(key);
+    return '<div' + (big ? ' style="grid-column:1/-1"' : '') + '><label>' + esc(FIXLBL[k] || key) + '</label>' + (big ? '<textarea rows="2" data-hx="' + id + '" data-k="' + key + '">' + esc(v) + '</textarea>' : '<input type="text" data-hx="' + id + '" data-k="' + key + '" value="' + esc(v) + '">') + '</div>';
+  }).join('');
+  var alt = alts.length ? '<div class="row" style="margin-top:6px"><span class="small muted">किंवा head:</span>' + alts.map(function (a) { return '<button class="btn sm" data-qhead="' + id + '" data-h="' + esc(a) + '">' + esc(a) + '</button>'; }).join('') + '</div>' : '';
+  return '<div class="qcard' + (is.some(function (i) { return i.lv === 'hi'; }) ? ' hi' : '') + (is.length ? '' : ' clean') + '" id="q-' + id + '">' +
+    '<div class="item" style="padding-bottom:0"><div class="chips">' + chipsHtml(r) + '</div>' + diffHtml(r) + (fx ? '<div class="qfix">' + fx + '</div>' : '') + alt + '</div>' +
+    itemHtml(r, { noWarn: true }) +
+    '<div class="qact"><button class="btn pri sm" data-qok="' + id + '">✓ ठीक आहे</button><button class="btn sm" data-qskip="' + id + '">नंतर पाहतो</button>' + (r.missing ? '<button class="btn sm danger" data-qremove="' + id + '">यादीतून काढा</button>' : '') + '</div></div>';
+}
+function qApprove(id) {
+  var r = rec(id); if (!r) return; r.ok = true; delete r.isNew; delete r.chg; delete r.missing; S.arcDirty = true; saveDraftSoon();
+  var card = $('q-' + id);
+  if (card) { card.style.transition = 'opacity .18s'; card.style.opacity = '0'; setTimeout(function () { renderQueue(); renderSteps(); }, 170); } else { renderQueue(); renderSteps(); }
+}
+function renderQueue() {
+  var n = S.records.length;
+  if (!n) { $('qHead').innerHTML = '<div class="empty">आधी फाईल्स निवडून "वर्गीकरण करा" दाबा.<br><br><button class="btn pri" data-go="files">फाईल्स निवडा →</button></div>'; $('qBatch').innerHTML = ''; $('qList').innerHTML = ''; return; }
+  var ids = S.qIds.filter(function (id) { var r = rec(id); return r && !r.ok; });
+  var total = Math.max(S.qTotal, ids.length), doneN = total - ids.length, pct = total ? Math.round(doneN * 100 / total) : 100;
+  var unc = S.records.filter(function (r) { return !r.head; }).length;
+  var h = '<h2>तपासणी रांग</h2><div class="small muted">' + n + ' नोंदींपैकी ' + total + ' नोंदींकडे तुमचे लक्ष हवे. बाकीच्या ' + (n - total) + ' नोंदी बिनचूक वाटतात.</div><div class="qbar"><div style="width:' + pct + '%"></div></div><div class="small">' + doneN + ' / ' + total + ' तपासल्या</div>';
+  if (ids.length) h += '<div class="row" style="margin-top:8px"><button class="btn sm" id="qAllClean">त्रुटी नसलेल्या सर्व मंजूर करा</button></div>';
+  else h += '<div style="margin-top:10px"><b style="color:var(--ok)">✓ सर्व नोंदी तपासल्या.</b> ' + (unc ? '<span style="color:var(--bad)">पण ' + unc + ' अवर्गीकृत आहेत – "वर्गीकरण" टॅब पाहा.</span>' : '') + '<div class="row" style="margin-top:8px"><button class="btn pri" data-go="download">Word बनवा →</button><button class="btn" data-go="review">सर्व वर्गीकरण पाहा</button></div></div>';
+  if (S.lastMerge) h = '<div class="banner" style="margin:0 0 10px;background:var(--brandSoft);color:var(--brand);border-color:var(--brand2)"><b>अद्ययावत फाईलनंतर (' + fmtDT(S.lastMerge.t) + '): ' + esc(S.lastMerge.txt) + '</b></div>' + h;
+  $('qHead').innerHTML = h;
+  var b = S.batch || {}, bl = [];
+  (b.gaps || []).forEach(function (g) {
+    var m = g.missing.slice(0, 15).join(', ') + (g.missing.length > 15 ? '…' : '');
+    bl.push('<li>' + PSU[g.ps] + (g.marg ? ' (मर्ग)' : '') + ': गुन्हा क्र. <b>' + m + '</b> यादीत नाही (' + g.from + ' ते ' + g.to + ' च्या दरम्यान)</li>');
+  });
+  (b.dupList || []).forEach(function (d) { bl.push('<li>' + esc(d.text) + '</li>'); });
+  $('qBatch').innerHTML = (bl.length && !S.batchOk) ? '<div class="bcard"><b>संपूर्ण यादी तपासणी – हे पाहा:</b><ul style="margin:6px 0 8px;padding-left:20px">' + bl.join('') + '</ul><button class="btn sm" id="qBatchOk">पाहिले, ठीक आहे</button></div>' : '';
+  $('qList').innerHTML = ids.map(function (id) { return qCardHtml(rec(id)); }).join('');
+}
+$('v-queue').addEventListener('click', function (e) {
+  if (e.target.closest('#qBatchOk')) { S.batchOk = true; renderQueue(); }
+  if (e.target.closest('#qAllClean')) {
+    var n = 0; S.qIds.forEach(function (id) { var r = rec(id); if (r && !r.ok && !lookIssues(r).length) { r.ok = true; n++; } });
+    saveDraftSoon(); renderQueue(); renderSteps(); toast(n ? n + ' नोंदी मंजूर ✓' : 'त्रुटी नसलेली कोणतीही नोंद अजून नाही');
+  }
+});
+document.addEventListener('click', function (e) { var g = e.target.closest('[data-go]'); if (g) show(g.dataset.go); });
+
+/* ---------- PS file status + WhatsApp reminder ---------- */
+function renderPsStatus() {
+  var html = '<div class="pss">' + Object.keys(PSU).map(function (k) {
+    var files = S.files.filter(function (f) { return f.ps === k; }), nrec = S.records.filter(function (r) { return r.ps === k; }).length;
+    var got = files.length > 0 || nrec > 0;
+    return '<div class="psc ' + (got ? 'got' : 'miss') + '"><h4>' + (got ? '✓' : '⚠') + ' ' + PSU[k] + '</h4><div class="st">' + (got ? (nrec ? nrec + ' नोंदी' : files.length + ' फाईल निवडली') : 'फाईल आलेली नाही') + '</div>' +
+      (got ? '' : '<input type="text" inputmode="numeric" placeholder="PS चा WhatsApp नंबर (एकदाच)" data-psnum="' + k + '" value="' + esc(lsGet('psnum_' + k) || '') + '" data-notype="1"><div class="row"><button class="btn sm" data-wa="' + k + '">WhatsApp वर आठवण पाठवा</button></div>') + '</div>';
+  }).join('') + '</div>';
+  var unk = S.files.filter(function (f) { return !f.ps; }).length;
+  if (unk) html += '<div class="small muted" style="margin-top:8px">⚠ ' + unk + ' फाईलचा PS ओळखला नाही – यादीत PS निवडा.</div>';
+  $('psHome').innerHTML = html; $('psFiles').innerHTML = html;
+}
+document.addEventListener('change', function (e) { var t = e.target; if (t.dataset && t.dataset.psnum) { lsSet('psnum_' + t.dataset.psnum, t.value.trim()); } });
+document.addEventListener('click', function (e) {
+  var b = e.target.closest('[data-wa]'); if (!b) return;
+  var k = b.dataset.wa, inp = b.closest('.psc').querySelector('input'), num = ((inp && inp.value) || lsGet('psnum_' + k) || '').replace(/\D/g, '');
+  if (inp) lsSet('psnum_' + k, inp.value.trim());
+  if (num.length === 10) num = '91' + num;
+  var mo = S.month || ($('monthIn').value || '').trim();
+  var msg = 'नमस्कार, पो.स्टे. ' + PSU[k] + ' चा ' + (mo ? 'माहे ' + mo + ' चा ' : '') + 'B Part अद्याप प्राप्त झालेला नाही. कृपया .docx फाईल तातडीने पाठवावी.\n– उपविभागीय पोलीस अधिकारी कार्यालय, नागपूर';
+  window.open('https://wa.me/' + num + '?text=' + encodeURIComponent(msg), '_blank');
+});
+
+/* ---------- home ---------- */
+function renderHome() {
+  var n = S.records.length, pend = n ? pendingCount() : 0, unc = S.records.filter(function (r) { return !r.head; }).length, okN = S.records.filter(function (r) { return r.ok; }).length;
+  var mo = S.month ? 'माहे ' + S.month : '';
+  var T, P, B, G;
+  if (!n) { T = 'नमस्कार! नवीन महिना सुरू करूया'; P = 'तिन्ही PS ची B Part फाईल निवडा – बाकी काम app करेल.'; B = 'फाईल्स निवडा →'; G = 'files'; }
+  else if (pend || unc) { T = pend + ' नोंदी तपासायच्या'; P = mo + ' · एकूण ' + n + ' नोंदी' + (unc ? ' · ' + unc + ' अवर्गीकृत' : ''); B = 'तपासणी रांग सुरू करा →'; G = pend ? 'queue' : 'review'; }
+  else if (!S.gen) { T = 'सर्व तपासले ✓'; P = mo + ' · ' + n + ' नोंदी तयार आहेत'; B = 'Word बनवा →'; G = 'download'; }
+  else if (S.arcDirty) { T = 'Word तयार ✓ – महिना जतन करा'; P = mo + ' · जतन केले की पुढच्या महिन्यात तुलना व शोध करता येईल'; B = 'महिना जतन करा →'; G = 'archive'; }
+  else { T = 'Word तयार ✓ · जतन झाले'; P = mo + ' · आता अहवाल पाहा'; B = 'अहवाल पाहा →'; G = 'reports'; }
+  $('heroT').textContent = T; $('heroP').textContent = P; $('heroBtn').textContent = B; $('heroBtn').dataset.go = G;
+  $('tiles').innerHTML = n ? '<div class="tile" data-go="review"><b>' + n + '</b><span>एकूण नोंदी</span></div><div class="tile warn" data-go="queue"><b>' + pend + '</b><span>तपासायच्या</span></div><div class="tile bad" data-go="review"><b>' + unc + '</b><span>अवर्गीकृत</span></div><div class="tile ok" data-go="queue"><b>' + okN + '</b><span>तुम्ही मंजूर केल्या</span></div>' : '';
+  var d = n ? null : loadDraft();
+  $('draftBox').innerHTML = (d && d.records && d.records.length) ? '<div class="card" style="border-color:var(--brand2)"><h2>अर्धवट काम सापडले</h2><p class="small muted" style="margin-top:0">' + (d.month ? 'माहे ' + esc(d.month) + ' · ' : '') + d.records.length + ' नोंदी · जतन: ' + new Date(d.t).toLocaleDateString('en-GB') + ' ' + new Date(d.t).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) + '</p><div class="row"><button class="btn pri" data-draft="load">सुरू ठेवा</button><button class="btn" data-draft="del">काढून टाका</button></div></div>' : '';
+  var days = bkDays();
+  $('bkBanner').innerHTML = ((S.rules.length || S.fixes.length) && (days === null || days >= 30)) ? '<div class="banner"><b>' + (days === null ? 'शिकवलेल्या नियमांचा बॅकअप अजून घेतला नाही.' : 'शेवटचा बॅकअप ' + days + ' दिवसांपूर्वी घेतला.') + '</b><button class="btn sm" data-bk="1">आता बॅकअप घ्या</button></div>' : '';
+  Array.prototype.forEach.call(document.querySelectorAll('#segFs button'), function (b) { b.classList.toggle('on', b.dataset.fs === (lsGet('bps_fs') || '1')); });
+  Array.prototype.forEach.call(document.querySelectorAll('#segTh button'), function (b) { b.classList.toggle('on', b.dataset.th === (lsGet('bps_th') || 'auto')); });
+  renderPsStatus(); homeArc();
+}
+$('heroBtn').addEventListener('click', function () { show(this.dataset.go || 'files'); });
+$('v-home').addEventListener('click', function (e) {
+  var d = e.target.closest('[data-draft]');
+  if (d && d.dataset.draft === 'del') { lsDel('bps_draft'); try { localStorage.removeItem('bps_draft'); } catch (x) {} renderHome(); }
+  if (d && d.dataset.draft === 'load') {
+    var j = loadDraft(); if (!j) return;
+    S.records = j.records; S.month = j.month || ''; S.gen = !!j.gen; S.log = j.log || []; S.batch = CHECKS.batch(S.records); S.batchOk = true;
+    $('monthIn').value = S.month; $('monthTag').textContent = 'माहे ' + (S.month || '—');
+    toast(S.records.length + ' नोंदी परत आणल्या ✓'); show('queue');
+  }
+  if (e.target.closest('[data-bk]')) { show('rules'); makeBackup(); }
+  var fs = e.target.closest('[data-fs]'); if (fs) { lsSet('bps_fs', fs.dataset.fs); applyLook(); renderHome(); }
+  var th = e.target.closest('[data-th]'); if (th) { lsSet('bps_th', th.dataset.th); applyLook(); renderHome(); }
+});
+
+/* ---------- look: text size + theme ---------- */
+function applyMode() {
+  var full = lsGet('bps_mode') === 'full';
+  document.body.classList.toggle('simple', !full);
+  Array.prototype.forEach.call(document.querySelectorAll('#segMode button'), function (b) { b.classList.toggle('on', b.dataset.mode === (full ? 'full' : 'simple')); });
+  if (!full && ['dash', 'hbt', 'archive', 'reports', 'typing'].indexOf(S.cur) >= 0) show('home');
+}
+$('segMode').addEventListener('click', function (e) { var b = e.target.closest('[data-mode]'); if (!b) return; lsSet('bps_mode', b.dataset.mode); applyMode(); toast(b.dataset.mode === 'full' ? 'सर्व साधने दाखवली' : 'साधी पद्धत'); });
+function applyLook() {
+  var th = lsGet('bps_th') || 'auto', fs = lsGet('bps_fs') || '1';
+  if (th === 'auto') document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme', th);
+  document.body.style.zoom = fs === '1' ? '' : fs;
+}
+
+/* ---------- backup ---------- */
+function bkDays() { var v = lsGet('bps_lastbk'); if (!v) return null; return Math.max(0, Math.floor((Date.now() - new Date(v).getTime()) / 86400000)); }
+function bkInfoText() { var d = bkDays(); return d === null ? ' · अजून घेतला नाही' : ' · शेवटचा: ' + (d === 0 ? 'आज' : d + ' दिवसांपूर्वी'); }
+function makeBackup() {
+  call('api_exportSettings').then(function (j) {
+    var obj = { app: 'bps', v: 2, saved: new Date().toISOString(), settings: JSON.parse(j), prefs: { psnum: { bela: lsGet('psnum_bela') || '', bori: lsGet('psnum_bori') || '', midc: lsGet('psnum_midc') || '' }, drive: lsGet('bps_drive') || '' } };
+    var d = new Date(), pad = function (x) { return ('0' + x).slice(-2); };
+    var name = 'bpart-sarthi-backup-' + d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + '.json';
+    var b64 = btoa(unescape(encodeURIComponent(JSON.stringify(obj))));
+    var box = $('bkRes'); box.innerHTML = '';
+    showFile(box, { b64: b64, name: name, mime: 'application/json' });
+    lsSet('bps_lastbk', new Date().toISOString()); $('bkInfo').textContent = bkInfoText();
+    toast('बॅकअप फाईल तयार ✓ – "शेअर / Files मध्ये जतन" दाबून सुरक्षित ठेवा');
+  }).catch(fail);
+}
+function applyBackup(text) {
+  var str = text, p = null;
+  try { p = JSON.parse(text); } catch (e) { toast('हा बॅकअप वाचता आला नाही', true); return; }
+  if (p && p.kind === 'archive') { importArchive(p); return; }
+  if (p && p.settings) { str = JSON.stringify(p.settings); if (p.prefs && p.prefs.drive && !lsGet('bps_drive')) lsSet('bps_drive', p.prefs.drive); if (p.prefs && p.prefs.psnum) Object.keys(p.prefs.psnum).forEach(function (k) { if (p.prefs.psnum[k]) lsSet('psnum_' + k, p.prefs.psnum[k]); }); }
+  busy(true); call('api_importSettings', str).then(function (b) { busy(false); S.rules = b.rules; S.heads = b.heads; S.fixes = b.fixes; renderRules(); toast('बॅकअप परत आणला ✓'); }).catch(fail);
+}
+$('bkFile').addEventListener('click', makeBackup);
+$('bkIn').addEventListener('change', function (e) { var f = e.target.files[0]; e.target.value = ''; if (!f) return; var rd = new FileReader(); rd.onload = function () { applyBackup(String(rd.result)); }; rd.readAsText(f); });
+
+/* ---------- संग्रह: महिन्यानुसार जतन (IndexedDB) + जुने महिने आपोआप Google Drive मध्ये ---------- */
+var ARC = (function () {
+  var dbp = null;
+  function open() {
+    if (dbp) return dbp;
+    dbp = new Promise(function (res, rej) {
+      try {
+        var rq = indexedDB.open('bps_archive', 1);
+        rq.onupgradeneeded = function () { rq.result.createObjectStore('months', { keyPath: 'key' }); };
+        rq.onsuccess = function () { res(rq.result); };
+        rq.onerror = function () { rej(rq.error || new Error('साठवण उघडता आली नाही')); };
+      } catch (e) { rej(e); }
+    });
+    dbp.catch(function () { dbp = null; });
+    return dbp;
+  }
+  function run(mode, fn) {
+    return open().then(function (db) {
+      return new Promise(function (res, rej) {
+        var t = db.transaction('months', mode), rq = fn(t.objectStore('months'));
+        t.oncomplete = function () { res(rq && rq.result); };
+        t.onerror = t.onabort = function () { rej(t.error || new Error('साठवण अयशस्वी')); };
+      });
+    });
+  }
+  return {
+    all: function () { return run('readonly', function (st) { return st.getAll(); }); },
+    get: function (k) { return run('readonly', function (st) { return st.get(k); }); },
+    put: function (m) { return run('readwrite', function (st) { return st.put(m); }); },
+    del: function (k) { return run('readwrite', function (st) { return st.delete(k); }); }
+  };
+})();
+/* Google Drive (तुमच्या स्वतःच्या छोट्या Apps Script सेवेतून) */
+var DRV = {
+  cfg: function () { try { return JSON.parse(lsGet('bps_drive') || 'null'); } catch (e) { return null; } },
+  on: function () { var c = this.cfg(); return !!(c && c.url && c.key); },
+  call: function (action, extra, cfg) {
+    var c = cfg || this.cfg(); if (!c) return Promise.reject(new Error('Drive जोडलेले नाही'));
+    var body = { key: c.key, action: action }; for (var k in (extra || {})) body[k] = extra[k];
+    return fetch(c.url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body), redirect: 'follow' })
+      .then(function (r) { return r.text(); })
+      .then(function (t) { var j; try { j = JSON.parse(t); } catch (e) { throw new Error('सेवेकडून उत्तर समजले नाही – लिंक आणि "Who has access: Anyone" तपासा'); } if (j.err) throw new Error(j.err); return j; });
+  }
+};
+function monthKey(m) { var x = String(m || '').match(/(\d{1,2})\s*[\/\-]\s*(\d{4})/); return x ? x[2] + '-' + ('0' + x[1]).slice(-2) : null; }
+function fmtDT(t) { var d = new Date(t); return d.toLocaleDateString('en-GB') + ' ' + d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }); }
+function psCounts(recs) { var c = {}; recs.forEach(function (r) { c[r.ps] = (c[r.ps] || 0) + 1; }); return c; }
+function psLine(c) { return Object.keys(PSU).filter(function (k) { return c[k]; }).map(function (k) { return PSU[k] + ' ' + c[k]; }).join(' · '); }
+function metaOf(m) { return { key: m.key, month: m.month, savedAt: m.savedAt, n: m.n, counts: m.counts, gen: m.gen, ok: m.ok, sum: m.sum || (m.records ? monthSum(m.records) : null) }; }
+var ARCS = [], ARC_OK = true;
+
+// Drive वर पाठवा; यशस्वी झाले तर जुने (सर्वात नवीन सोडून) महिने फक्त Drive मध्ये ठेवा
+function driveUp(m) {
+  return DRV.call('put', { meta: metaOf(m), data: JSON.stringify(m) }).then(function () { m.drive = true; return ARC.put(m); });
+}
+function rotateOld() {
+  return ARC.all().then(function (list) {
+    var newest = list.reduce(function (a, m) { return m.key > a ? m.key : a; }, ''), jobs = [];
+    list.forEach(function (m) {
+      if (m.key < newest && m.drive && m.records) { var c = metaOf(m); c.drive = true; c.sum = c.sum || monthSum(m.records); c.cold = true; c.records = null; jobs.push(ARC.put(c)); }
+    });
+    return Promise.all(jobs).then(function () { return jobs.length; });
+  });
+}
+function saveMonth() {
+  if (!S.records.length) { toast('आधी फाईल्स प्रक्रिया करा', true); return; }
+  var key = monthKey(S.month);
+  if (!key) { toast('आधी "माहे" लिहा (उदा. 09/2026) – फाईल्स टॅबमध्ये', true); return; }
+  var m = { key: key, month: S.month, savedAt: Date.now(), n: S.records.length, counts: psCounts(S.records), sum: monthSum(S.records), gen: !!S.gen, ok: S.records.filter(function (r) { return r.ok; }).length, records: S.records, log: S.log };
+  var msg = 'जतन झाले ✓';
+  ARC.get(key).then(function (old) {
+    if (old && !confirm('माहे ' + S.month + ' आधीच जतन आहे (' + fmtDT(old.savedAt) + '). नवीन कामाने बदलायचे?')) return;
+    return ARC.put(m).then(function () {
+      S.arcDirty = false; try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {}
+      if (!DRV.on()) return msg;
+      return driveUp(m).then(function () { return rotateOld(); }).then(function (n) { return 'जतन झाले ✓ Drive मध्येही गेले' + (n ? ' · ' + n + ' जुने महिने फक्त Drive मध्ये' : ''); })
+        .catch(function (e) { toast('Drive मध्ये जाऊ शकले नाही: ' + ((e && e.message) || e) + ' – app मध्ये जतन आहे', true); return null; });
+    }).then(function (t) { if (t) toast('माहे ' + S.month + ' ' + t); renderArchive(); renderHome(); });
+  }).catch(function (e) { toast('इथे साठवण चालत नाही (' + ((e && e.message) || e) + '). "संग्रह फाईल" वापरा.', true); });
+}
+function loadFull(key) {
+  return ARC.get(key).then(function (m) {
+    if (m && m.records) return m;
+    if (!DRV.on()) throw new Error('हा महिना Drive मध्ये आहे – आधी Drive जोडा');
+    return DRV.call('get', { k: key }).then(function (j) { return JSON.parse(j.data); });
+  });
+}
+function openMonth(key, no) {
+  busy(true, 'महिना उघडत आहे…');
+  loadFull(key).then(function (m) {
+    busy(false);
+    if (!m) return;
+    if (S.records.length && S.arcDirty && !confirm('सध्याचे न जतन केलेले काम जाईल. माहे ' + m.month + ' उघडायचे?')) return;
+    S.records = m.records; S.month = m.month; S.gen = !!m.gen; S.log = m.log || []; S.batch = CHECKS.batch(S.records); S.batchOk = true; S.pvDone = false; S.arcDirty = false;
+    S.q = no || ''; $('qF').value = S.q; $('monthIn').value = S.month; updateMergeBox(); $('monthTag').textContent = 'माहे ' + S.month;
+    saveDraftSoon(); toast('माहे ' + m.month + ' उघडले ✓'); show(no ? 'review' : 'home');
+  }).catch(fail);
+}
+// Drive मधील महिन्यांची यादी या device च्या यादीत आणा (नवीन फोन/Mac वर उपयोगी)
+function pullDriveList() {
+  if (!DRV.on()) return Promise.resolve(0);
+  return DRV.call('list').then(function (j) {
+    return ARC.all().then(function (cur) {
+      var have = {}; cur.forEach(function (m) { have[m.key] = 1; }); var jobs = [];
+      (j.items || []).forEach(function (x) {
+        if (have[x.key]) return; var mt = x.meta || {};
+        jobs.push(ARC.put({ key: x.key, month: mt.month || x.key, savedAt: mt.savedAt || 0, n: mt.n || 0, counts: mt.counts || {}, sum: mt.sum || null, gen: mt.gen, ok: mt.ok, drive: true, cold: true, records: null }));
+      });
+      return Promise.all(jobs).then(function () { return jobs.length; });
+    });
+  });
+}
+function syncAllToDrive() {
+  if (!DRV.on()) { toast('आधी Drive जोडा', true); return; }
+  busy(true, 'Drive मध्ये पाठवत आहे…');
+  ARC.all().then(function (list) {
+    var todo = list.filter(function (m) { return m.records && !m.drive; });
+    return todo.reduce(function (p, m) { return p.then(function () { return driveUp(m); }); }, Promise.resolve()).then(function () { return rotateOld(); }).then(function () { return todo.length; });
+  }).then(function (n) { busy(false); toast(n + ' महिने Drive मध्ये पाठवले ✓'); renderArchive(); }).catch(fail);
+}
+function renderDriveCard() {
+  var c = DRV.cfg();
+  $('drvState').innerHTML = DRV.on() ? '<span style="color:var(--ok)">✓ जोडले आहे</span> <span class="small muted">· नवीन महिना जतन केला की जुने महिने आपोआप फक्त Drive मध्ये जातात</span>' : '<span class="muted">जोडलेले नाही</span>';
+  $('drvUrl').value = c ? c.url : ''; $('drvKey').value = c ? c.key : '';
+  $('drvBtns').classList.toggle('hide', !DRV.on());
+}
+function renderArchive() {
+  var n = S.records.length, key = monthKey(S.month);
+  renderDriveCard();
+  var pre = DRV.on() ? pullDriveList().catch(function () { return 0; }) : Promise.resolve(0);
+  pre.then(function () { return ARC.all(); }).then(function (list) {
+    ARC_OK = true; ARCS = list.sort(function (a, b) { return a.key < b.key ? 1 : -1; });
+    var cur = key && ARCS.filter(function (m) { return m.key === key; })[0];
+    $('arcNow').innerHTML = !n ? '<div class="muted small">आधी फाईल्स प्रक्रिया करा, मग इथे जतन करा.</div>' :
+      '<div class="small" style="margin-bottom:8px"><b>माहे ' + esc(S.month || '—') + '</b> · ' + n + ' नोंदी' + (cur ? ' · <span style="color:' + (S.arcDirty ? 'var(--warn)' : 'var(--ok)') + '">' + (S.arcDirty ? 'जतनानंतर बदल झाले – पुन्हा जतन करा' : 'जतन झाले ✓ ' + fmtDT(cur.savedAt) + (cur.drive ? ' · Drive ✓' : '')) + '</span>' : ' · <span style="color:var(--warn)">अजून जतन केले नाही</span>') + '</div><button class="btn pri" data-arc="save">' + (cur ? 'पुन्हा जतन करा' : 'या महिन्याचे जतन करा') + '</button>';
+    $('arcN').textContent = ARCS.length;
+    $('arcList').innerHTML = ARCS.map(function (m) {
+      return '<div class="li"><div class="tx"><b>' + esc(m.month) + '</b> <span class="small muted">· ' + m.n + ' नोंदी' + (m.gen ? ' · Word बनवले' : '') + '</span>' + (m.cold ? ' <span class="badge">☁ फक्त Drive मध्ये</span>' : m.drive ? ' <span class="badge learned">☁ Drive ✓</span>' : '') + '<div class="small muted">' + esc(psLine(m.counts || {})) + ' · जतन: ' + (m.savedAt ? fmtDT(m.savedAt) : '—') + '</div></div>' +
+        '<button class="btn sm pri" data-arcopen="' + esc(m.key) + '">उघडा</button><button class="btn sm danger" data-arcdel="' + esc(m.key) + '">काढा</button></div>';
+    }).join('') || '<div class="muted small">अजून कोणताही महिना जतन केलेला नाही.</div>';
+    arcSearch();
+  }).catch(function (e) {
+    ARC_OK = false; ARCS = [];
+    $('arcNow').innerHTML = '<div class="small" style="color:var(--bad)">या आवृत्तीत ब्राउझर साठवण चालत नाही. Install केलेली app (Home Screen वरील) वापरा. तोपर्यंत खालील "संग्रह फाईल" ने या महिन्याची प्रत ठेवता येते.</div>';
+    $('arcList').innerHTML = ''; $('arcN').textContent = 0; arcSearch();
+  });
+}
+var _aq, _atok = 0;
+function hitHtml(h) {
+  return '<div class="li"><div class="tx"><span class="badge">' + esc(h.month) + '</span> <span class="badge ps">' + esc(PSU[h.ps] || h.ps) + '</span> <b>' + esc(h.no) + '</b> <span class="small muted">' + esc(h.head || '') + '</span><div class="small">' + esc(h.crime || '') + '</div><div class="small muted">' + esc(h.place || '') + '</div></div><button class="btn sm" data-arcopen="' + esc(h.key) + '" data-no="' + esc(h.no) + '">पहा</button></div>';
+}
+function arcSearch() {
+  var q = ($('arcQ').value || '').trim().toLowerCase(), box = $('arcHits'), tok = ++_atok;
+  if (!q) { box.innerHTML = '<div class="muted small">नाव, गावाचे नाव, गुन्हा क्रमांक किंवा कलम लिहा.</div>'; return; }
+  var terms = q.split(/\s+/), hits = [], hot = {};
+  ARCS.forEach(function (m) {
+    if (!m.records) return; hot[m.key] = 1;
+    m.records.forEach(function (r) {
+      var u = r.u || {}, hay = [m.month, PSU[r.ps], r.no, r.head, u.crime, u.party, u.place, u.stolen, u.invest].join(' ').toLowerCase();
+      if (terms.every(function (t) { return hay.indexOf(t) >= 0; })) hits.push({ key: m.key, month: m.month, ps: r.ps, no: r.no, head: r.head, crime: (u.crime || '').split('\n')[0], place: (u.place || '').replace(/\n/g, ' ') });
+    });
+  });
+  function paint(extra, note) {
+    var all = hits.concat(extra || []);
+    box.innerHTML = '<div class="small muted" style="margin-bottom:6px">' + all.length + ' नोंदी सापडल्या' + (all.length > 80 ? ' (पहिल्या 80)' : '') + (note || '') + '</div>' + all.slice(0, 80).map(hitHtml).join('');
+  }
+  paint(null, ARCS.some(function (m) { return !m.records; }) && DRV.on() ? ' · Drive मध्ये शोधत आहे…' : '');
+  if (DRV.on() && ARCS.some(function (m) { return !m.records; })) {
+    DRV.call('search', { q: q }).then(function (j) {
+      if (tok !== _atok) return;
+      paint((j.hits || []).filter(function (h) { return !hot[h.key]; }), '');
+    }).catch(function (e) { if (tok === _atok) paint(null, ' · Drive शोध अयशस्वी: ' + esc((e && e.message) || e)); });
+  }
+}
+$('arcQ').addEventListener('input', function () { clearTimeout(_aq); _aq = setTimeout(arcSearch, 300); });
+$('v-archive').addEventListener('click', function (e) {
+  if (e.target.closest('[data-arc="save"]')) saveMonth();
+  var o = e.target.closest('[data-arcopen]'); if (o) openMonth(o.dataset.arcopen, o.dataset.no);
+  var d = e.target.closest('[data-arcdel]');
+  if (d) {
+    var k = d.dataset.arcdel, m = ARCS.filter(function (x) { return x.key === k; })[0];
+    if (!confirm('माहे ' + k + ' चे जतन केलेले काम काढायचे? ' + (m && m.drive ? '(Drive मधूनही जाईल) ' : '') + '(परत मिळणार नाही)')) return;
+    (m && m.drive && DRV.on() ? DRV.call('del', { k: k }) : Promise.resolve()).then(function () { return ARC.del(k); }).then(function () { toast('काढले'); renderArchive(); renderHome(); }).catch(fail);
+  }
+  if (e.target.closest('#drvSave')) {
+    var cfg = { url: $('drvUrl').value.trim(), key: $('drvKey').value.trim() };
+    if (!/^https:\/\/script\.google\.com\//.test(cfg.url) || !cfg.key) { toast('Drive सेवेची लिंक (https://script.google.com/…/exec) आणि चावी दोन्ही टाका', true); return; }
+    busy(true, 'Drive जोडणी तपासत आहे…');
+    DRV.call('ping', {}, cfg).then(function () { lsSet('bps_drive', JSON.stringify(cfg)); busy(false); toast('Drive जोडले ✓'); renderArchive(); renderHome(); }).catch(fail);
+  }
+  if (e.target.closest('#drvOff')) { if (confirm('Drive जोडणी तोडायची? (Drive मधील फाईल्स तशाच राहतील)')) { lsDel('bps_drive'); renderArchive(); } }
+  if (e.target.closest('#drvSyncAll')) syncAllToDrive();
+});
+function exportArchive() {
+  var cur = (S.records.length && monthKey(S.month)) ? [{ key: monthKey(S.month), month: S.month, savedAt: Date.now(), n: S.records.length, counts: psCounts(S.records), gen: !!S.gen, ok: 0, records: S.records }] : [];
+  (ARC_OK ? ARC.all() : Promise.resolve([])).catch(function () { return []; }).then(function (list) {
+    var map = {}; cur.forEach(function (m) { map[m.key] = m; });
+    list.forEach(function (m) { if (m.records) map[m.key] = m; });
+    var months = Object.keys(map).map(function (k) { return map[k]; });
+    if (!months.length) { toast('या device वर फाईलमध्ये ठेवण्यासारखा महिना नाही (जुने महिने Drive मध्येच आहेत)', true); return; }
+    var d = new Date(), pad = function (x) { return ('0' + x).slice(-2); };
+    var name = 'bpart-sarthi-sangrah-' + d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + '.json';
+    var b64 = btoa(unescape(encodeURIComponent(JSON.stringify({ app: 'bps', kind: 'archive', v: 1, saved: d.toISOString(), months: months }))));
+    var box = $('arcRes'); box.innerHTML = '';
+    showFile(box, { b64: b64, name: name, mime: 'application/json' });
+    lsSet('bps_lastarc', new Date().toISOString());
+    toast(months.length + ' महिने फाईलमध्ये – "शेअर / Files मध्ये जतन" दाबून सुरक्षित ठेवा');
+  });
+}
+function importArchive(p) {
+  var ms = (p.months || []).filter(function (m) { return m && m.key && m.records; });
+  if (!ms.length) { toast('या फाईलमध्ये महिने नाहीत', true); return; }
+  ARC.all().then(function (cur) {
+    var have = {}; cur.forEach(function (m) { have[m.key] = m; });
+    var jobs = ms.filter(function (m) { return !have[m.key] || !have[m.key].records || (m.savedAt || 0) >= have[m.key].savedAt; }).map(function (m) { return ARC.put(m); });
+    return Promise.all(jobs).then(function () { toast(jobs.length + ' महिने परत आणले ✓'); renderArchive(); renderHome(); });
+  }).catch(function (e) { toast('इथे साठवण चालत नाही: ' + ((e && e.message) || e), true); });
+}
+$('arcExp').addEventListener('click', exportArchive);
+$('arcIn').addEventListener('change', function (e) { var f = e.target.files[0]; e.target.value = ''; if (!f) return; var rd = new FileReader(); rd.onload = function () { var p = null; try { p = JSON.parse(String(rd.result)); } catch (x) {} if (p && p.kind === 'archive') importArchive(p); else toast('ही संग्रह फाईल नाही', true); }; rd.readAsText(f); });
+function homeArc() {
+  var box = $('arcHome'); if (!box) return;
+  ARC.all().then(function (list) {
+    list.sort(function (a, b) { return a.key < b.key ? 1 : -1; });
+    var days = lsGet('bps_lastarc') ? Math.floor((Date.now() - new Date(lsGet('bps_lastarc')).getTime()) / 86400000) : null;
+    var warn = list.length && !DRV.on() && (days === null || days >= 30) ? '<div class="banner" style="margin:10px 0 0"><b>' + (days === null ? 'संग्रहाची फाईल प्रत अजून घेतली नाही.' : 'संग्रहाची शेवटची फाईल प्रत ' + days + ' दिवसांपूर्वी घेतली.') + ' (किंवा Drive जोडा)</b><button class="btn sm" data-go="archive">संग्रह टॅब</button></div>' : '';
+    box.innerHTML = '<div class="card"><h2>जतन केलेले महिने <span class="count">' + list.length + '</span></h2>' + (list.length ? '<div class="row">' + list.slice(0, 12).map(function (m) { return '<button class="chipbtn" data-arcopen="' + esc(m.key) + '">' + (m.cold ? '☁ ' : '') + esc(m.month) + ' · ' + m.n + '</button>'; }).join('') + '</div>' : '<div class="muted small">अजून कोणताही महिना जतन केलेला नाही. Word बनवल्यानंतर "संग्रह" टॅबमध्ये जतन करा.</div>') + warn + '<div class="row" style="margin-top:8px"><button class="btn sm" data-go="archive">संग्रह / शोध →</button></div></div>';
+  }).catch(function () { box.innerHTML = ''; });
+}
+$('arcHome').addEventListener('click', function (e) { var o = e.target.closest('[data-arcopen]'); if (o) openMonth(o.dataset.arcopen); });
+
+/* ---------- splash ---------- */
+if (window.BPS_PWA) document.body.classList.add('pwa');
+(function () {
+  var sp = $('splash'), t0 = Date.now(), done = false;
+  function hide() { if (done) return; done = true; var wait = Math.max(0, 2700 - (Date.now() - t0)); setTimeout(function () { sp.classList.add('out'); setTimeout(function () { sp.remove(); }, 500); }, wait); }
+  window._hideSplash = hide;
+  setTimeout(hide, 6000);
+  sp.addEventListener('click', function () { t0 = 0; hide(); });
+  $('hdrLogo').addEventListener('click', function () { var l = this; l.classList.remove('anim'); void l.offsetWidth; l.classList.add('anim'); });
+})();
+/* ---------- boot ---------- */
+applyLook(); renderSteps(); renderHome();
+
+/* ================= डॅशबोर्ड ================= */
+// महिन्याचा सारांश: { heads: { head: {bela, bori, midc, x, d, u} } }  (d = उघड, u = अउघड)
+function monthSum(recs) {
+  var heads = {}, nos = {};
+  (recs || []).forEach(function (r) {
+    var fy = CHECKS.pdate(r.u ? r.u.filed : r.filed);
+    if (r.no && fy && PSU[r.ps]) { var nk = r.ps + '|' + (r.table === 'M' ? 'M' : ''); (nos[nk] = nos[nk] || []).push(fy.y + '|' + (+r.no)); }
+    var h = r.head || UNC, o = heads[h] = heads[h] || { bela: 0, bori: 0, midc: 0, x: 0, d: 0, u: 0 };
+    o[PSU[r.ps] ? r.ps : 'x']++;
+    var cu = '', au = r.u ? r.u.arrest : '', pu = r.u ? r.u.party : '';
+    try { cu = KD.convert(ENG.norm(r.crime)); if (!r.u) { au = KD.convert(ENG.norm(r.arrest)); pu = KD.convert(ENG.norm(r.party)); } } catch (e) {}
+    var d = /दारू|जुगार|एनडीपीएस|आर्म|पोलीस अधिनियम|कलम 285|मर्ग/.test(h) ? 1 : detOf(cu || '', au || '', pu || ''); if (d === 1) o.d++; else if (d === 0) o.u++;
+  });
+  return { heads: heads, nos: nos };
+}
+function rowsSum(rows) {
+  var heads = {}, nos = {};
+  rows.forEach(function (r) {
+    if (r.no && r.y && PSU[r.ps]) { var nk = r.ps + '|' + (r.marg ? 'M' : ''); (nos[nk] = nos[nk] || []).push(r.y + '|' + r.no); } var o = heads[r.head] = heads[r.head] || { bela: 0, bori: 0, midc: 0, x: 0, d: 0, u: 0 }; o[PSU[r.ps] ? r.ps : 'x']++; if (r.det === 1 || /दारू|जुगार|एनडीपीएस|आर्म|पोलीस अधिनियम|कलम 285|मर्ग/.test(r.head)) o.d++; else if (r.det === 0) o.u++; });
+  return { heads: heads, nos: nos };
+}
+var DCAT = [
+  ['शरीराविरुद्ध', /खून|सदोष|खुनाचा|आत्महत्येस|दुखापत|अॅसिड|बंदिस्त|लोकसेवकावर|गर्भपात|मुलांना|दंगल|मारामारी|सभा|धमकी|अश्लिल|वैर|धर्माशी|राज्याविरुद्ध|संघटित/],
+  ['महिला व बालके', /विनयभंग|बलात्कार|नम्रतेचा|पती|हुंडा|पळवून|तस्करी|वेश्या|पोक्सो|लैंगिक|कौटुंबिक|बालविवाह|अनैतिक|बाल न्याय|वेठबिगारी/],
+  ['मालमत्ता', /चोरी|घरफोडी|दरोडा|खंडणी|विश्वासघात|फसवणूक|अप्रामाणिक|बनावट|गैरप्रकार|अतिक्रमण|माहिती तंत्रज्ञान/],
+  ['अपघात', /^33[678]|निष्काळजी|सार्वजनिक मार्गावर|मोटार वाहन/],
+  ['प्रतिबंधक कारवाई', /दारू|जुगार|एनडीपीएस|आर्म|पोलीस अधिनियम|कलम 285|जिवनावश्यक|प्राण्यांना|प्राणी संरक्षण|विद्युत|पर्यावरण|खाणी|अन्न|सिगारेट|लॉटरी|स्फोटक/],
+  ['मर्ग', /^मर्ग/],
+  ['इतर', /./]
+];
+var SERIOUS = /खून|सदोष|खुनाचा|बलात्कार|दरोडा|जबरी|अॅसिड|हुंडाबळी|पळवून|घरफोडी/;
+function catOf(h) { for (var i = 0; i < DCAT.length; i++) if (DCAT[i][1].test(h)) return DCAT[i][0]; return 'इतर'; }
+function hval(o, ps) { return o ? (ps ? o[ps] || 0 : (o.bela || 0) + (o.bori || 0) + (o.midc || 0) + (o.x || 0)) : 0; }
+function sumBy(sum, ps, f) { var t = 0; if (!sum) return 0; for (var h in sum.heads) if (!f || f(h)) t += hval(sum.heads[h], ps); return t; }
+function lsJSON(k, d) { try { return JSON.parse(lsGet(k) || 'null') || d; } catch (e) { return d; } }
+function keyLabel(k) { var m = String(k).split('-'); return m[1] + '/' + m[0]; }
+function prevKey(k, back) { var m = String(k).split('-'), y = +m[0], mo = +m[1] - (back || 1); while (mo < 1) { mo += 12; y--; } return y + '-' + ('0' + mo).slice(-2); }
+var DM = {};   // key -> sum
+function loadDashData() {
+  DM = {};
+  var hist = lsJSON('bps_hist', {});
+  Object.keys(hist).forEach(function (k) { DM[k] = { sum: hist[k].sum, src: 'इतिहास' }; });
+  return ARC.all().catch(function () { return []; }).then(function (list) {
+    (list || []).forEach(function (m) { var sm = m.records ? monthSum(m.records) : m.sum; if (sm) DM[m.key] = { sum: sm, src: 'जतन' }; });
+    var ck = monthKey(S.month);
+    if (S.records.length && ck) DM[ck] = { sum: monthSum(S.records), src: 'चालू' };
+  });
+}
+function cmpSum(key, mode) {
+  if (mode === 'yoy') { var y = prevKey(key, 12); return DM[y] ? { sum: DM[y].sum, label: 'माहे ' + keyLabel(y) } : null; }
+  if (mode === 'avg') {
+    var ks = []; for (var i = 1; i <= 6; i++) { var k = prevKey(key, i); if (DM[k]) ks.push(k); }
+    if (!ks.length) return null;
+    var heads = {};
+    ks.forEach(function (k) { var hs = DM[k].sum.heads; for (var h in hs) { var o = heads[h] = heads[h] || { bela: 0, bori: 0, midc: 0, x: 0, d: 0, u: 0 }; for (var f in o) o[f] += (hs[h][f] || 0) / ks.length; } });
+    return { sum: { heads: heads }, label: ks.length + ' महिन्यांची सरासरी', avg: true };
+  }
+  var p = prevKey(key, 1); return DM[p] ? { sum: DM[p].sum, label: 'माहे ' + keyLabel(p) } : null;
+}
+function fmtN(v) { return Math.round(v * 10) / 10 % 1 ? (Math.round(v * 10) / 10).toFixed(1) : String(Math.round(v)); }
+function deltaHtml(cur, prev, goodDown) {
+  if (prev == null) return '<span class="muted">तुलनेसाठी माहिती नाही</span>';
+  var d = cur - prev; if (Math.abs(d) < 0.05) return 'बदल नाही';
+  var pc = prev ? Math.round(100 * d / prev) : null, up = d > 0;
+  var cls = (goodDown === false) ? (up ? 'dn' : 'up') : (up ? 'up' : 'dn');
+  return '<span class="' + cls + '">' + (up ? '▲ ' : '▼ ') + fmtN(Math.abs(d)) + (pc !== null && isFinite(pc) ? ' (' + Math.abs(pc) + '%)' : '') + '</span>';
+}
+function renderDash() {
+  loadDashData().then(function () {
+    var keys = Object.keys(DM).sort().reverse(), sel = $('dMonth'), cur = sel.value;
+    sel.innerHTML = keys.map(function (k) { return '<option value="' + k + '">' + keyLabel(k) + ' · ' + DM[k].src + '</option>'; }).join('');
+    if (cur && DM[cur]) sel.value = cur;
+    if (!keys.length) { $('dSub').textContent = 'अजून माहिती नाही'; $('dBody').innerHTML = '<div class="card empty">आधी PS फाईल्स प्रक्रिया करा, किंवा खाली "इतिहास जोडा" मधून जुने विभाग B Part निवडा.</div>'; return; }
+    drawDash();
+  });
+}
+function drawDash() {
+  var key = $('dMonth').value, ps = $('dPs').value, mode = $('dCmp').value;
+  var curS = DM[key].sum, C = cmpSum(key, mode), P = C ? C.sum : null;
+  var noM = function (h) { return !/^मर्ग/.test(h); };
+  $('dSub').textContent = 'माहे ' + keyLabel(key) + (ps ? ' · ' + PSU[ps] : ' · नागपूर उपविभाग') + (C ? ' · तुलना: ' + C.label : '');
+  var tot = sumBy(curS, ps, noM), ptot = P ? sumBy(P, ps, noM) : null;
+  var ser = sumBy(curS, ps, function (h) { return SERIOUS.test(h); }), pser = P ? sumBy(P, ps, function (h) { return SERIOUS.test(h); }) : null;
+  var marg = sumBy(curS, ps, function (h) { return !noM(h); }), pmarg = P ? sumBy(P, ps, function (h) { return !noM(h); }) : null;
+  var dd = 0, du = 0; for (var h in curS.heads) if (noM(h) && catOf(h) !== 'प्रतिबंधक कारवाई' && (!ps || hval(curS.heads[h], ps))) { var o = curS.heads[h]; var share = ps ? hval(o, ps) / (hval(o) || 1) : 1; dd += o.d * share; du += o.u * share; }
+  var detP = dd + du ? Math.round(100 * dd / (dd + du)) : null;
+  var html = '<div class="kpis">' +
+    '<div class="kpi"><div class="lb">एकूण गुन्हे</div><div class="v">' + tot + '</div><div class="d">' + deltaHtml(tot, ptot) + '</div></div>' +
+    '<div class="kpi"><div class="lb">गंभीर गुन्हे</div><div class="v">' + ser + '</div><div class="d">' + deltaHtml(ser, pser) + '</div></div>' +
+    '<div class="kpi"><div class="lb">उघड प्रमाण <span class="small">(प्रतिबंधक वगळून)</span></div><div class="v">' + (detP === null ? '—' : detP + '%') + '</div><div class="d">' + (detP === null ? 'उघड/अउघड नोंद नाही' : Math.round(dd) + ' उघड · ' + Math.round(du) + ' अउघड') + '</div></div>' +
+    '<div class="kpi"><div class="lb">मर्ग</div><div class="v">' + marg + '</div><div class="d">' + deltaHtml(marg, pmarg) + '</div></div></div>';
+  html += '<div class="dgrid">';
+  html += '<div class="card c7"><h2>Head नुसार गुन्हे</h2><div class="dsub">पट्टी = या महिन्यातील संख्या' + (C ? ' · उभी रेघ = ' + esc(C.label) : '') + '</div><div class="hbars" id="dHeads"></div>' +
+    '<details style="margin-top:10px"><summary class="small" style="cursor:pointer">सर्व heads तक्ता</summary><div style="overflow:auto;margin-top:6px"><table class="tblv" id="dTbl"></table></div></details></div>';
+  html += '<div class="card c5"><h2>हुशार निरीक्षणे</h2><div class="ins" id="dIns"></div></div>';
+  html += '<div class="card c7"><h2>12 महिन्यांचा कल</h2><div class="dsub">एकूण गुन्हे (मर्ग वगळून)' + (ps ? ' · ' + PSU[ps] : '') + '</div><div class="trend" id="dTrend"></div></div>';
+  html += '<div class="card c5"><h2>प्रकारानुसार</h2><div class="cats" id="dCats"></div></div>';
+  html += '<div class="card c12"><h2>PS नुसार – प्रकारवार</h2><div class="legend"><span><i style="background:var(--s1)"></i>बेला</span><span><i style="background:var(--s2)"></i>बोरी</span><span><i style="background:var(--s3)"></i>एमआयडीसी</span></div><div class="hbars" id="dPsc"></div></div>';
+  html += '</div>';
+  $('dBody').innerHTML = html;
+  // head bars
+  var hs = Object.keys(curS.heads).filter(function (h) { return hval(curS.heads[h], ps) > 0; }).sort(function (a, b) { return hval(curS.heads[b], ps) - hval(curS.heads[a], ps); });
+  var all = hs.slice(); if (P) Object.keys(P.heads).forEach(function (h) { if (all.indexOf(h) < 0 && hval(P.heads[h], ps) > 0) all.push(h); });
+  var top = hs.slice(0, 14), mx = 1;
+  top.forEach(function (h) { mx = Math.max(mx, hval(curS.heads[h], ps), P ? hval(P.heads[h], ps) : 0); });
+  $('dHeads').innerHTML = top.map(function (h) {
+    var v = hval(curS.heads[h], ps), pv = P ? hval(P.heads[h], ps) : null, o = curS.heads[h];
+    var tip = '<b>' + esc(h) + '</b>' + v + ' गुन्हे' + (pv != null ? ' · ' + esc(C.label) + ': ' + fmtN(pv) : '') + (ps ? '' : '<br>बेला ' + o.bela + ' · बोरी ' + o.bori + ' · एमआयडीसी ' + o.midc);
+    return '<div class="hbar" data-tip="' + esc(tip) + '"><span class="nm">' + esc(h) + '</span><span class="tr"><span class="fl" style="width:' + (100 * v / mx) + '%"></span>' + (pv != null ? '<span class="pm" style="left:' + Math.min(99.5, 100 * pv / mx) + '%"></span>' : '') + '</span><span class="vl">' + v + '</span></div>';
+  }).join('') + (hs.length > top.length ? '<div class="small muted">+ आणखी ' + (hs.length - top.length) + ' heads (तक्त्यात)</div>' : '');
+  $('dTbl').innerHTML = '<tr><th>Head</th><th>चालू</th>' + (P ? '<th>' + esc(C.label) + '</th><th>फरक</th>' : '') + '</tr>' + all.map(function (h) {
+    var v = hval(curS.heads[h], ps), pv = P ? hval(P.heads[h], ps) : 0; return '<tr><td>' + esc(h) + '</td><td>' + v + '</td>' + (P ? '<td>' + fmtN(pv) + '</td><td>' + (v - pv > 0 ? '+' : '') + fmtN(v - pv) + '</td>' : '') + '</tr>';
+  }).join('');
+  // categories
+  $('dCats').innerHTML = DCAT.map(function (c) {
+    var f = function (h) { return catOf(h) === c[0]; }, v = sumBy(curS, ps, f), pv = P ? sumBy(P, ps, f) : null;
+    if (!v && !pv) return '';
+    return '<div class="cat"><b>' + v + '</b><span>' + c[0] + '</span><div class="d">' + deltaHtml(v, pv) + '</div></div>';
+  }).join('');
+  // PS × category stacked
+  var cmx = 1, rows = DCAT.map(function (c) { var f = function (h) { return catOf(h) === c[0]; }; var r = { c: c[0], v: ['bela', 'bori', 'midc'].map(function (p) { return sumBy(curS, p, f); }) }; cmx = Math.max(cmx, r.v[0] + r.v[1] + r.v[2]); return r; }).filter(function (r) { return r.v[0] + r.v[1] + r.v[2]; });
+  $('dPsc').innerHTML = rows.map(function (r) {
+    var t = r.v[0] + r.v[1] + r.v[2];
+    return '<div class="hbar" data-tip="' + esc('<b>' + r.c + '</b>बेला ' + r.v[0] + ' · बोरी ' + r.v[1] + ' · एमआयडीसी ' + r.v[2]) + '"><span class="nm">' + r.c + '</span><span class="tr"><span class="stk" style="width:' + (100 * t / cmx) + '%">' +
+      r.v.map(function (x, i) { return x ? '<span style="flex:' + x + ';background:var(--s' + (i + 1) + ')"></span>' : ''; }).join('') + '</span></span><span class="vl">' + t + '</span></div>';
+  }).join('');
+  drawTrend(key, ps);
+  $('dIns').innerHTML = insights(curS, P, C, ps, key, detP, dd, du).map(function (x) { return '<div><i class="' + (x[0] || '') + '">' + x[1] + '</i><span>' + x[2] + '</span></div>'; }).join('') || '<div><i>i</i><span>तुलनेसाठी आणखी महिने जोडा – मग इथे वाढ/घट दिसेल.</span></div>';
+}
+function insights(curS, P, C, ps, key, detP, dd, du) {
+  var out = [], noM = function (h) { return !/^मर्ग/.test(h); };
+  var tot = sumBy(curS, ps, noM);
+  if (P) {
+    var pt = sumBy(P, ps, noM), d = tot - pt;
+    if (Math.abs(d) >= 1) out.push([d > 0 ? 'up' : 'dn', d > 0 ? '▲' : '▼', 'एकूण गुन्हे ' + esc(C.label) + 'पेक्षा <b>' + fmtN(Math.abs(d)) + '</b> ने ' + (d > 0 ? 'वाढले' : 'घटले') + (pt ? ' (' + Math.abs(Math.round(100 * d / pt)) + '%)' : '') + '.']);
+    var ch = []; var hs = {}; Object.keys(curS.heads).concat(Object.keys(P.heads)).forEach(function (h) { hs[h] = 1; });
+    Object.keys(hs).forEach(function (h) { if (!noM(h)) return; ch.push([h, hval(curS.heads[h], ps) - hval(P.heads[h], ps), hval(curS.heads[h], ps)]); });
+    ch.sort(function (a, b) { return b[1] - a[1]; });
+    ch.filter(function (x) { return x[1] >= 2; }).slice(0, 3).forEach(function (x) { out.push(['up', '▲', '<b>' + esc(x[0]) + '</b>: ' + x[2] + ' गुन्हे (+' + fmtN(x[1]) + ')']); });
+    ch.slice().reverse().filter(function (x) { return x[1] <= -2; }).slice(0, 2).forEach(function (x) { out.push(['dn', '▼', '<b>' + esc(x[0]) + '</b>: ' + x[2] + ' गुन्हे (' + fmtN(x[1]) + ')']); });
+  }
+  var ser = Object.keys(curS.heads).filter(function (h) { return SERIOUS.test(h) && !/घरफोडी/.test(h) && hval(curS.heads[h], ps); });
+  if (ser.length) out.push(['up', '!', 'गंभीर: ' + ser.map(function (h) { return esc(h.replace(/ कलम.*$/, '')) + ' ' + hval(curS.heads[h], ps); }).join(', ')]);
+  var prop = 0, propU = 0; for (var h in curS.heads) if (/चोरी|घरफोडी|दरोडा/.test(h)) { var o = curS.heads[h], sh = ps ? hval(o, ps) / (hval(o) || 1) : 1; prop += hval(o, ps); propU += o.u * sh; }
+  if (prop && propU >= 1) out.push(['', '₹', 'मालमत्तेचे ' + prop + ' गुन्हे – त्यापैकी <b>' + Math.round(propU) + '</b> अउघड.']);
+  if (!ps) {
+    var pc = ['bela', 'bori', 'midc'].map(function (p) { return [p, sumBy(curS, p, noM)]; }).sort(function (a, b) { return b[1] - a[1]; });
+    if (pc[0][1]) out.push(['', 'PS', 'सर्वाधिक गुन्हे: <b>' + PSU[pc[0][0]] + '</b> (' + pc[0][1] + ') · ' + PSU[pc[1][0]] + ' ' + pc[1][1] + ' · ' + PSU[pc[2][0]] + ' ' + pc[2][1]]);
+  }
+  // compared with own 6-month average: unusual heads
+  var ks = []; for (var i = 1; i <= 6; i++) { var k = prevKey(key, i); if (DM[k]) ks.push(k); }
+  if (ks.length >= 3) {
+    Object.keys(curS.heads).forEach(function (h) {
+      if (!noM(h)) return; var v = hval(curS.heads[h], ps), av = ks.reduce(function (t, k) { return t + hval(DM[k].sum.heads[h], ps); }, 0) / ks.length;
+      if (v >= 3 && v >= 1.6 * av + 1) out.push(['up', '↗', '<b>' + esc(h) + '</b> नेहमीपेक्षा जास्त: ' + v + ' (सरासरी ' + fmtN(av) + ')']);
+    });
+  }
+  return out.slice(0, 9);
+}
+function drawTrend(key, ps) {
+  var ks = []; for (var i = 11; i >= 0; i--) ks.push(prevKey(key, i));
+  var pts = ks.map(function (k) { return DM[k] ? sumBy(DM[k].sum, ps, function (h) { return !/^मर्ग/.test(h); }) : null; });
+  var have = pts.filter(function (v) { return v != null; });
+  if (have.length < 2) { $('dTrend').innerHTML = '<div class="empty small">कल दाखवण्यासाठी किमान 2 महिने हवेत – "इतिहास जोडा" वापरा.</div>'; return; }
+  var W = 640, H = 220, L = 34, R = 10, T = 12, B = 26, mx = Math.max.apply(null, have), mn = 0;
+  var step = Math.pow(10, Math.floor(Math.log10(mx || 1))), top = Math.ceil(mx / step) * step; if (top / step > 5) step *= 2; top = Math.ceil(mx / step) * step || 1;
+  var x = function (i) { return L + (W - L - R) * i / 11; }, y = function (v) { return T + (H - T - B) * (1 - (v - mn) / (top - mn)); };
+  var g = '';
+  for (var t = 0; t <= top; t += step) g += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y(t) + '" y2="' + y(t) + '" stroke="var(--grid)" stroke-width="1"/><text x="' + (L - 6) + '" y="' + (y(t) + 4) + '" text-anchor="end">' + t + '</text>';
+  ks.forEach(function (k, i) { if (i % 2 === 0 || i === 11) g += '<text x="' + x(i) + '" y="' + (H - 6) + '" text-anchor="middle">' + keyLabel(k).replace('/20', '/') + '</text>'; });
+  var d = '', seg = false;
+  pts.forEach(function (v, i) { if (v == null) { seg = false; return; } d += (seg ? 'L' : 'M') + x(i) + ' ' + y(v) + ' '; seg = true; });
+  var dots = '', hits = '';
+  pts.forEach(function (v, i) {
+    if (v == null) return;
+    var last = i === 11;
+    dots += '<circle cx="' + x(i) + '" cy="' + y(v) + '" r="' + (last ? 5 : 4) + '" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"/>';
+    if (last) dots += '<text x="' + x(i) + '" y="' + (y(v) - 10) + '" text-anchor="middle" style="fill:var(--text);font-weight:700;font-size:12px">' + v + '</text>';
+    hits += '<rect x="' + (x(i) - 24) + '" y="' + T + '" width="48" height="' + (H - T - B) + '" fill="transparent" data-tip="' + esc('<b>माहे ' + keyLabel(ks[i]) + '</b>' + v + ' गुन्हे') + '"/>';
+  });
+  $('dTrend').innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="12 महिन्यांचा कल">' + g + '<path d="' + d + '" fill="none" stroke="var(--s1)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>' + dots + hits + '</svg>';
+}
+['dMonth', 'dCmp', 'dPs'].forEach(function (id) { $(id).addEventListener('change', drawDash); });
+// tooltip for any [data-tip]
+(function () {
+  var tip = document.createElement('div'); tip.className = 'vtip'; document.body.appendChild(tip);
+  document.addEventListener('mousemove', function (e) {
+    var t = e.target.closest && e.target.closest('[data-tip]');
+    if (!t) { tip.style.display = 'none'; return; }
+    tip.innerHTML = t.getAttribute('data-tip'); tip.style.display = 'block';
+    var x = e.clientX + 14, y = e.clientY + 14, w = tip.offsetWidth, h = tip.offsetHeight;
+    if (x + w > innerWidth - 8) x = e.clientX - w - 14; if (y + h > innerHeight - 8) y = e.clientY - h - 14;
+    tip.style.left = x + 'px'; tip.style.top = y + 'px';
+  });
+  document.addEventListener('click', function (e) { if (!(e.target.closest && e.target.closest('[data-tip]'))) tip.style.display = 'none'; });
+  document.addEventListener('touchstart', function (e) {
+    var t = e.target.closest && e.target.closest('[data-tip]'); if (!t) { tip.style.display = 'none'; return; }
+    var r = t.getBoundingClientRect(); tip.innerHTML = t.getAttribute('data-tip'); tip.style.display = 'block';
+    tip.style.left = Math.max(8, Math.min(innerWidth - tip.offsetWidth - 8, r.left)) + 'px'; tip.style.top = Math.max(8, r.top - tip.offsetHeight - 8) + 'px';
+  }, { passive: true });
+})();
+$('histIn').addEventListener('change', function () {
+  var fl = Array.prototype.slice.call(this.files); this.value = '';
+  if (!fl.length) return;
+  busy(true, fl.length + ' फाईल्स वाचत आहे…');
+  Promise.all(fl.map(function (f) { return new Promise(function (res) { var rd = new FileReader(); rd.onload = function () { res({ name: f.name, b64: String(rd.result).split(',')[1] }); }; rd.readAsDataURL(f); }); }))
+    .then(function (files) { return call('api_histImport', files); })
+    .then(function (list) {
+      busy(false);
+      var hist = lsJSON('bps_hist', {}), msg = [];
+      list.forEach(function (m) { hist[m.key] = { month: m.month, sum: rowsSum(m.rows), at: Date.now() }; msg.push(keyLabel(m.key) + ' (' + m.rows.length + ')'); });
+      lsSet('bps_hist', JSON.stringify(hist));
+      $('histInfo').textContent = 'जोडले: ' + msg.join(', ');
+      toast(list.length + ' महिने इतिहासात जोडले ✓'); renderDash();
+    }).catch(fail);
+});
+/* nav icons + sections */
+(function () {
+  var I = {
+    home: '<path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/>',
+    dash: '<path d="M4 20V10"/><path d="M10 20V4"/><path d="M16 20v-7"/><path d="M22 20H2"/>',
+    files: '<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/><path d="M12 18v-6"/><path d="M9 15l3-3 3 3"/>',
+    queue: '<path d="M9 6h12"/><path d="M9 12h12"/><path d="M9 18h12"/><path d="M3 6l1.5 1.5L7 5"/><path d="M3 12l1.5 1.5L7 11"/><path d="M3 18l1.5 1.5L7 17"/>',
+    review: '<path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 13l9 5 9-5"/>',
+    hbt: '<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1"/><path d="M9 10h6"/><path d="M9 14h6"/>',
+    preview: '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+    download: '<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/><path d="M12 11v6"/><path d="M9 14l3 3 3-3"/>',
+    archive: '<rect x="3" y="4" width="18" height="5" rx="1"/><path d="M5 9v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9"/><path d="M10 13h4"/>',
+    reports: '<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/><path d="M8 13h8"/><path d="M8 17h5"/>',
+    typing: '<rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10"/>',
+    rules: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>'
+  };
+  Array.prototype.forEach.call(document.querySelectorAll('#tabs button[data-v]'), function (b) { if (I[b.dataset.v]) b.insertAdjacentHTML('afterbegin', '<svg viewBox="0 0 24 24" aria-hidden="true">' + I[b.dataset.v] + '</svg>'); });
+  var sec = { home: 'काम', preview: 'निकाल', archive: 'साधने' };
+  Object.keys(sec).forEach(function (v) { var b = document.querySelector('#tabs button[data-v="' + v + '"]'); if (b) b.insertAdjacentHTML('beforebegin', '<div class="navh">' + sec[v] + '</div>'); });
+})();
+/* न जतन केलेले काम: वरच्या माहे-चिपवर खूण + बंद करताना इशारा */
+function unsaved() { return !!(S.records.length && S.arcDirty); }
+setInterval(function () {
+  var t = $('monthTag'), u = unsaved(), base = 'माहे ' + (S.month || '—');
+  t.textContent = u ? base + ' ● न जतन – जतन करा' : base;
+  t.style.cursor = u ? 'pointer' : ''; t.style.color = u ? '#ffc067' : ''; t.style.fontWeight = u ? '700' : '';
+}, 700);
+$('monthTag').addEventListener('click', function () { if (unsaved()) saveMonth(); });
+window.addEventListener('beforeunload', function (e) { if (unsaved()) { e.preventDefault(); e.returnValue = ''; return ''; } });
+/* सुरुवातीला: शेवटचा जतन केलेला (app मधील) महिना आपोआप उघडतो */
+function autoOpenSaved() {
+  if (S.records.length) return;
+  ARC.all().then(function (all) {
+    var hot = (all || []).filter(function (m) { return m.records && m.records.length; }).sort(function (a, b) { return (b.savedAt || 0) - (a.savedAt || 0); })[0];
+    if (!hot || S.records.length) return;
+    S.records = hot.records; S.month = hot.month; S.gen = !!hot.gen; S.log = hot.log || [];
+    S.batch = CHECKS.batch(S.records); S.batchOk = true; S.arcDirty = false;
+    $('monthIn').value = S.month; $('monthTag').textContent = 'माहे ' + S.month;
+    renderHome(); renderSteps();
+  }).catch(function () {});
+}
+applyMode();
+call('api_bootstrap').then(function (b) {
+  window._hideSplash();
+  S.heads = b.heads; S.defaultHeads = b.defaultHeads; S.rules = b.rules; S.fixes = b.fixes;
+  if (b.folder) $('folderIn').value = b.folder;
+  renderHome(); autoOpenSaved();
+}).catch(function (e) { window._hideSplash(); fail(e); });
+;(window.__BPS_PARTS = window.__BPS_PARTS || []).push('App2'); /* ===== END OF App2 ===== */

@@ -1,0 +1,354 @@
+var REPORT = (function () {
+  var UNI_FONT = 'Mangal', KRU_FONT = 'Kruti Dev 010', LAT_FONT = 'Times New Roman';
+  var PSU = { bela: 'बेला', bori: 'बोरी', midc: 'एमआयडीसी' };
+  var PS_ORDER = { bela: 1, bori: 2, midc: 3 };
+
+  function esc(s) { return String(s == null ? '' : s).replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+  // ---- conversion with user fixes ----
+  function makeConv(fixes) {
+    fixes = fixes || [];
+    return function (s) {
+      var u = KD.convert(s || '');
+      for (var i = 0; i < fixes.length; i++) if (fixes[i].from) u = u.split(fixes[i].from).join(fixes[i].to || '');
+      u = u.replace(/([0-9०-९])ए(?=[0-9०-९]{3})/g, '$1,').replace(/([0-9०-९])ध्-/g, '$1/-');
+      return u.replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
+    };
+  }
+  function tidy(s) { return (s || '').replace(/\s+/g, ' ').trim(); }
+
+  /* ================================================================ */
+  /* DOCX writer                                                        */
+  /* ================================================================ */
+  function fontFor(o, latin) { return latin ? LAT_FONT : (o.kruti ? KRU_FONT : UNI_FONT); }
+  function runXml(text, o, latin) {
+    var sz = Math.round((o.size || 10) * (o.kruti && !latin ? 1.3 : 1) * 2);
+    var f = fontFor(o, latin);
+    var rpr = '<w:rPr><w:rFonts w:ascii="' + f + '" w:hAnsi="' + f + '" w:cs="' + f + '" w:eastAsia="' + f + '"/>' +
+      (o.bold ? '<w:b/><w:bCs/>' : '') + (o.color ? '<w:color w:val="' + o.color + '"/>' : '') +
+      '<w:sz w:val="' + sz + '"/><w:szCs w:val="' + sz + '"/>' + (o.kruti ? '' : '<w:lang w:val="mr-IN" w:bidi="mr-IN"/>') + '</w:rPr>';
+    return '<w:r>' + rpr + '<w:t xml:space="preserve">' + esc(text) + '</w:t></w:r>';
+  }
+  function lineRuns(line, o) {
+    if (!o.kruti) return runXml(line, o, false);
+    var k = TEXT.u2k(line), out = '';
+    k.split(/(\u0001[^\u0002]*\u0002)/).forEach(function (seg) {
+      if (!seg) return;
+      if (seg.charAt(0) === '\u0001') out += runXml(seg.slice(1, -1), o, true);
+      else out += runXml(seg, o, false);
+    });
+    return out;
+  }
+  function paraXml(text, o) {
+    o = o || {};
+    var ppr = '<w:pPr>' + (o.keepNext ? '<w:keepNext/>' : '') + (o.pageBreak ? '<w:pageBreakBefore/>' : '') +
+      (o.shade ? '<w:shd w:val="clear" w:color="auto" w:fill="' + o.shade + '"/>' : '') +
+      '<w:spacing w:before="' + (o.before || 0) + '" w:after="' + (o.after || 0) + '" w:line="' + (o.line || 252) + '" w:lineRule="auto"/><w:jc w:val="' + (o.align || 'left') + '"/></w:pPr>';
+    var lines = String(text == null ? '' : text).split('\n');
+    var body = lines.map(function (l, i) { return (i ? '<w:r><w:br/></w:r>' : '') + lineRuns(l, o); }).join('');
+    return '<w:p>' + ppr + body + '</w:p>';
+  }
+  function cellXml(text, w, o) {
+    var paras = String(text == null ? '' : text).split(/\n+/).map(function (x) { return x.trim(); }).filter(function (x) { return x; });
+    if (!paras.length) paras = [''];
+    return '<w:tc><w:tcPr><w:tcW w:w="' + w + '" w:type="dxa"/>' + (o.shade ? '<w:shd w:val="clear" w:color="auto" w:fill="' + o.shade + '"/>' : '') + '<w:vAlign w:val="' + (o.header ? 'center' : 'top') + '"/></w:tcPr>' +
+      paras.map(function (p) { return paraXml(p, { size: o.size, bold: o.bold, align: o.align, kruti: o.kruti, after: 20, keepNext: o.keepNext }); }).join('') + '</w:tc>';
+  }
+  function tableXml(headers, rows, widths, o) {
+    var total = widths.reduce(function (a, b) { return a + b; }, 0);
+    var b = '<w:tblBorders>' + ['top', 'left', 'bottom', 'right', 'insideH', 'insideV'].map(function (e) { return '<w:' + e + ' w:val="single" w:sz="4" w:space="0" w:color="595959"/>'; }).join('') + '</w:tblBorders>';
+    var x = '<w:tbl><w:tblPr><w:tblW w:w="' + total + '" w:type="dxa"/><w:jc w:val="center"/>' + b + '<w:tblLayout w:type="fixed"/><w:tblCellMar><w:top w:w="40" w:type="dxa"/><w:left w:w="70" w:type="dxa"/><w:bottom w:w="40" w:type="dxa"/><w:right w:w="70" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid>' +
+      widths.map(function (w) { return '<w:gridCol w:w="' + w + '"/>'; }).join('') + '</w:tblGrid>';
+    var hs = o.hsize || 9.5;
+    // header rows: NOT repeated on following pages (as requested)
+    if (o.hrows) {
+      var pend = {};
+      o.hrows.forEach(function (row) {
+        var col = 0, k = 0, cells = '';
+        while (col < widths.length) {
+          var p = pend[col];
+          if (p && p.left > 0) {
+            var wsum = 0; for (var j = col; j < col + p.span; j++) wsum += widths[j];
+            cells += '<w:tc><w:tcPr><w:tcW w:w="' + wsum + '" w:type="dxa"/>' + (p.span > 1 ? '<w:gridSpan w:val="' + p.span + '"/>' : '') + '<w:vMerge/><w:shd w:val="clear" w:color="auto" w:fill="DCE6F2"/></w:tcPr><w:p/></w:tc>';
+            p.left--; col += p.span; continue;
+          }
+          var sp = row[k++]; if (!sp) break;
+          if (typeof sp === 'string') sp = { t: sp };
+          var span = sp.span || 1, w = 0; for (var q = col; q < col + span; q++) w += widths[q];
+          var c = cellXml(sp.t, w, { bold: true, align: 'center', header: true, size: hs, shade: 'DCE6F2', kruti: o.kruti, keepNext: o.keep });
+          var extra = (span > 1 ? '<w:gridSpan w:val="' + span + '"/>' : '') + (sp.rs > 1 ? '<w:vMerge w:val="restart"/>' : '');
+          if (extra) c = c.replace('<w:tcW w:w="' + w + '" w:type="dxa"/>', '<w:tcW w:w="' + w + '" w:type="dxa"/>' + extra);
+          if (sp.rs > 1) pend[col] = { left: sp.rs - 1, span: span };
+          cells += c; col += span;
+        }
+        x += '<w:tr><w:trPr><w:cantSplit/></w:trPr>' + cells + '</w:tr>';
+      });
+    } else {
+      x += '<w:tr><w:trPr><w:cantSplit/></w:trPr>' + headers.map(function (h, i) { return cellXml(h, widths[i], { bold: true, align: 'center', header: true, size: hs, shade: 'DCE6F2', kruti: o.kruti, keepNext: o.keep }); }).join('') + '</w:tr>';
+    }
+    rows.forEach(function (r, ri) {
+      var cells = Array.isArray(r) ? r : r.c, bold = !Array.isArray(r) && r.bold, shade = !Array.isArray(r) && r.shade, kn = o.keep && ri < rows.length - 1;
+      x += '<w:tr><w:trPr><w:cantSplit/></w:trPr>' + cells.map(function (c, i) {
+        var al = o.aligns ? (o.aligns[i] || 'center') : (i < 2 ? 'center' : 'left');
+        return cellXml(c, widths[i], { size: o.size || 9.5, align: al, kruti: o.kruti, bold: bold, shade: shade, keepNext: kn });
+      }).join('') + '</w:tr>';
+    });
+    return x + '</w:tbl>';
+  }
+  function scale(weights, total) {
+    var s = weights.reduce(function (a, b) { return a + b; }, 0);
+    var out = weights.map(function (w) { return Math.floor(w * total / s); });
+    out[out.length - 1] += total - out.reduce(function (a, b) { return a + b; }, 0);
+    return out;
+  }
+  var NS = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"';
+  // model: {titles:[...], sections:[{title, headers, rows, weights}]}
+  function buildDocx(model, opts) {
+    opts = opts || {};
+    var o = { kruti: !!opts.kruti };
+    var paper = opts.paper === 'legal' ? 'legal' : 'a4';
+    var PW = paper === 'legal' ? 20160 : 16838, PH = paper === 'legal' ? 12240 : 11906, M = 567; // landscape, 1 cm margins
+    var usable = PW - 2 * M;
+    var body = '';
+    (model.titles || []).forEach(function (t, i) { body += paraXml(t, { bold: true, size: i === 0 ? 17 : 13, align: 'center', after: i === (model.titles.length - 1) ? 160 : 40, kruti: o.kruti }); });
+    var n = 0;
+    model.sections.forEach(function (sec) {
+      var brk = model.flow ? !!sec.pageBreak && n > 0 : n > 0;
+      if (sec.title) body += paraXml(sec.title + (model.flow ? '' : '   (' + sec.rows.length + ')'), { bold: true, size: 12.5, before: n && !brk ? 240 : (n ? 0 : 60), after: 100, keepNext: true, pageBreak: brk, shade: 'F2F2F2', kruti: o.kruti, line: 300 });
+      var tw = sec.widthPct ? Math.round(usable * sec.widthPct) : usable;
+      body += tableXml(sec.headers, sec.rows, scale(sec.weights, tw), { size: sec.size || 9.5, kruti: o.kruti, hrows: sec.hrows, aligns: sec.aligns, hsize: sec.hsize, keep: !!model.flow && sec.rows.length <= 24 });
+      if (sec.note) body += paraXml(sec.note, { size: 8.5, before: 40, kruti: o.kruti, color: '595959' });
+      n++;
+    });
+    if (!model.sections.length) body += paraXml('नोंदी नाहीत', { align: 'center', kruti: o.kruti });
+    body += '<w:sectPr><w:footerReference w:type="default" r:id="rId3"/><w:pgSz w:w="' + PW + '" w:h="' + PH + '" w:orient="landscape"/><w:pgMar w:top="' + M + '" w:right="' + M + '" w:bottom="' + M + '" w:left="' + M + '" w:header="360" w:footer="300" w:gutter="0"/></w:sectPr>';
+    var doc = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<w:document ' + NS + '><w:body>' + body + '</w:body></w:document>';
+    var f = o.kruti ? KRU_FONT : UNI_FONT;
+    var styles = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<w:styles ' + NS + '><w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="' + f + '" w:hAnsi="' + f + '" w:cs="' + f + '" w:eastAsia="' + f + '"/><w:sz w:val="20"/><w:szCs w:val="20"/>' + (o.kruti ? '' : '<w:lang w:val="mr-IN" w:bidi="mr-IN"/>') + '</w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:spacing w:after="0" w:line="252" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults><w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/><w:qFormat/></w:style><w:style w:type="table" w:default="1" w:styleId="TableNormal"><w:name w:val="Normal Table"/><w:uiPriority w:val="99"/><w:semiHidden/><w:tblPr><w:tblInd w:w="0" w:type="dxa"/><w:tblCellMar><w:top w:w="0" w:type="dxa"/><w:left w:w="108" w:type="dxa"/><w:bottom w:w="0" w:type="dxa"/><w:right w:w="108" w:type="dxa"/></w:tblCellMar></w:tblPr></w:style></w:styles>';
+    var settings = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<w:settings ' + NS + '><w:zoom w:percent="100"/><w:defaultTabStop w:val="720"/><w:characterSpacingControl w:val="doNotCompress"/><w:compat><w:compatSetting w:name="compatibilityMode" w:uri="http://schemas.microsoft.com/office/word" w:val="15"/><w:compatSetting w:name="overrideTableStyleFontSizeAndJustification" w:uri="http://schemas.microsoft.com/office/word" w:val="1"/><w:compatSetting w:name="enableOpenTypeFeatures" w:uri="http://schemas.microsoft.com/office/word" w:val="1"/><w:compatSetting w:name="doNotFlipMirrorIndents" w:uri="http://schemas.microsoft.com/office/word" w:val="1"/><w:compatSetting w:name="differentiateMultirowTableHeaders" w:uri="http://schemas.microsoft.com/office/word" w:val="1"/></w:compat></w:settings>';
+    var footer = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<w:ftr ' + NS + '><w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii="' + LAT_FONT + '" w:hAnsi="' + LAT_FONT + '"/><w:sz w:val="18"/></w:rPr><w:t xml:space="preserve">– </w:t></w:r><w:fldSimple w:instr=" PAGE "><w:r><w:rPr><w:rFonts w:ascii="' + LAT_FONT + '" w:hAnsi="' + LAT_FONT + '"/><w:sz w:val="18"/></w:rPr><w:t>1</w:t></w:r></w:fldSimple><w:r><w:rPr><w:rFonts w:ascii="' + LAT_FONT + '" w:hAnsi="' + LAT_FONT + '"/><w:sz w:val="18"/></w:rPr><w:t xml:space="preserve"> –</w:t></w:r></w:p></w:ftr>';
+    var ct = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/><Override PartName="/word/settings.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml"/><Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/><Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/><Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/></Types>';
+    var rels = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties" Target="docProps/app.xml"/></Relationships>';
+    var drels = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings" Target="settings.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" Target="footer1.xml"/></Relationships>';
+    var now = new Date().toISOString().replace(/\.\d+Z$/, 'Z');
+    var core = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><dc:title>' + esc((model.titles || []).join(' ')) + '</dc:title><dc:creator>B Part</dc:creator><dcterms:created xsi:type="dcterms:W3CDTF">' + now + '</dcterms:created><dcterms:modified xsi:type="dcterms:W3CDTF">' + now + '</dcterms:modified></cp:coreProperties>';
+    var app = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties"><Application>Microsoft Office Word</Application><DocSecurity>0</DocSecurity><AppVersion>16.0000</AppVersion></Properties>';
+    return { '[Content_Types].xml': ct, '_rels/.rels': rels, 'word/document.xml': doc, 'word/styles.xml': styles, 'word/settings.xml': settings, 'word/footer1.xml': footer, 'word/_rels/document.xml.rels': drels, 'docProps/core.xml': core, 'docProps/app.xml': app };
+  }
+
+  /* ================================================================ */
+  /* Field preparation (Unicode, normalised)                            */
+  /* ================================================================ */
+  function yearOf(month) { var m = String(month || '').match(/(20\d\d)/); return m ? m[1] : ''; }
+  function themeKind(head) { return /घरफोडी/.test(head || '') ? 'H' : /चोरी/.test(head || '') ? 'T' : /दुखापत/.test(head || '') ? 'U' : ''; }
+
+  // returns normalised Unicode fields for one record
+  function fields(r, o) {
+    o = o || {};
+    var cv = o.cv || makeConv(o.fixes), hx = r.hx || {};
+    var f = {};
+    f.crime = TEXT.normCrime(cv(r.crime), yearOf(o.month));
+    if (/^चोरी|घरफोडी/.test(r.head || '')) {
+      var cl = f.crime.split('\n');
+      f.crime = [cl[0]].concat(cl.slice(1).filter(function (l) { return !/^((मोसा|मोटार सायकल|ईतर|इतर)\s*)?चोरी$|रात्र\s*घरफोडी|^घरफोडी$|^(इतर|ईतर)\s*चोरी$/.test(l.replace(/\s+/g, ' ').trim()); })).join('\n');
+    }
+    f.place = tidy(cv(r.place)); f.occ = tidy(cv(r.occ)); f.filed = tidy(cv(r.filed));
+    f.party = TEXT.normParty(cv(r.party));
+    f.deceased = cv(r.deceased); f.cause = tidy(cv(r.cause));
+    var ar = cv(r.arrest); f.arrest = TEXT.blank(ar) ? '' : ar;
+    // प्रतिबंधक कारवाई written in another column / in the hakikat -> अटक व प्रतिबंधक
+    var norm0 = function (x) { return String(x || '').replace(/[\s.\-]+/g, ''); };
+    var pv = []; [cv(r.stolen), cv(r.recovered), cv(r.invest), cv(r.details)].forEach(function (x) { TEXT.prevOf(x).forEach(function (q) { if (pv.indexOf(q) < 0) pv.push(q); }); });
+    var pvCell = function (x) { x = String(x || '').replace(/\s+/g, ' ').trim(); return /^प्रतिबंधक|बॉन्ड|बंधपत्र|इंटेरी?ि?म|इटेरीयम/.test(x) && !/चोर|रुपये\s*रोख|सोन|मोबा/.test(x) ? x : ''; };
+    [cv(r.stolen), cv(r.recovered)].forEach(function (x) { var c = pvCell(x); if (c) { pv = pv.filter(function (q) { return c.indexOf(q) < 0; }); pv.push(c); } });
+    pv = pv.filter(function (q) { var k = (q.match(/\d+/) || [''])[0]; return norm0(f.arrest).indexOf(norm0(q)) < 0 && !(k && /[इई]स्त/.test(f.arrest) && f.arrest.indexOf(k) >= 0); });
+    pv = pv.map(function (q) { return q.replace(/\s+/g, ' ').replace(/^प्रतिबंधक\s*(?:कार्य|कार)[ऀ-ॿ]*\s*/, '').replace(/\s*प्रतिबंधक\s*(?:कार्य|कार)[ऀ-ॿ]*$/, '').replace(/^ईस्त/, 'इस्त').replace(/[\s\-]+$/, '').trim(); });
+    pv = pv.filter(function (q, i) { return q && pv.indexOf(q) === i && !pv.some(function (y, j) { return j !== i && y.length > q.length && y.indexOf(q) >= 0; }); });
+    if (pv.length) f.arrest = (f.arrest ? f.arrest + '\n' : '') + 'प्रतिबंधक कारवाई: ' + pv.join('; ');
+    r._prevCols = pv.length ? 1 : 0;
+    f.invest = TEXT.normInvest(cv(r.invest));
+    var det = cv(r.details);
+    f.details = o.full ? det : (TEXT.tplHakikat(r.head, f.crime, det) || TEXT.shortHakikat(det));
+    var noPrev = function (x) { var y = String(x || ''); TEXT.prevOf(y).forEach(function (q) { y = y.split(q).join(' '); }); y = y.replace(/\s{2,}/g, ' ').trim(); return /[ऀ-ॿA-Za-z0-9]{2,}/.test(y.replace(/[्ँ-ः]/g, '')) ? y : ''; };
+    f.stolen = noPrev(cv(r.stolen)); f.recovered = noPrev(cv(r.recovered));
+    if (/^प्रतिबंधक|बॉन्ड|बंधपत्र|इंटेरी?ि?म|इटेरीयम/.test(f.stolen) && !/चोर|सोन|मोबा/.test(f.stolen)) f.stolen = '';
+    if (/^प्रतिबंधक|बॉन्ड|बंधपत्र|इंटेरी?ि?म|इटेरीयम/.test(f.recovered) && !/चोर|सोन|मोबा/.test(f.recovered)) f.recovered = '';
+    // उप-प्रकार (note under section)
+    var sub = r.subEdited ? (r.sub || '') : '';
+    if (!r.subEdited) {
+      if (/^चोरी/.test(r.head || '')) sub = TEXT.theftKinds(hx.desc || hx.stolen || f.stolen, det);
+      else sub = ENG.subOf({ table: r.table, crimeText: r.crime, extraText: '' }, r.head);
+    }
+    f.sub = sub;
+    if (sub) f.crime += '\n(' + sub + ')';
+    // text corrected by hand inside the app (final wording)
+    var ed = r.ed || {};
+    Object.keys(ed).forEach(function (k) { if (ed[k] != null && k !== 'sub') f[k] = ed[k]; });
+    return f;
+  }
+
+  /* ================================================================ */
+  /* Division B-part model                                              */
+  /* ================================================================ */
+  function isWide(head) { return /चोरी|घरफोडी|जबरी|दरोडा/.test(head); }
+  function divisionModel(recs, headsOrder, month, fixes, opts) {
+    opts = opts || {};
+    var cv = makeConv(fixes);
+    var groups = {}, order = [];
+    (headsOrder || []).forEach(function (h) { groups[h] = []; order.push(h); });
+    recs.forEach(function (r) {
+      var h = r.head || 'अवर्गीकृत';
+      if (!groups[h]) { groups[h] = []; order.push(h); }
+      groups[h].push(r);
+    });
+    var sections = [];
+    order.forEach(function (h) {
+      var rs = groups[h]; if (!rs.length) return;
+      rs.sort(function (a, b) { return (PS_ORDER[a.ps] || 9) - (PS_ORDER[b.ps] || 9) || (+a.no - +b.no); });
+      var marg = h === 'मर्ग', wide = isWide(h);
+      var headers, weights, rows;
+      var fl = rs.map(function (r) { return fields(r, { cv: cv, month: month, full: opts.full }); });
+      if (marg) {
+        headers = ['अ.क्र.', 'पोस्टे', 'मर्ग क्र. व कलम', 'घटनास्थळ', 'घ.ता.वेळ', 'दा.ता.वेळ', 'फिर्यादीचे नाव', 'मृतकाचे नाव', 'दाखल / तपास', 'मरणाचे कारण'];
+        weights = [560, 1000, 1500, 1500, 1200, 1200, 2300, 2300, 1700, 2700];
+        rows = rs.map(function (r, i) { var f = fl[i]; return [String(i + 1), PSU[r.ps] || r.ps, f.crime, f.place, f.occ, f.filed, f.party, f.deceased, f.invest, f.cause]; });
+      } else if (wide) {
+        headers = ['अ.क्र.', 'पोस्टे', 'अप.क्र. व कलम', 'घटनास्थळ', 'घ.ता.वेळ', 'दा.ता.वेळ', 'फिर्यादी व आरोपीचे नाव व पत्ता', 'अटक ता.वेळ व प्रतिबंधक', 'चोरीस गेलेला माल', 'वसुल माल', 'तपास अधिकारी', 'घटनेचे थोडक्यात विवरण'];
+        weights = [520, 950, 1650, 1250, 1100, 1100, 2150, 1150, 2000, 900, 1250, 3500];
+        rows = rs.map(function (r, i) {
+          var f = fl[i], x = r.hx || {};
+          var st = x.stolen || x.desc || f.stolen || TEXT.stolenSentence(cv(r.details).replace(/\s+/g, ' '));
+          if (x.value && st.indexOf(x.value) < 0) st += (st ? '\n' : '') + 'एकूण किं. ' + x.value + '/- रु.';
+          return [String(i + 1), PSU[r.ps] || r.ps, f.crime, f.place, f.occ, f.filed, f.party, f.arrest, st, x.recovered || f.recovered, f.invest, f.details];
+        });
+      } else {
+        headers = ['अ.क्र.', 'पोस्टे', 'अप.क्र. व कलम', 'घटनास्थळ', 'घ.ता.वेळ', 'दा.ता.वेळ', 'फिर्यादी व आरोपीचे नाव व पत्ता', 'अटक ता.वेळ व प्रतिबंधक', 'तपास अधिकारी', 'घटनेचे थोडक्यात विवरण'];
+        weights = [560, 1050, 1700, 1300, 1150, 1150, 2400, 1200, 1300, 4100];
+        rows = rs.map(function (r, i) { var f = fl[i]; return [String(i + 1), PSU[r.ps] || r.ps, f.crime, f.place, f.occ, f.filed, f.party, f.arrest, f.invest, f.details]; });
+      }
+      sections.push({ title: h, headers: headers, weights: weights, rows: rows });
+    });
+    return { titles: ['नागपूर विभाग', 'बी पार्ट', 'माहे ' + month], sections: sections };
+  }
+
+  /* ================================================================ */
+  /* HBT (Burglary / Theft / Hurt)                                      */
+  /* ================================================================ */
+  function ages(partyU) {
+    var a = [], re = /वय\s*[-:]?\s*(\d{1,3})/g, m;
+    while ((m = re.exec(partyU || ''))) a.push(m[1]);
+    return a;
+  }
+  function amounts(t) {
+    var all = (t || '').match(/\d{1,3}(?:,\d{2,3})+|\d{4,7}/g) || [];
+    var best = 0;
+    all.forEach(function (x) { var v = +x.replace(/,/g, ''); if (v > best && v < 100000000 && !/^(19|20)\d\d$/.test(x)) best = v; });
+    return best ? String(best) : '';
+  }
+  var BIKE_RE = /(हिरो|होंडा|होन्डा|बजाज|टि?व्हीएस|टीव्हीएस|यामाहा|सुझुकी|अ[ॅॅ]?क्टि?व्हा|ॲक्टिव्हा|स्प्लेंडर|स्पेन्डर|स्पेंडर|स्पें?ल्?डर|स्प्लें?डर|ड्रीम|शाईन|साईन|युनिकॉर्न|पॅशन|पल्सर|प्लेझर|एचएफ)[^,।;]{0,90}/;
+  function hbtKind(head) { return themeKind(head); }
+  function hbtPrefill(r, fixes) {
+    var cv = makeConv(fixes);
+    var k = hbtKind(r.head), x = {};
+    var det = cv(r.details), st = cv(r.stolen);
+    TEXT.prevOf(st).forEach(function (q) { st = st.split(q).join(' '); }); st = st.replace(/\s{2,}/g, ' ').trim();
+    if (TEXT.blank(st) || !/[ऀ-ॿA-Za-z0-9]{3,}/.test(st)) st = '';
+    var fromDet = '';
+    if (k === 'H' || k === 'T') fromDet = TEXT.stolenSentence(det);
+    if (k === 'H') {
+      x.stolen = st || fromDet; x.recovered = (cv(r.recovered) || '').replace(/^[-–\s]*$/, '') || '00'; x.method = ''; x.aa = '00';
+      var mth = det.match(/(शटर|शेटर|दाराचा कुलूप|दाराचे कुलूप|कुलुप|कुलूप|कडी|कोंडा|खिडकी|ग्रील)[^,।;]{0,25}?(तोडून|तोडुन|वाकवून|वाकवुन|उचकटून|उचकटुन|काढून|काढुन)/);
+      if (mth) x.method = mth[0];
+    } else if (k === 'T') {
+      var bike = det.match(BIKE_RE);
+      x.desc = st || (bike && /मोसा|मो[-\s]?सा|मोटार\s*सायकल/.test(det) ? 'मोसा ' + bike[0].trim() : fromDet);
+      if (x.desc && x.desc.length > 260) x.desc = x.desc.slice(-260).replace(/^\S*\s/, '');
+      var kim = (det.match(/(?:किंमती|किमती|कीमती|किंमत|किमत|किं|की|कि)\s*[-:,.]?\s*\d[\d,]{2,}/g) || []).join(' ');
+      var v1 = +amounts(st || x.desc) || 0, v2 = +amounts(kim) || 0;
+      x.value = String(Math.max(v1, v2) || '');
+      x.recovered = (cv(r.recovered) || '').replace(/^[-–\s]*$/, '') || '0'; x.arrest = '0';
+    } else if (k === 'U') {
+      var a = ages(cv(r.party));
+      x.weapon = ''; x.reason = ''; x.cAge = a[0] || ''; x.aAge = a.slice(1).join(', '); x.total = a.length > 1 ? String(a.length - 1) : '';
+      x.arrested = ''; x.relation = ''; x.action = ''; x.disposal = 'पोस्टे';
+      var w = det.match(/(काठी|काठीने|लाकडी दांडा|लोखंडी रॉड|रॉड|चाकू|चाकु|सुरा|कुऱ्हाड|कुर्‍हाड|दगड|विट|बेल्ट|हाताबुक्क्यांनी|हातबुक्क्यांनी|लाथाबुक्क्यांनी)/);
+      if (w) x.weapon = w[1];
+    }
+    return x;
+  }
+  function hbtModel(recs, month, fixes) {
+    var cv = makeConv(fixes);
+    var H = [], T = [], U = [];
+    recs.slice().sort(function (a, b) { return (PS_ORDER[a.ps] || 9) - (PS_ORDER[b.ps] || 9) || (+a.no - +b.no); }).forEach(function (r) {
+      var k = hbtKind(r.head); if (!k) return;
+      var x = r.hx || hbtPrefill(r, fixes);
+      var f = fields(r, { cv: cv, month: month, full: true });
+      var crime = f.crime;
+      if (k === 'H') H.push([PSU[r.ps], crime, f.place, f.occ, f.filed, x.stolen, x.recovered, x.method, x.aa]);
+      if (k === 'T') T.push([PSU[r.ps], crime, x.desc, x.value, x.recovered, x.arrest]);
+      if (k === 'U') U.push([PSU[r.ps], f.crime, x.weapon, x.reason, x.cAge, x.aAge, x.total, x.arrested, x.relation, x.action, x.disposal]);
+    });
+    function num(rows) { return rows.map(function (r, i) { return [String(i + 1)].concat(r); }); }
+    var sections = [];
+    sections.push({ title: 'घरफोडीचे गुन्हे', headers: ['अ.क्र.', 'पो.स्टे.', 'अप.क्र. व कलम', 'घटनास्थळ', 'घ.ता.वेळ', 'दा.ता.वेळ', 'चोरीस गेलेला माल', 'वसुल माल', 'गुन्ह्याची पद्धत', 'आ.अ.'], weights: [1.2, 2.0, 4.5, 4.2, 3.6, 3.0, 8.0, 2.0, 2.4, 1.6], rows: num(H) });
+    sections.push({ title: 'चोरीचे गुन्हे', headers: ['अ.क्र.', 'पो.स्टे.', 'अप.क्र. व कलम', 'चोरीस गेलेल्या मालाचे विवरण', 'चोरीचा माल (रु.)', 'वसुल माल', 'अटक आरोपी'], weights: [1.2, 2.2, 6.0, 10.0, 3.0, 3.0, 4.0], rows: num(T) });
+    sections.push({ title: 'दुखापत वर्गीकरण', headers: ['अ.क्र.', 'पो.स्टे.', 'अप.क्र. व कलम', 'हत्यार', 'कारण', 'फिर्यादी वय', 'आरोपी वय', 'एकूण आरोपी', 'अटक आरोपी', 'नातेसंबंध', 'प्रतिकार्यवाही', 'निपटारा'], weights: [1.2, 2.0, 5.0, 2.4, 2.4, 2.0, 2.0, 2.6, 3.4, 4.0, 4.4, 1.6], rows: num(U) });
+    sections.forEach(function (s) { s.weights = s.weights.map(function (w) { return Math.round(w * 100); }); s.size = 10; });
+    return { titles: ['नागपूर विभाग', 'घरफोडी, चोरी, दुखापत यादी', 'माहे ' + month], sections: sections };
+  }
+
+  /* ================================================================ */
+  /* model -> HTML (preview in app, PDF on server)                      */
+  /* ================================================================ */
+  function hesc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+  function modelHtml(model, opts) {
+    opts = opts || {};
+    var h = '';
+    (model.titles || []).forEach(function (t, i) { h += '<div class="t' + i + '">' + hesc(t) + '</div>'; });
+    model.sections.forEach(function (sec, n) {
+      var brk = model.flow ? !!sec.pageBreak && n > 0 : n > 0;
+      h += '<div class="sec' + (brk ? ' brk' : '') + '">';
+      if (sec.title) h += '<div class="st">' + hesc(sec.title) + (model.flow ? '' : ' (' + sec.rows.length + ')') + '</div>';
+      var tot = sec.weights.reduce(function (a, b) { return a + b; }, 0);
+      h += '<table class="rt" style="width:' + Math.round((sec.widthPct || 1) * 100) + '%"><colgroup>' + sec.weights.map(function (w) { return '<col style="width:' + (100 * w / tot).toFixed(2) + '%">'; }).join('') + '</colgroup><thead>';
+      if (sec.hrows) sec.hrows.forEach(function (row) { h += '<tr>' + row.map(function (c) { if (typeof c === 'string') c = { t: c }; return '<th' + (c.span > 1 ? ' colspan="' + c.span + '"' : '') + (c.rs > 1 ? ' rowspan="' + c.rs + '"' : '') + '>' + hesc(c.t).replace(/\n/g, '<br>') + '</th>'; }).join('') + '</tr>'; });
+      else h += '<tr>' + sec.headers.map(function (c) { return '<th>' + hesc(c) + '</th>'; }).join('') + '</tr>';
+      h += '</thead><tbody>';
+      sec.rows.forEach(function (r) {
+        var cells = Array.isArray(r) ? r : r.c, cls = Array.isArray(r) ? '' : ((r.bold ? 'b ' : '') + (r.shade ? 'sh' : ''));
+        h += '<tr' + (cls ? ' class="' + cls + '"' : '') + '>' + cells.map(function (c, i) { var al = sec.aligns ? (sec.aligns[i] || 'center') : (i < 2 ? 'center' : 'left'); return '<td style="text-align:' + al + '">' + hesc(c).replace(/\n/g, '<br>') + '</td>'; }).join('') + '</tr>';
+      });
+      h += '</tbody></table>' + (sec.note ? '<div class="nt">' + hesc(sec.note) + '</div>' : '') + '</div>';
+    });
+    if (!opts.page) return h;
+    return '<!DOCTYPE html><html><head><meta charset="utf-8"><style>@page{size:legal landscape;margin:12mm}body{font-family:"Noto Sans Devanagari",Mangal,"Nirmala UI",sans-serif;font-size:10.5px;color:#000}' +
+      '.t0{text-align:center;font-weight:bold;font-size:16px}.t1,.t2{text-align:center;font-weight:bold;font-size:13px}.sec{margin-top:12px}.brk{page-break-before:always}.st{font-weight:bold;font-size:12.5px;background:#f2f2f2;padding:3px 6px;margin-bottom:4px}' +
+      'table.rt{border-collapse:collapse;margin:0 auto}table.rt th,table.rt td{border:1px solid #595959;padding:2px 4px;vertical-align:top}table.rt th{background:#dce6f2;text-align:center}tr.b td{font-weight:bold}tr.sh td{background:#f2f2f2}.nt{font-size:9px;color:#555;margin-top:3px}</style></head><body>' + h + '</body></html>';
+  }
+
+  /* ================================================================ */
+  /* अहवाल: PS x head संख्या                                           */
+  /* ================================================================ */
+  function countReport(recs, headsOrder) {
+    var by = {}, heads = [];
+    (headsOrder || []).forEach(function (h) { by[h] = { bela: 0, bori: 0, midc: 0 }; });
+    recs.forEach(function (r) { var h = r.head || 'अवर्गीकृत'; if (!by[h]) by[h] = { bela: 0, bori: 0, midc: 0 }; by[h][r.ps] = (by[h][r.ps] || 0) + 1; });
+    var rows = [], tot = { bela: 0, bori: 0, midc: 0, all: 0 };
+    Object.keys(by).forEach(function (h) {
+      var b = by[h], t = (b.bela || 0) + (b.bori || 0) + (b.midc || 0);
+      if (!t) return;
+      rows.push({ head: h, bela: b.bela || 0, bori: b.bori || 0, midc: b.midc || 0, total: t });
+      tot.bela += b.bela || 0; tot.bori += b.bori || 0; tot.midc += b.midc || 0; tot.all += t;
+    });
+    return { rows: rows, totals: tot };
+  }
+
+  return { buildDocx: buildDocx, divisionModel: divisionModel, hbtModel: hbtModel, hbtPrefill: hbtPrefill, hbtKind: hbtKind, makeConv: makeConv, fields: fields, countReport: countReport, PSU: PSU, modelHtml: modelHtml };
+})();
+if (typeof module !== 'undefined') module.exports = REPORT;
+
+;
+/* अहवाल (reports) built from classified B-Part records. Pure JS. Depends on TEXT, ENG.
+   Every record must carry r.u (Unicode fields from REPORT.fields) and r.hx (HBT details).
+   Optional user overrides on a record:  r.dOv ('1' उघड / '0' अउघड),  r.rcat (category text),  r.adr ({type,cause,sex,grp}). */
+;(window.__BPS_PARTS = window.__BPS_PARTS || []).push('Engine3'); /* ===== END OF Engine3 ===== */

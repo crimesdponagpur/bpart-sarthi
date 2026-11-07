@@ -1,0 +1,455 @@
+var CHECKS = (function () {
+  var PSN = { bela: 'बेला', bori: 'बोरी', midc: 'एमआयडीसी' };
+
+  function pdate(s) {
+    var m = String(s || '').match(/(\d{1,2})\s*[\/\-.@]\s*(\d{1,2})\s*[\/\-.@]\s*(\d{2,4})/);
+    if (!m) return null;
+    var y = +m[3]; if (y < 100) y += 2000;
+    var d = +m[1], mo = +m[2];
+    if (mo < 1 || mo > 12 || d < 1 || d > 31) return null;
+    return { d: d, m: mo, y: y, k: y * 10000 + mo * 100 + d };
+  }
+
+  // related heads (e.g. night/day burglary, 336/337/338) are not "ambiguous"
+  function family(h) {
+    if (!h) return '';
+    if (/घरफोडी/.test(h)) return 'घरफोडी';
+    if (/बलात्कार/.test(h)) return 'बलात्कार';
+    if (/^\s*(336|337|338)/.test(h)) return 'अपघात-दुखापत';
+    return h;
+  }
+
+  var RISKY = [
+    [/घरफोडी/, /घरफोडी|^चोरी$/], [/^चोरी$/, /घरफोडी|जबरी/], [/विश्वासघात/, /फसवणूक/], [/फसवणूक/, /विश्वासघात/],
+    [/जबरी/, /दरोडा/], [/दरोडा/, /जबरी/], [/आर्म/, /दुखापत|खुनाचा|खून/], [/खुनाचा/, /^खून/], [/^खून/, /खुनाचा/], [/दुखापत/, /खुनाचा/],
+    [/जिवनावश्यक|पर्यावरण|खाणी|सार्वजनिक मालमत्ता/, /फसवणूक|चोरी/], [/बेकायदेशीर सभा/, /दंगल/], [/दंगल/, /बेकायदेशीर सभा/],
+    [/आत्महत्येस/, /हुंडाबळी/], [/सदोष/, /^खून/]
+  ];
+  function kindOf(h) { return /घरफोडी/.test(h || '') ? 'H' : /चोरी/.test(h || '') ? 'T' : /दुखापत/.test(h || '') ? 'U' : ''; }
+
+  var FIX = {
+    'वसुल माल नोंद नाही': 'hx.recovered', 'हत्यार नोंद नाही': 'hx.weapon', 'कारण नोंद नाही': 'hx.reason',
+    'फिर्यादी वय नाही': 'hx.cAge', 'आरोपी वय नाही': 'hx.aAge'
+  };
+  var HIGH = /^(head ठरलेला नाही|दाखल तारीख\/वेळ नाही)/;
+
+  // issues for one record: [{lv:'hi'|'mid', k, t, fix?, alt?}]
+  function issues(r, ctx) {
+    ctx = ctx || {};
+    var out = [], u = r.u || {}, hx = r.hx || {}, h = r.head || '', kind = kindOf(h);
+    if (r.isNew) out.push({ lv: 'hi', k: 'new', t: 'नवीन नोंद (अद्ययावत फाईलमधून) – तपासा' });
+    if (r.chg && r.chg.length) out.push({ lv: 'hi', k: 'chg', t: 'PS ने बदल केला: ' + r.chg.map(function (c) { return c.label; }).join(', ') });
+    if (r.missing) out.push({ lv: 'hi', k: 'miss', t: 'नवीन फाईलमध्ये ही नोंद नाही – PS ने काढली का?' });
+    var ws = []; try { ws = TEXT.validate(r); } catch (e) {}
+    ws.forEach(function (w) {
+      var fix = null;
+      if (/^चोरीस गेलेला माल नोंद नाही/.test(w)) fix = kind === 'H' ? 'hx.stolen' : 'hx.desc';
+      else if (/वसुल माल नोंद नाही$/.test(w)) fix = 'hx.recovered';
+      else if (FIX[w]) fix = FIX[w];
+      out.push({ lv: HIGH.test(w) ? 'hi' : 'mid', k: /^head/.test(w) ? 'head' : 'warn', t: w, fix: fix });
+    });
+    // ambiguous automatic classification
+    if (h && r.rule && !r.manual && !/^learned/.test(r.rule) && !/^table-/.test(r.rule)) {
+      try {
+        var c = ENG.candidates({ table: r.table, crimeText: r.crime, extraText: [r.stolen, r.details, r.party].join(' ') });
+        // only pairs that really get mixed up in past division B Parts (2024-26); the rest are settled by rule order
+        var alt = c.filter(function (x) { return x !== h && RISKY.some(function (p) { return p[0].test(h) && p[1].test(x); }); });
+        if (alt.length) out.push({ lv: 'hi', k: 'amb', t: 'एकापेक्षा जास्त head बसतात – "' + h + '" बरोबर आहे का?', alt: alt });
+      } catch (e) {}
+    }
+    if (r.table !== 'M') {
+      // arrested but no date
+      var arr = u.arrest || '';
+      if (/अटक/.test(arr) && !/नाही|नसून|होणे बाकी/.test(arr) && !pdate(arr)) out.push({ lv: 'mid', k: 'arrdate', t: 'अटक आहे पण अटकेची तारीख दिसत नाही' });
+      // stolen goods present but no amount
+      if (kind === 'H' || kind === 'T') {
+        var st = (hx.stolen || hx.desc || u.stolen || '').trim();
+        var val = (hx.value || '').trim();
+        if (st && !/[0-9०-९]/.test(st) && !/[0-9०-९]/.test(val) && !/नाही|^-+$/.test(st)) out.push({ lv: 'mid', k: 'val', t: 'चोरीस गेलेल्या मालाची किंमत दिसत नाही', fix: kind === 'T' ? 'hx.value' : 'hx.stolen' });
+      }
+    }
+    // dates
+    var fd = pdate(u.filed), od = pdate(u.occ);
+    if (fd && ctx.month) {
+      var mm = String(ctx.month).match(/(\d{1,2})\s*[\/\-]\s*(\d{4})/);
+      if (mm && (fd.m !== +mm[1] || fd.y !== +mm[2])) out.push({ lv: 'mid', k: 'month', t: 'दाखल तारीख ' + fd.d + '/' + fd.m + '/' + fd.y + ' या महिन्याची नाही' });
+    }
+    if (fd && od && od.k > fd.k) out.push({ lv: 'mid', k: 'order', t: 'घटनेची तारीख दाखल तारखेनंतरची आहे' });
+    // duplicate
+    if (ctx.dups && ctx.dups[r.id]) out.push({ lv: 'hi', k: 'dup', t: ctx.dups[r.id] });
+    // already reported in an earlier month (same PS, same year, same crime no.)
+    if (ctx.prev && r.no && fd) { var pk = r.ps + '|' + (r.table === 'M' ? 'M' : '') + fd.y + '|' + (+r.no), pm = ctx.prev[pk]; if (pm) out.push({ lv: 'hi', k: 'prevm', t: 'हा गुन्हा क्र. ' + (+r.no) + ' माहे ' + pm + ' च्या B Part मध्ये आधीच आला होता – दुबार?' }); }
+    if (r.table !== 'M' && r.crime) {
+      try {
+        var nt = ENG.norm(r.crime), ac = ENG.acts(nt), sec = ENG.parseSections(r.crime);
+        // भादवि after 1 July 2024
+        if (ac.IPC && !ac.BNS && fd && fd.k >= 20240701 && (!od || od.k >= 20240701)) out.push({ lv: 'mid', k: 'ipc', t: 'भादवि (IPC) लिहिले आहे – 1 जुलै 2024 नंतरच्या घटनेस बीएनएस कलम हवे' });
+        // BNS has sections 1–358 only
+        if (ac.BNS && !Object.keys(ac).some(function (k) { return k !== 'BNS' && k !== 'IPC'; })) {
+          var big = sec.order.filter(function (n) { return +n > 358; });
+          if (big.length) out.push({ lv: 'mid', k: 'bnsno', t: 'कलम ' + big.join(', ') + ' बीएनएसमध्ये नाही (बीएनएस 1–358) – भादवि कलम तर लिहिले नाही?' });
+        }
+        if (sec.order.length && !Object.keys(ac).length && !Object.keys(ENG.acts(ENG.norm([r.crime, r.details].join(' ')))).length) out.push({ lv: 'mid', k: 'noact', t: 'कलमासोबत कायद्याचे नाव (बीएनएस / मोवाका / ...) लिहिलेले नाही' });
+      } catch (e) {}
+      // arrest before the incident
+      var ad = pdate(u.arrest);
+      if (ad && od && ad.k < od.k) out.push({ lv: 'mid', k: 'arrord', t: 'अटकेची तारीख घटनेच्या तारखेपूर्वीची आहे' });
+      if (fd && ctx.today && fd.k > ctx.today) out.push({ lv: 'mid', k: 'future', t: 'दाखल तारीख भविष्यातील आहे' });
+    }
+    return out;
+  }
+
+  // whole-list checks: crime-number gaps and duplicates
+  function batch(recs) {
+    var gaps = [], dups = {}, dupList = [];
+    var series = {};
+    recs.forEach(function (r) {
+      var n = parseInt(r.no, 10); if (!isFinite(n)) return;
+      var key = r.ps + (r.table === 'M' ? ':M' : '');
+      (series[key] = series[key] || []).push({ n: n, r: r });
+    });
+    Object.keys(series).forEach(function (key) {
+      var a = series[key].sort(function (x, y) { return x.n - y.n; }), seen = {}, miss = [];
+      a.forEach(function (x) {
+        if (seen[x.n]) {
+          var msg = 'हाच गुन्हा क्र. ' + x.n + ' यादीत दोनदा आहे (' + PSN[x.r.ps] + ')';
+          dups[x.r.id] = msg; dups[seen[x.n].id] = msg; dupList.push({ ps: x.r.ps, no: x.n, ids: [x.r.id, seen[x.n].id], text: msg });
+        }
+        seen[x.n] = x.r;
+      });
+      for (var i = a[0].n; i <= a[a.length - 1].n; i++) if (!seen[i]) miss.push(i);
+      if (miss.length) gaps.push({ ps: key.split(':')[0], marg: /:M$/.test(key), missing: miss, from: a[0].n, to: a[a.length - 1].n, count: a.length });
+    });
+    // same crime text + same party in different records
+    var bytxt = {};
+    recs.forEach(function (r) {
+      var k = r.ps + '|' + (r.crime || '').replace(/\s+/g, '') + '|' + (r.party || '').replace(/\s+/g, '').slice(0, 60);
+      if (!r.crime) return;
+      if (bytxt[k] && bytxt[k].no !== r.no) {
+        var msg = 'गुन्हा ' + bytxt[k].no + ' व ' + r.no + ' ची माहिती सारखीच आहे (' + PSN[r.ps] + ') – दुबार तर नाही?';
+        if (!dups[r.id]) { dups[r.id] = msg; dups[bytxt[k].id] = dups[bytxt[k].id] || msg; dupList.push({ ps: r.ps, no: r.no, ids: [r.id, bytxt[k].id], text: msg }); }
+      } else bytxt[k] = r;
+    });
+    return { gaps: gaps, dups: dups, dupList: dupList };
+  }
+
+  // weight for sorting the queue
+  function weight(list) { return list.reduce(function (s, x) { return s + (x.lv === 'hi' ? 10 : 1); }, 0); }
+
+  // records similar to r (same non-generic sections + act) that still have a different head and were not edited by hand
+  var GENERIC = ['3', '3:5', '351', '351:2', '351:3', '352', '61', '61:2', '49', '190', '191', '191:2', '191:3'];
+  function sig(r) {
+    var s = (r.secs || []).filter(function (x) { return GENERIC.indexOf(x) < 0; }).sort().join(',');
+    if (!s) return '';
+    return (r.acts || []).slice().sort().join('+') + '|' + r.table + '|' + s;
+  }
+  function similar(r, all) {
+    var s = sig(r); if (!s) return [];
+    return all.filter(function (x) { return x.id !== r.id && !x.manual && x.head !== r.head && sig(x) === s; });
+  }
+
+  return { pdate: pdate, issues: issues, batch: batch, weight: weight, similar: similar, sig: sig, family: family, GENERIC: GENERIC };
+})();
+if (typeof module !== 'undefined') module.exports = CHECKS;
+
+;
+/**
+ * बी-पार्ट सारथी – नागपूर उपविभाग (Google Apps Script web app)
+ * Files in this project: Code.gs, Engine.gs, Index.html
+ */
+
+var OUTPUT_FOLDER_NAME = 'B-Part App Output';
+
+function doGet() {
+  return HtmlService.createHtmlOutputFromFile('Index')
+    .setTitle('बी-पार्ट सारथी')
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1, maximum-scale=1')
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}
+
+/* ---------------- storage (UserProperties, chunked JSON) ---------------- */
+function store_() { return PropertiesService.getUserProperties(); }
+function getBig_(key, dflt) {
+  var p = store_();
+  var n = +(p.getProperty(key + '__n') || 0);
+  if (!n) return dflt;
+  var s = '';
+  for (var i = 0; i < n; i++) s += p.getProperty(key + '__' + i) || '';
+  try { return JSON.parse(s); } catch (e) { return dflt; }
+}
+function setBig_(key, obj) {
+  var p = store_();
+  var s = JSON.stringify(obj);
+  var old = +(p.getProperty(key + '__n') || 0);
+  var parts = [];
+  for (var i = 0; i < s.length; i += 8000) parts.push(s.substr(i, 8000));
+  var props = {};
+  parts.forEach(function (c, i) { props[key + '__' + i] = c; });
+  props[key + '__n'] = String(parts.length);
+  p.setProperties(props);
+  for (var j = parts.length; j < old; j++) p.deleteProperty(key + '__' + j);
+}
+function getRules_() {
+  var r = getBig_('rules', []), ch = false;
+  r.forEach(function (x) { var n = ENG.RENAMED[x.head]; if (n) { x.head = n; ch = true; } });
+  if (ch) setBig_('rules', r);
+  return r;
+}
+function getHeads_() {
+  var h = getBig_('heads', null);
+  if (!h || !h.length) return ENG.HEADS.slice();
+  var out = [];
+  h.forEach(function (x) { x = ENG.RENAMED[x] || x; if (out.indexOf(x) < 0) out.push(x); });
+  h = out;
+  // new defaults appear automatically, placed after the default head that precedes them
+  ENG.HEADS.forEach(function (d, i) {
+    if (h.indexOf(d) >= 0) return;
+    var at = -1;
+    for (var j = i - 1; j >= 0 && at < 0; j--) at = h.indexOf(ENG.HEADS[j]);
+    if (at < 0) h.push(d); else h.splice(at + 1, 0, d);
+  });
+  return h;
+}
+function getFixes_() { return getBig_('fixes', []); }
+
+/* ---------------- API: bootstrap ---------------- */
+function api_bootstrap() {
+  return {
+    heads: getHeads_(),
+    defaultHeads: ENG.HEADS,
+    rules: getRules_(),
+    fixes: getFixes_(),
+    folder: store_().getProperty('lastFolder') || '',
+    user: Session.getActiveUser().getEmail()
+  };
+}
+
+/* ---------------- API: list docx in a Drive folder ---------------- */
+function api_listFolder(folderUrlOrId) {
+  var id = String(folderUrlOrId || '').trim();
+  var m = id.match(/folders\/([a-zA-Z0-9_-]+)/) || id.match(/id=([a-zA-Z0-9_-]+)/);
+  if (m) id = m[1];
+  var folder = DriveApp.getFolderById(id);
+  store_().setProperty('lastFolder', folderUrlOrId);
+  var out = [];
+  var it = folder.getFiles();
+  while (it.hasNext()) {
+    var f = it.next();
+    if (/\.docx$/i.test(f.getName())) out.push({ id: f.getId(), name: f.getName(), ps: CORE.detectPs(f.getName(), []), updated: f.getLastUpdated().toISOString() });
+  }
+  var sub = folder.getFolders(), subs = [];
+  while (sub.hasNext()) { var s = sub.next(); subs.push({ id: s.getId(), name: s.getName() }); }
+  out.sort(function (a, b) { return a.name < b.name ? -1 : 1; });
+  return { name: folder.getName(), files: out, folders: subs };
+}
+
+/* ---------------- API: process PS files ---------------- */
+// files: [{name, b64?, driveId?, ps?}]
+function dataMonth_(recs) {
+  var cnt = {}, tot = 0, best = '', bn = 0;
+  recs.forEach(function (r) {
+    var m = String(r.filed || '').match(/(\d{1,2})\s*[\/\-.@]\s*(\d{1,2})\s*[\/\-.@]\s*(\d{2,4})/);
+    if (!m) return;
+    var mo = +m[2], y = +m[3]; if (y < 100) y += 2000;
+    if (mo < 1 || mo > 12) return;
+    var k = ('0' + mo).slice(-2) + '/' + y; cnt[k] = (cnt[k] || 0) + 1; tot++;
+    if (cnt[k] > bn) { bn = cnt[k]; best = k; }
+  });
+  return tot >= 5 && bn / tot >= 0.6 ? best : '';
+}
+function api_process(files) {
+  var learned = getRules_(), fixes = getFixes_();
+  var all = [], info = [], month = null;
+  files.forEach(function (f) {
+    var blob;
+    if (f.driveId) { var df = DriveApp.getFileById(f.driveId); blob = df.getBlob(); f.name = df.getName(); }
+    else blob = Utilities.newBlob(Utilities.base64Decode(f.b64), 'application/zip', f.name);
+    blob.setContentType('application/zip');
+    var parts;
+    try { parts = Utilities.unzip(blob); } catch (e) { throw new Error(f.name + ': ही .docx फाईल वाचता आली नाही (जुनी .doc असल्यास Word मध्ये .docx म्हणून सेव्ह करा).'); }
+    var docPart = parts.filter(function (b) { return b.getName() === 'word/document.xml'; })[0];
+    if (!docPart) throw new Error(f.name + ': Word document सापडला नाही.');
+    var stylesPart = parts.filter(function (b) { return b.getName() === 'word/styles.xml'; })[0];
+    var legacyDefault = CORE.defaultIsLegacy(stylesPart ? stylesPart.getDataAsString('UTF-8') : '');
+    var parsed = CORE.parseDocumentXml(docPart.getDataAsString('UTF-8'), legacyDefault);
+    var ps = f.ps || CORE.detectPs(f.name, parsed.paras);
+    if (!ps) throw new Error(f.name + ': पोलीस स्टेशन ओळखता आले नाही. यादीत PS निवडा.');
+    var mo = CORE.detectMonth(parsed.paras);
+    if (mo && !month) month = mo.mm + '/' + mo.yyyy;
+    var recs = CORE.extractRecords(parsed, ps, f.name);
+    info.push({ name: f.name, ps: ps, count: recs.length, tables: parsed.tables.length });
+    all = all.concat(recs);
+  });
+  // the month in the PS file heading is sometimes typed wrong: trust the filing dates when most agree
+  var dm = dataMonth_(all), hdrMonth = month || '';
+  if (dm && dm !== hdrMonth) month = dm;
+  CORE.classifyAll(all, learned);
+  decorate_(all, fixes, month || '');
+  return { records: all, files: info, month: month || '', hdrMonth: hdrMonth, monthFromData: !!(dm && dm !== hdrMonth) };
+}
+
+function decorate_(recs, fixes, month) {
+  var cv = REPORT.makeConv(fixes);
+  recs.forEach(function (r) {
+    r.hx = REPORT.hbtPrefill(r, fixes);
+    var f = REPORT.fields(r, { cv: cv, month: month, full: true });
+    r.u = f;
+  });
+}
+
+/* ---------------- API: re-classify after a rule change ---------------- */
+// recs: [{id, table, crime, stolen, details, party, manual, head}]
+function api_reclassify(recs) {
+  var learned = getRules_();
+  var out = {};
+  recs.forEach(function (r) {
+    if (r.manual) return;
+    var res = ENG.classify({ table: r.table, crimeText: r.crime, extraText: [r.stolen, r.details, r.party].join(' ') }, null, learned);
+    out[r.id] = { head: res.head, rule: res.rule };
+  });
+  return out;
+}
+
+/* ---------------- API: rules / heads / fixes ---------------- */
+function api_saveRule(rule) {
+  var rules = getRules_();
+  rule.id = rule.id || ('R' + new Date().getTime());
+  rule.created = new Date().toISOString();
+  rules = rules.filter(function (x) { return x.id !== rule.id; });
+  rules.push(rule);
+  setBig_('rules', rules);
+  var heads = getHeads_();
+  if (rule.head && heads.indexOf(rule.head) < 0) { heads.push(rule.head); setBig_('heads', heads); }
+  return { rules: rules, heads: heads };
+}
+function api_deleteRule(id) {
+  var rules = getRules_().filter(function (x) { return x.id !== id; });
+  setBig_('rules', rules);
+  return rules;
+}
+function api_saveHeads(heads) { setBig_('heads', heads); return getHeads_(); }
+function api_saveFixes(fixes) { setBig_('fixes', fixes); return fixes; }
+function api_exportSettings() { return JSON.stringify({ rules: getRules_(), heads: getHeads_(), fixes: getFixes_() }); }
+function api_importSettings(json) {
+  var o = JSON.parse(json);
+  if (o.rules) setBig_('rules', o.rules);
+  if (o.heads) setBig_('heads', o.heads);
+  if (o.fixes) setBig_('fixes', o.fixes);
+  return api_bootstrap();
+}
+
+/* ---------------- API: preview model ---------------- */
+function api_model(payload) {
+  var fixes = getFixes_();
+  return REPORT.divisionModel(payload.records, payload.heads || getHeads_(), payload.month, fixes, { full: !!payload.full });
+}
+function api_report(payload) {
+  return REPORT.countReport(payload.records, payload.heads || getHeads_());
+}
+
+/* ---------------- API: generate Word files ---------------- */
+// payload: {kind:'division'|'hbt', kruti:bool, full:bool, month:'09/2026', records:[...], heads:[...]}
+function api_generate(payload) {
+  var fixes = getFixes_();
+  var model = payload.kind === 'hbt'
+    ? REPORT.hbtModel(payload.records, payload.month, fixes)
+    : REPORT.divisionModel(payload.records, payload.heads || getHeads_(), payload.month, fixes, { full: !!payload.full });
+  var files = REPORT.buildDocx(model, { kruti: !!payload.kruti, paper: payload.paper });
+  var blobs = Object.keys(files).map(function (path) { return Utilities.newBlob(files[path], 'application/xml', path); });
+  var mm = (payload.month || '').replace('/20', '-').replace('/', '-');
+  var base = payload.kind === 'hbt' ? ('HBT, THEFT, HURT LIST ND ' + mm) : ('NAGPUR DIVISION B PART ' + mm);
+  var name = base + (payload.kruti ? ' (Kruti Dev)' : ' (Unicode)') + '.docx';
+  var zip = Utilities.zip(blobs, name);
+  zip.setContentType('application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+  var folder = outputFolder_();
+  var old = folder.getFilesByName(name);
+  while (old.hasNext()) old.next().setTrashed(true);
+  var file = folder.createFile(zip);
+  return { name: name, url: file.getUrl(), id: file.getId(), b64: Utilities.base64Encode(zip.getBytes()) };
+}
+/* ---------------- API: अहवाल (reports) ---------------- */
+// payload: {kind:'breakup'|'property'|'cheating'|'ndps'|'gambling'|'daru'|'adr', fmt:'docx'|'pdf', month, records:[...]}
+function api_ahwal(payload) {
+  var fixes = getFixes_(), cv = REPORT.makeConv(fixes);
+  var recs = payload.records.map(function (r) {
+    if (!r.u) r.u = REPORT.fields(r, { cv: cv, month: payload.month, full: true });
+    if (!r.hx) r.hx = REPORT.hbtPrefill(r, fixes);
+    return r;
+  });
+  var model = AHWAL.build(payload.kind, recs, payload.month);
+  var label = AHWAL.LIST.filter(function (x) { return x.id === payload.kind; })[0].name;
+  var mm = (payload.month || '').replace('/20', '-').replace('/', '-');
+  var base = 'अहवाल - ' + label.replace(/[\/:*?"<>|]/g, '-') + ' ' + mm;
+  var blob;
+  if (payload.fmt === 'pdf') {
+    blob = Utilities.newBlob(REPORT.modelHtml(model, { page: true }), 'text/html', base + '.html').getAs('application/pdf').setName(base + '.pdf');
+  } else {
+    var files = REPORT.buildDocx(model, {});
+    var blobs = Object.keys(files).map(function (path) { return Utilities.newBlob(files[path], 'application/xml', path); });
+    blob = Utilities.zip(blobs, base + '.docx');
+    blob.setContentType('application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+  }
+  var folder = outputFolder_();
+  var old = folder.getFilesByName(blob.getName());
+  while (old.hasNext()) old.next().setTrashed(true);
+  var file = folder.createFile(blob);
+  return { name: blob.getName(), url: file.getUrl(), b64: Utilities.base64Encode(blob.getBytes()), mime: blob.getContentType() };
+}
+
+function outputFolder_() {
+  var it = DriveApp.getFoldersByName(OUTPUT_FOLDER_NAME);
+  return it.hasNext() ? it.next() : DriveApp.createFolder(OUTPUT_FOLDER_NAME);
+}
+
+/* ---------------- quick self-test from the editor ---------------- */
+function test_converter() {
+  Logger.log(KD.convert('ukxiwj foHkkx'));      // नागपूर विभाग
+  Logger.log(KD.convert('?kVukLFkG'));          // घटनास्थळ
+}
+
+/* ---------------- API: इतिहास – जुने विभाग B Part (head-wise) वाचून महिन्याचा सारांश ---------------- */
+// files: [{name,b64}] -> [{key, month, rows:[{ps, head, det}]}]
+function api_histImport(files) {
+  var PSN = { 'बेला': 'bela', 'बोरी': 'bori', 'बुटीबोरी': 'bori', 'एमआयडीसी': 'midc' };
+  var U = function (x) { return KD.convert(ENG.norm(x || '')).replace(/\s+/g, ' ').trim(); };
+  return files.map(function (f) {
+    var blob = Utilities.newBlob(Utilities.base64Decode(f.b64), 'application/zip', f.name);
+    var parts = Utilities.unzip(blob);
+    var docPart = parts.filter(function (b) { return b.getName() === 'word/document.xml'; })[0];
+    if (!docPart) throw new Error(f.name + ': Word document सापडला नाही.');
+    var stylesPart = parts.filter(function (b) { return b.getName() === 'word/styles.xml'; })[0];
+    var parsed = CORE.parseDocumentXml(docPart.getDataAsString('UTF-8'), CORE.defaultIsLegacy(stylesPart ? stylesPart.getDataAsString('UTF-8') : ''));
+    var mo = CORE.detectMonth(parsed.paras.map(U));
+    if (!mo) { var fm = f.name.match(/(\d{1,2})\s*[-_ .]\s*(20\d\d|\d\d)(?!\d)/); if (fm) mo = { mm: ('0' + fm[1]).slice(-2), yyyy: fm[2].length === 2 ? '20' + fm[2] : fm[2] }; }
+    if (!mo) throw new Error(f.name + ': माहे ओळखता आला नाही (फाईलच्या नावात 08-2025 असे लिहा).');
+    var rows = [];
+    parsed.tables.forEach(function (t) {
+      if (t.rows.length < 2) return;
+      var hdr = t.rows[0].map(U), hj = hdr.join('|');
+      var ci = -1; hdr.forEach(function (h, i) { if (ci < 0 && /अप.*क्र|मर्ग.*क्र|कलम/.test(h)) ci = i; });
+      if (ci < 0) return;
+      var pick = function (re) { for (var i = 0; i < hdr.length; i++) if (re.test(hdr[i])) return i; return -1; };
+      var psi = pick(/पोस्टे|पो.स्टे/), di = pick(/हकि?ी?कत|हकीगत|विवरण|कारण/), pi = pick(/फिर्यादी/), si = pick(/चोरीस/), ai = pick(/अटक/);
+      var marg = /मर्ग/.test(hj);
+      t.rows.slice(1).forEach(function (row) {
+        var crime = row[ci] || ''; if (!/\d/.test(crime)) return;
+        var res = ENG.classify({ table: marg ? 'M' : 'A', crimeText: crime, extraText: [row[si] || '', row[di] || '', row[pi] || ''].join(' ') }, null, getRules_());
+        var cu = U(crime), au = ai >= 0 ? U(row[ai]) : '';
+        var nm = cu.match(/(\d+)\s*\/\s*(\d{2,4})/); rows.push({ no: nm ? +nm[1] : 0, y: nm ? (nm[2].length === 2 ? 2000 + +nm[2] : +nm[2]) : 0, marg: marg, ps: PSN[U(row[psi]).replace(/\s|उघड/g, '')] || '', head: res.head || 'अवर्गीकृत', det: detOf(cu, au, pi >= 0 ? U(row[pi]) : '') });
+      });
+    });
+    return { key: mo.yyyy + '-' + mo.mm, month: mo.mm + '/' + mo.yyyy, rows: rows, name: f.name };
+  });
+}
+// उघड / अउघड from crime text and arrest column
+function detOf(cu, au, pu) {
+  if (/अ\s*-?\s*उघड|अनडिटेक्ट/.test(cu)) return 0;
+  if (/उघड|डिटेक्ट/.test(cu)) return 1;
+  au = au || '';
+  if (/अटक/.test(au) && /\d/.test(au) && !/नाही|बाकी|नसून/.test(au)) return 1;
+  if (/सु?ू?च?ा?नापत्र|नोटीस|35\s*\(?3/.test(au) && !/बाकी/.test(au)) return 1;
+  if (pu) { try { var k = TEXT.accusedKnown(pu); if (k === true) return 1; if (k === false) return 0; } catch (e) {} }
+  return -1;
+}
+
+;(window.__BPS_PARTS = window.__BPS_PARTS || []).push('Engine5'); /* ===== END OF Engine5 ===== */
