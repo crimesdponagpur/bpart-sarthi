@@ -387,7 +387,7 @@ body.simple .adv{display:none!important}
     <div class="tiles" id="tiles"></div>
     <div class="card"><h2>PS कडून फाईल्स</h2><div id="psHome"></div></div>
     <div class="card">
-      <h2>दिसणे <span class="small muted appver" style="font-weight:400;margin-left:auto">आवृत्ती: 13-11-2026</span></h2>
+      <h2>दिसणे <span class="small muted appver" style="font-weight:400;margin-left:auto">आवृत्ती: 13-11-2026 (2)</span></h2>
       <div class="row" style="gap:18px">
         <div><div class="small muted" style="margin-bottom:4px">अक्षरांचा आकार</div><div class="seg" id="segFs"><button data-fs="1">अ</button><button data-fs="1.15" style="font-size:1.1em">अ</button><button data-fs="1.3" style="font-size:1.25em">अ</button></div></div>
         <div><div class="small muted" style="margin-bottom:4px">रंगसंगती</div><div class="seg" id="segTh"><button data-th="auto">आपोआप</button><button data-th="light">उजळ</button><button data-th="dark">गडद</button></div></div>
@@ -609,7 +609,7 @@ body.simple .adv{display:none!important}
   <!-- RULES -->
   <section id="v-rules" class="hide">
     <div class="card">
-      <h2>App पद्धत <span class="small muted appver" style="font-weight:400;margin-left:auto">आवृत्ती: 13-11-2026</span></h2>
+      <h2>App पद्धत <span class="small muted appver" style="font-weight:400;margin-left:auto">आवृत्ती: 13-11-2026 (2)</span></h2>
       <div class="seg" id="segMode"><button data-mode="simple">साधी (फक्त B Part)</button><button data-mode="full">सर्व साधने</button></div>
       <p class="muted small" style="margin-bottom:0">साधी पद्धत: फाईल्स → तपासणी → head-wise Word एवढेच दिसते. "सर्व साधने" निवडल्यास डॅशबोर्ड, HBT यादी, अहवाल, संग्रह, टायपिंग परत दिसतात.</p>
     </div>
@@ -1347,6 +1347,7 @@ var TEXT = (function () {
     var m = first.match(/^(\d+(?:\s*[,+]\s*\d+)*)\s*\/\s*(\d{2,4})(?!\d)/);
     if (m) {
       var yy = m[2].length === 2 ? '20' + m[2] : m[2];
+      if (yyyy && m[2].length === 2 && Math.abs(+m[2] - (+yyyy % 100)) > 1) yy = String(yyyy);
       first = m[1].replace(/\s*,\s*/g, ',').replace(/\s*\+\s*/g, '+') + '/' + yy + first.slice(m[0].length);
     } else if ((m = first.match(/^(\d+)\b/)) && yyyy) {
       first = m[1] + '/' + yyyy + first.slice(m[0].length);
@@ -1545,6 +1546,19 @@ var TEXT = (function () {
   function mpoka122Tpl(t, crimeU) {
     if (!/122/.test(crimeU) || !/लपव|संशय|अंधारात|लपून/.test(t)) return '';
     return 'आरोपी ' + (plural(t) ? 'हे' : 'हा') + ' ' + (/रात्र/.test(t) ? 'रात्रीच्या वेळी ' : '') + (/अंधार/.test(t) ? 'अंधारात ' : '') + 'आपले अस्तित्व लपवून ' + (/गुन्हा\s*करण्या|हस्तक्षेप|दखलपात्र|चोरी\s*करण्या|इराद/.test(t) ? 'गुन्हा करण्याच्या उद्देशाने ' : '') + 'मिळून ' + (plural(t) ? 'आले.' : 'आला.');
+  }
+  // चोरीच्या हकिगतीतील मालाची क्रमांकवार यादी ("1) ... 2) ...") काढून फक्त एकूण ठेवणे – यादी 'चोरीस गेलेला माल' रकान्यात असते
+  function trimGoodsList(t) {
+    t = String(t || '');
+    var m = t.match(/(?:^|[\s,(])0?1\s*\)\s*/);
+    if (!m) return t;
+    var start = m.index + (m[0].match(/^[\s,(]/) ? 1 : 0), rest = t.slice(start);
+    // the grand total: the last "असा एकूण ... चा माल" of the list
+    var e = -1, mm, re = /(?:अ[सश]ा|असे)\s*(?:एकु?ू?[णन]|एकंदर)/g;
+    while ((mm = re.exec(rest)) && mm.index < 1200) if (/^[^।]{0,70}?(?:चा|चे|ची)\s*(?:मुद्?दे?)?माल/.test(rest.slice(mm.index))) e = mm.index;
+    if (e < 0) { re.lastIndex = 0; mm = re.exec(rest); e = mm ? mm.index : -1; }
+    if (e <= 0 || e > 900) return t;
+    return (t.slice(0, start) + ' ' + rest.slice(e)).replace(/\s{2,}/g, ' ');
   }
   function tplHakikat(head, crimeU, detU) {
     var t = (detU || '').replace(/\s+/g, ' ').replace(/ध-/g, '/-');
@@ -1807,7 +1821,7 @@ var TEXT = (function () {
     return String(text || '').replace(/[A-Za-z]+/g, romanWord);
   }
 
-  return { normInvest: normInvest, digits: digits, normCrime: normCrime, normParty: normParty, normAct: normAct, accusedKnown: accusedKnown, shortHakikat: shortHakikat, tplHakikat: tplHakikat, prevOf: prevOf, stolenSentence: stolenSentence, theftKinds: theftKinds, validate: validate, blank: blank, u2k: u2k, roman: roman, romanWord: romanWord };
+  return { normInvest: normInvest, digits: digits, normCrime: normCrime, normParty: normParty, normAct: normAct, accusedKnown: accusedKnown, shortHakikat: shortHakikat, tplHakikat: tplHakikat, prevOf: prevOf, amountTotal: amountTotal, inr: inr, trimGoodsList: trimGoodsList, stolenSentence: stolenSentence, theftKinds: theftKinds, validate: validate, blank: blank, u2k: u2k, roman: roman, romanWord: romanWord };
 })();
 if (typeof module !== 'undefined') module.exports = TEXT;
 
@@ -2110,7 +2124,7 @@ var REPORT = (function () {
     f.crime = TEXT.normCrime(cv(r.crime), yearOf(o.month));
     if (/^चोरी|घरफोडी/.test(r.head || '')) {
       var cl = f.crime.split('\n');
-      f.crime = [cl[0]].concat(cl.slice(1).filter(function (l) { return !/^((मोसा|मोटार सायकल|ईतर|इतर)\s*)?चोरी$|रात्र\s*घरफोडी|^घरफोडी$|^(इतर|ईतर)\s*चोरी$/.test(l.replace(/\s+/g, ' ').trim()); })).join('\n');
+      f.crime = [cl[0]].concat(cl.slice(1).filter(function (l) { return !/^((मोसा|मोटार सायकल|ईतर|इतर)\s*)?चोरी$|(?:रात्री?|दिवसा)\s*घरफोडी|घरफोडी\s*(?:रात्री?|दिवसा)|^घरफोडी$|^(इतर|ईतर)\s*चोरी$/.test(l.replace(/\s+/g, ' ').trim()); })).join('\n');
     }
     f.place = tidy(cv(r.place)); f.occ = tidy(cv(r.occ)); f.filed = tidy(cv(r.filed));
     f.party = TEXT.normParty(cv(r.party));
@@ -2128,7 +2142,7 @@ var REPORT = (function () {
     r._prevCols = pv.length ? 1 : 0;
     f.invest = TEXT.normInvest(cv(r.invest));
     var det = cv(r.details);
-    f.details = o.full ? det : (TEXT.tplHakikat(r.head, f.crime, det) || TEXT.shortHakikat(det));
+    f.details = o.full ? det : (TEXT.tplHakikat(r.head, f.crime, det) || TEXT.shortHakikat(/चोरी|घरफोडी|जबरी|दरोडा/.test(r.head || '') ? TEXT.trimGoodsList(det.replace(/\s+/g, ' ')) : det));
     var noPrev = function (x) { var y = String(x || ''); TEXT.prevOf(y).forEach(function (q) { y = y.split(q).join(' '); }); y = y.replace(/\s{2,}/g, ' ').trim(); return /[ऀ-ॿA-Za-z0-9]{2,}/.test(y.replace(/[्ँ-ः]/g, '')) ? y : ''; };
     f.stolen = noPrev(cv(r.stolen)); f.recovered = noPrev(cv(r.recovered));
     if (/^प्रतिबंधक|बॉन्ड|बंधपत्र|इंटेरी?ि?म|इटेरीयम/.test(f.stolen) && !/चोर|सोन|मोबा/.test(f.stolen)) f.stolen = '';
@@ -2179,7 +2193,12 @@ var REPORT = (function () {
           var f = fl[i], x = r.hx || {};
           var st = x.stolen || x.desc || f.stolen || TEXT.stolenSentence(cv(r.details).replace(/\s+/g, ' '));
           if (x.value && st.indexOf(x.value) < 0) st += (st ? '\n' : '') + 'एकूण किं. ' + x.value + '/- रु.';
-          return [String(i + 1), PSU[r.ps] || r.ps, f.crime, f.place, f.occ, f.filed, f.party, f.arrest, st, x.recovered || f.recovered, f.invest, f.details];
+          var rec = x.recovered || f.recovered, k = function (v) { return String(v || '').replace(/[^ऀ-ॿ0-9]/g, '').slice(0, 60); };
+          if (rec && st && k(rec).length > 15 && (k(rec) === k(st) || k(st).indexOf(k(rec)) === 0 || k(rec).indexOf(k(st)) === 0)) {
+            var tv = TEXT.amountTotal(String(rec).replace(/\s+/g, ' '));
+            rec = 'संपूर्ण माल वसुल' + (tv ? '\n(किं. ' + TEXT.inr(tv) + ' रु.)' : '');
+          }
+          return [String(i + 1), PSU[r.ps] || r.ps, f.crime, f.place, f.occ, f.filed, f.party, f.arrest, st, rec, f.invest, f.details];
         });
       } else {
         headers = ['अ.क्र.', 'पोस्टे', 'अप.क्र. व कलम', 'घटनास्थळ', 'घ.ता.वेळ', 'दा.ता.वेळ', 'फिर्यादी व आरोपीचे नाव व पत्ता', 'अटक ता.वेळ व प्रतिबंधक', 'तपास अधिकारी', 'घटनेचे थोडक्यात विवरण'];
@@ -2951,6 +2970,10 @@ var CHECKS = (function () {
         var c = ENG.candidates({ table: r.table, crimeText: r.crime, extraText: [r.stolen, r.details, r.party].join(' ') });
         // only pairs that really get mixed up in past division B Parts (2024-26); the rest are settled by rule order
         var alt = c.filter(function (x) { return x !== h && RISKY.some(function (p) { return p[0].test(h) && p[1].test(x); }); });
+        // घरफोडी: 331 written -> never plain चोरी; day/night is settled when the PS wrote रात्र/दिवसा or only one of 331(3)/(4)
+        var sx = r.secs || [], h3 = sx.indexOf('331:3') >= 0, h4 = sx.indexOf('331:4') >= 0;
+        if (/घरफोडी/.test(h) && sx.some(function (q) { return /^331/.test(q); })) alt = alt.filter(function (x) { return !/^चोरी$/.test(x); });
+        if (/घरफोडी/.test(h) && (/^burg-(?:nw|dw)$/.test(r.rule) || h3 !== h4)) alt = alt.filter(function (x) { return !/घरफोडी/.test(x); });
         if (alt.length) out.push({ lv: 'hi', k: 'amb', t: 'एकापेक्षा जास्त head बसतात – "' + h + '" बरोबर आहे का?', alt: alt });
       } catch (e) {}
     }
@@ -4685,7 +4708,7 @@ $('histIn').addEventListener('change', function () {
   };
   Array.prototype.forEach.call(document.querySelectorAll('#tabs button[data-v]'), function (b) { if (I[b.dataset.v]) b.insertAdjacentHTML('afterbegin', '<svg viewBox="0 0 24 24" aria-hidden="true">' + I[b.dataset.v] + '</svg>'); });
   var sec = { home: 'काम', preview: 'निकाल', archive: 'साधने' };
-  document.getElementById('tabs').insertAdjacentHTML('beforeend', '<div class="navh" style="margin-top:auto;text-transform:none;letter-spacing:0;font-weight:500">आवृत्ती: 13-11-2026</div>');
+  document.getElementById('tabs').insertAdjacentHTML('beforeend', '<div class="navh" style="margin-top:auto;text-transform:none;letter-spacing:0;font-weight:500">आवृत्ती: 13-11-2026 (2)</div>');
   Object.keys(sec).forEach(function (v) { var b = document.querySelector('#tabs button[data-v="' + v + '"]'); if (b) b.insertAdjacentHTML('beforebegin', '<div class="navh">' + sec[v] + '</div>'); });
 })();
 /* न जतन केलेले काम: वरच्या माहे-चिपवर खूण + बंद करताना इशारा */

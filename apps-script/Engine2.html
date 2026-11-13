@@ -103,6 +103,7 @@ var TEXT = (function () {
     var m = first.match(/^(\d+(?:\s*[,+]\s*\d+)*)\s*\/\s*(\d{2,4})(?!\d)/);
     if (m) {
       var yy = m[2].length === 2 ? '20' + m[2] : m[2];
+      if (yyyy && m[2].length === 2 && Math.abs(+m[2] - (+yyyy % 100)) > 1) yy = String(yyyy);
       first = m[1].replace(/\s*,\s*/g, ',').replace(/\s*\+\s*/g, '+') + '/' + yy + first.slice(m[0].length);
     } else if ((m = first.match(/^(\d+)\b/)) && yyyy) {
       first = m[1] + '/' + yyyy + first.slice(m[0].length);
@@ -301,6 +302,19 @@ var TEXT = (function () {
   function mpoka122Tpl(t, crimeU) {
     if (!/122/.test(crimeU) || !/लपव|संशय|अंधारात|लपून/.test(t)) return '';
     return 'आरोपी ' + (plural(t) ? 'हे' : 'हा') + ' ' + (/रात्र/.test(t) ? 'रात्रीच्या वेळी ' : '') + (/अंधार/.test(t) ? 'अंधारात ' : '') + 'आपले अस्तित्व लपवून ' + (/गुन्हा\s*करण्या|हस्तक्षेप|दखलपात्र|चोरी\s*करण्या|इराद/.test(t) ? 'गुन्हा करण्याच्या उद्देशाने ' : '') + 'मिळून ' + (plural(t) ? 'आले.' : 'आला.');
+  }
+  // चोरीच्या हकिगतीतील मालाची क्रमांकवार यादी ("1) ... 2) ...") काढून फक्त एकूण ठेवणे – यादी 'चोरीस गेलेला माल' रकान्यात असते
+  function trimGoodsList(t) {
+    t = String(t || '');
+    var m = t.match(/(?:^|[\s,(])0?1\s*\)\s*/);
+    if (!m) return t;
+    var start = m.index + (m[0].match(/^[\s,(]/) ? 1 : 0), rest = t.slice(start);
+    // the grand total: the last "असा एकूण ... चा माल" of the list
+    var e = -1, mm, re = /(?:अ[सश]ा|असे)\s*(?:एकु?ू?[णन]|एकंदर)/g;
+    while ((mm = re.exec(rest)) && mm.index < 1200) if (/^[^।]{0,70}?(?:चा|चे|ची)\s*(?:मुद्?दे?)?माल/.test(rest.slice(mm.index))) e = mm.index;
+    if (e < 0) { re.lastIndex = 0; mm = re.exec(rest); e = mm ? mm.index : -1; }
+    if (e <= 0 || e > 900) return t;
+    return (t.slice(0, start) + ' ' + rest.slice(e)).replace(/\s{2,}/g, ' ');
   }
   function tplHakikat(head, crimeU, detU) {
     var t = (detU || '').replace(/\s+/g, ' ').replace(/ध-/g, '/-');
@@ -563,7 +577,7 @@ var TEXT = (function () {
     return String(text || '').replace(/[A-Za-z]+/g, romanWord);
   }
 
-  return { normInvest: normInvest, digits: digits, normCrime: normCrime, normParty: normParty, normAct: normAct, accusedKnown: accusedKnown, shortHakikat: shortHakikat, tplHakikat: tplHakikat, prevOf: prevOf, stolenSentence: stolenSentence, theftKinds: theftKinds, validate: validate, blank: blank, u2k: u2k, roman: roman, romanWord: romanWord };
+  return { normInvest: normInvest, digits: digits, normCrime: normCrime, normParty: normParty, normAct: normAct, accusedKnown: accusedKnown, shortHakikat: shortHakikat, tplHakikat: tplHakikat, prevOf: prevOf, amountTotal: amountTotal, inr: inr, trimGoodsList: trimGoodsList, stolenSentence: stolenSentence, theftKinds: theftKinds, validate: validate, blank: blank, u2k: u2k, roman: roman, romanWord: romanWord };
 })();
 if (typeof module !== 'undefined') module.exports = TEXT;
 

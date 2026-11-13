@@ -54,6 +54,10 @@ var CHECKS = (function () {
         var c = ENG.candidates({ table: r.table, crimeText: r.crime, extraText: [r.stolen, r.details, r.party].join(' ') });
         // only pairs that really get mixed up in past division B Parts (2024-26); the rest are settled by rule order
         var alt = c.filter(function (x) { return x !== h && RISKY.some(function (p) { return p[0].test(h) && p[1].test(x); }); });
+        // घरफोडी: 331 written -> never plain चोरी; day/night is settled when the PS wrote रात्र/दिवसा or only one of 331(3)/(4)
+        var sx = r.secs || [], h3 = sx.indexOf('331:3') >= 0, h4 = sx.indexOf('331:4') >= 0;
+        if (/घरफोडी/.test(h) && sx.some(function (q) { return /^331/.test(q); })) alt = alt.filter(function (x) { return !/^चोरी$/.test(x); });
+        if (/घरफोडी/.test(h) && (/^burg-(?:nw|dw)$/.test(r.rule) || h3 !== h4)) alt = alt.filter(function (x) { return !/घरफोडी/.test(x); });
         if (alt.length) out.push({ lv: 'hi', k: 'amb', t: 'एकापेक्षा जास्त head बसतात – "' + h + '" बरोबर आहे का?', alt: alt });
       } catch (e) {}
     }
