@@ -647,7 +647,7 @@ $('histIn').addEventListener('change', function () {
   };
   Array.prototype.forEach.call(document.querySelectorAll('#tabs button[data-v]'), function (b) { if (I[b.dataset.v]) b.insertAdjacentHTML('afterbegin', '<svg viewBox="0 0 24 24" aria-hidden="true">' + I[b.dataset.v] + '</svg>'); });
   var sec = { home: 'काम', reports: 'निकाल', archive: 'साधने' };
-  document.getElementById('tabs').insertAdjacentHTML('beforeend', '<div class="navh" style="margin-top:auto;text-transform:none;letter-spacing:0;font-weight:500">आवृत्ती: 13-11-2026 (3)</div>');
+  document.getElementById('tabs').insertAdjacentHTML('beforeend', '<div class="navh" style="margin-top:auto;text-transform:none;letter-spacing:0;font-weight:500">आवृत्ती: 13-11-2026 (4)</div>');
   Object.keys(sec).forEach(function (v) { var b = document.querySelector('#tabs button[data-v="' + v + '"]'); if (b) b.insertAdjacentHTML('beforebegin', '<div class="navh">' + sec[v] + '</div>'); });
 })();
 /* न जतन केलेले काम: वरच्या माहे-चिपवर खूण + बंद करताना इशारा */

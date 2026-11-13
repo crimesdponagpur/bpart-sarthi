@@ -412,9 +412,65 @@ function test_converter() {
 }
 
 
+
+/* ---------------- API: वार्षिक (एकत्रित) B Part ---------------- */
+// payload: {kind:'docx'|'xlsx', year, months:[{month, records}], heads, paper, kruti}
+function api_yearly(payload) {
+  var fixes = getFixes_();
+  var model = REPORT.yearlyModel(payload.months || [], payload.heads || getHeads_(), payload.year, fixes);
+  var xl = payload.kind === 'xlsx';
+  var files = xl ? REPORT.yearlyXlsx(model, payload.year) : REPORT.buildDocx(model, { kruti: !!payload.kruti, paper: payload.paper });
+  var blobs = Object.keys(files).map(function (path) { return Utilities.newBlob(files[path], 'application/xml', path); });
+  var last = (payload.months || []).slice(-1)[0], upto = last ? REPORT.monthName(last.month) : '';
+  var name = 'NAGPUR DIVISION YEARLY B PART ' + payload.year + (upto ? ' (जानेवारी ते ' + upto + ')' : '') + (xl ? '' : (payload.kruti ? ' (Kruti Dev)' : ' (Unicode)')) + (xl ? '.xlsx' : '.docx');
+  var mime = xl ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+  var zip = Utilities.zip(blobs, name);
+  zip.setContentType(mime);
+  var url = '';
+  try { var folder = outputFolder_(); var old = folder.getFilesByName(name); while (old.hasNext()) old.next().setTrashed(true); url = folder.createFile(zip).getUrl(); } catch (e) {}
+  return { name: name, url: url, b64: Utilities.base64Encode(zip.getBytes()), mime: mime, total: model.total };
+}
+/* ---------------- API: जुने महिने – अंतिम विभाग B Part मधून पूर्ण नोंदी ---------------- */
+// files: [{name,b64}] -> [{key, month, records:[...], unknown:{title:n}}]
+function api_finalImport(files) {
+  var PSN = { 'बेला': 'bela', 'बोरी': 'bori', 'बुटीबोरी': 'bori', 'एमआयडीसी': 'midc' };
+  var U = function (x) { return KD.convert(String(x || '').replace(/[¼]/g, '(').replace(/[½]/g, ')')).replace(/\s+/g, ' ').trim(); };
+  var heads = getHeads_();
+  return files.map(function (f) {
+    var parts = Utilities.unzip(Utilities.newBlob(Utilities.base64Decode(f.b64), 'application/zip', f.name));
+    var docPart = parts.filter(function (b) { return b.getName() === 'word/document.xml'; })[0];
+    if (!docPart) throw new Error(f.name + ': Word document सापडला नाही.');
+    var stylesPart = parts.filter(function (b) { return b.getName() === 'word/styles.xml'; })[0];
+    var parsed = CORE.parseDocumentXml(docPart.getDataAsString('UTF-8'), CORE.defaultIsLegacy(stylesPart ? stylesPart.getDataAsString('UTF-8') : ''));
+    var mo = CORE.detectMonth(parsed.paras.map(U));
+    if (!mo) { var fm = f.name.match(/(\d{1,2})\s*[-_ .]\s*(20\d\d|\d\d)(?!\d)/); if (fm) mo = { mm: ('0' + fm[1]).slice(-2), yyyy: fm[2].length === 2 ? '20' + fm[2] : fm[2] }; }
+    if (!mo) throw new Error(f.name + ': माहे ओळखता आला नाही (फाईलच्या नावात 08-2026 असे लिहा).');
+    var recs = [], unknown = {};
+    parsed.tables.forEach(function (t, ti) {
+      if (t.rows.length < 2) return;
+      var hdr = t.rows[0].map(U), hj = hdr.join('|');
+      var pick = function (re) { for (var i = 0; i < hdr.length; i++) if (re.test(hdr[i])) return i; return -1; };
+      var ci = pick(/अप.*क्र|मर्ग.*क्र|कलम/); if (ci < 0) return;
+      var marg = /मर्ग/.test(hj), title = U(t.prev.slice(-1)[0] || ''), head = titleHead_(title, heads);
+      var col = { ps: pick(/पोस्टे|पो.स्टे/), place: pick(/घटनास्थळ/), occ: pick(/घ[.\-]?\s*ता|घटना\s*ता/), filed: pick(/दा[.\-]?\s*ता|दाखल\s*ता/), party: pick(/फिर्यादी/), arrest: pick(/अटक/), stolen: pick(/चोरीस/), recovered: pick(/वसुल|जप्त/), invest: pick(/तपास/), details: pick(/हकि?ी?कत|हकीगत|विवरण/), deceased: pick(/मृतक/), cause: pick(/कारण/) };
+      t.rows.slice(1).forEach(function (row, ri) {
+        var crime = row[ci] || ''; if (!/\d/.test(crime)) return;
+        if (!head) { unknown[title] = (unknown[title] || 0) + 1; }
+        var g = function (k) { return col[k] >= 0 ? (row[col[k]] || '') : ''; };
+        var cu = U(crime), nm = cu.match(/(\d+)\s*\/\s*(\d{2,4})/);
+        var ps = PSN[U(g('ps')).replace(/\s|उघड/g, '')] || '';
+        recs.push({ id: 'F' + mo.yyyy + mo.mm + ':' + ps + ':' + (marg ? 'M' : '') + (nm ? +nm[1] : ri) + ':' + ti + ':' + ri, ps: ps, table: marg ? 'M' : 'A', no: nm ? String(+nm[1]) : '',
+          crime: crime, place: g('place'), occ: g('occ'), filed: g('filed'), party: g('party'), arrest: g('arrest'), stolen: g('stolen'), recovered: g('recovered'), invest: g('invest'), details: g('details'), deceased: g('deceased'), cause: g('cause'),
+          head: head || null, rule: 'final', manual: true, ok: true, fromFinal: true });
+      });
+    });
+    return { key: mo.yyyy + '-' + mo.mm, month: mo.mm + '/' + mo.yyyy, records: recs, unknown: unknown, name: f.name };
+  });
+}
 /* ---------------- API: अंतिम विभाग B Part वरून शिकणे ---------------- */
 // विभागाच्या head शीर्षकांचे (जुने/नवे लेखन) app head मध्ये रूपांतर
 var TITLE_MAP = [
+    [/वि[द|]?्?\|?यु?ुत|विदयुत|भाविका/, 'विद्युत कायदा'], [/लोकसेवक/, 'लोकसेवकावर'],
     [/मा[हि]ी?ती\s*तं|आयटी\s*(?:ॲक्ट|अॅक्ट)/, 'माहिती तंत्रज्ञान'], [/रॅगिंग|छळवाद/, 'महाराष्ट्र छळवाद'], [/भ्रष्टाचार|भ्रश्टाचार|लाचलुचपत/, 'भ्रष्टाचार'], [/स्नॅचिंग|स्नैचिंग/, 'चोरी'], [/दंगा/, 'दंगल'], [/जादुटोना|इतर\s*एस\s*एल\s*एल/, 'इतर एसएलएल'], [/पशु\s*संरक्षण/, 'महाराष्ट्र प्राणी संरक्षण'], [/निवडणुक/, 'निवडणुकीशी'], [/अपव्यापार|मानवी\s*तस्करी/, 'मानवी तस्करी'], [/^इतर\s*भादवि|^कलम\s*(?:291|217|112|188|298)/, 'इतर बीएनएस'],
     [/मर्ग/, 'मर्ग'],
     [/दारू/, 'महाराष्ट्र दारूबंदी'],

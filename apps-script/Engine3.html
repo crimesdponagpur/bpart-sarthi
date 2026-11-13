@@ -254,7 +254,7 @@ var REPORT = (function () {
     var n = 0;
     model.sections.forEach(function (sec) {
       var brk = model.flow ? !!sec.pageBreak && n > 0 : n > 0;
-      if (sec.title) body += paraXml(sec.title + (model.flow ? '' : '   (' + sec.rows.length + ')'), { bold: true, size: 12.5, before: n && !brk ? 240 : (n ? 0 : 60), after: 100, keepNext: true, pageBreak: brk, shade: 'F2F2F2', kruti: o.kruti, line: 300 });
+      if (sec.title) body += paraXml(sec.title + (model.flow || sec.noCount ? '' : '   (' + sec.rows.length + ')'), { bold: true, size: 12.5, before: n && !brk ? 240 : (n ? 0 : 60), after: 100, keepNext: true, pageBreak: brk, shade: 'F2F2F2', kruti: o.kruti, line: 300 });
       var tw = sec.widthPct ? Math.round(usable * sec.widthPct) : usable;
       body += tableXml(sec.headers, sec.rows, scale(sec.weights, tw), { size: sec.size || 9.5, kruti: o.kruti, hrows: sec.hrows, aligns: sec.aligns, hsize: sec.hsize, keep: !!model.flow && sec.rows.length <= 24 });
       if (sec.note) body += paraXml(sec.note, { size: 8.5, before: 40, kruti: o.kruti, color: '595959' });
@@ -344,10 +344,11 @@ var REPORT = (function () {
     var sections = [];
     order.forEach(function (h) {
       var rs = groups[h]; if (!rs.length) return;
-      rs.sort(function (a, b) { return (PS_ORDER[a.ps] || 9) - (PS_ORDER[b.ps] || 9) || (+a.no - +b.no); });
+      var mk = function (r) { var m = String(r._month || '').match(/(\d{1,2})\s*\/\s*(\d{4})/); return m ? +m[2] * 100 + +m[1] : 0; };
+      rs.sort(function (a, b) { return (PS_ORDER[a.ps] || 9) - (PS_ORDER[b.ps] || 9) || mk(a) - mk(b) || (+a.no - +b.no); });
       var marg = h === 'मर्ग', wide = isWide(h);
       var headers, weights, rows;
-      var fl = rs.map(function (r) { return fields(r, { cv: cv, month: month, full: opts.full }); });
+      var fl = rs.map(function (r) { return fields(r, { cv: cv, month: r._month || month, full: opts.full }); });
       if (marg) {
         headers = ['अ.क्र.', 'पोस्टे', 'मर्ग क्र. व कलम', 'घटनास्थळ', 'घ.ता.वेळ', 'दा.ता.वेळ', 'फिर्यादीचे नाव', 'मृतकाचे नाव', 'दाखल / तपास', 'मरणाचे कारण'];
         weights = [560, 1000, 1500, 1500, 1200, 1200, 2300, 2300, 1700, 2700];
@@ -371,9 +372,15 @@ var REPORT = (function () {
         weights = [560, 1050, 1700, 1300, 1150, 1150, 2400, 1200, 1300, 4100];
         rows = rs.map(function (r, i) { var f = fl[i]; return [String(i + 1), PSU[r.ps] || r.ps, f.crime, f.place, f.occ, f.filed, f.party, f.arrest, f.invest, f.details]; });
       }
-      sections.push({ title: h, headers: headers, weights: weights, rows: rows });
+      if (opts.withMonth) {
+        headers = headers.slice(0, 2).concat(['माहे']).concat(headers.slice(2));
+        weights = weights.slice(0, 2).concat([620]).concat(weights.slice(2));
+        weights[weights.length - 1] = Math.max(1800, weights[weights.length - 1] - 620);
+        rows = rows.map(function (row, i) { return row.slice(0, 2).concat([monthName(rs[i]._month)]).concat(row.slice(2)); });
+      }
+      sections.push({ title: h, headers: headers, weights: weights, rows: rows, wide: wide, marg: marg });
     });
-    return { titles: ['नागपूर विभाग', 'बी पार्ट', 'माहे ' + month], sections: sections };
+    return { titles: opts.titles || ['नागपूर विभाग', 'बी पार्ट', 'माहे ' + month], sections: sections };
   }
 
   /* ================================================================ */
@@ -488,7 +495,98 @@ var REPORT = (function () {
     return { rows: rows, totals: tot };
   }
 
-  return { buildDocx: buildDocx, divisionModel: divisionModel, hbtModel: hbtModel, hbtPrefill: hbtPrefill, hbtKind: hbtKind, makeConv: makeConv, fields: fields, countReport: countReport, PSU: PSU, modelHtml: modelHtml };
+
+  /* ================================================================ */
+  /* वार्षिक (एकत्रित) B Part : Word + Excel                            */
+  /* ================================================================ */
+  var MONTHS_MR = ['जानेवारी', 'फेब्रुवारी', 'मार्च', 'एप्रिल', 'मे', 'जून', 'जुलै', 'ऑगस्ट', 'सप्टेंबर', 'ऑक्टोबर', 'नोव्हेंबर', 'डिसेंबर'];
+  function monthName(m) { var x = String(m || '').match(/(\d{1,2})\s*\/\s*(\d{4})/); return x ? MONTHS_MR[+x[1] - 1] : String(m || ''); }
+  // months: [{month:'01/2026', records:[...]}]
+  function yearlyModel(months, heads, year, fixes, opts) {
+    opts = opts || {};
+    var all = [], labels = months.map(function (m) { return monthName(m.month); });
+    months.forEach(function (m) { (m.records || []).forEach(function (r) { var c = {}; for (var k in r) c[k] = r[k]; c._month = m.month; all.push(c); }); });
+    var range = labels.length ? (labels[0] + (labels.length > 1 ? ' ते ' + labels[labels.length - 1] : '')) + ' ' + year : String(year);
+    var dm = divisionModel(all, heads, months.length ? months[months.length - 1].month : '', fixes, { withMonth: true, full: false, titles: ['नागपूर विभाग', 'वार्षिक (एकत्रित) बी पार्ट – सन ' + year, 'माहे ' + range] });
+    // summary: head x month
+    var cnt = {}, order = [];
+    dm.sections.forEach(function (sec) { order.push(sec.title); cnt[sec.title] = months.map(function () { return 0; }); });
+    all.forEach(function (r) { var h = r.head || 'अवर्गीकृत', i = months.map(function (m) { return m.month; }).indexOf(r._month); if (cnt[h] && i >= 0) cnt[h][i]++; });
+    var tot = months.map(function () { return 0; }), grand = 0;
+    var rows = order.map(function (h, n) { var c = cnt[h], t = c.reduce(function (a, b) { return a + b; }, 0); c.forEach(function (v, i) { tot[i] += v; }); grand += t; return [String(n + 1), h].concat(c.map(function (v) { return v ? String(v) : '-'; })).concat([String(t)]); });
+    rows.push({ c: ['', 'एकूण'].concat(tot.map(String)).concat([String(grand)]), bold: true, shade: 'F2F2F2' });
+    var summary = { noCount: true, title: 'सारांश – head नुसार महिनावार गुन्हे', headers: ['अ.क्र.', 'Head'].concat(labels).concat(['एकूण']), weights: [500, 4200].concat(labels.map(function () { return 760; })).concat([800]), rows: rows, aligns: ['center', 'left'].concat(labels.map(function () { return 'center'; })).concat(['center']), size: 9 };
+    dm.sections.unshift(summary);
+    dm.summary = { labels: labels, order: order, cnt: cnt, tot: tot, grand: grand };
+    dm.range = range; dm.total = all.length;
+    return dm;
+  }
+  /* minimal .xlsx writer (inline strings, one sheet per section) */
+  function xesc(s) { return String(s == null ? '' : s).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+  function colName(i) { var s = ''; i++; while (i > 0) { var m = (i - 1) % 26; s = String.fromCharCode(65 + m) + s; i = Math.floor((i - 1) / 26); } return s; }
+  function sheetName(t, used) {
+    var n = String(t || 'Sheet').replace(/[\\\/\?\*\[\]:]/g, ' ').replace(/\s*कलम\s*/g, ' ').replace(/\s*बीएनएस\s*$/g, '').replace(/\s{2,}/g, ' ').trim().slice(0, 31) || 'Sheet';
+    var b = n, k = 2; while (used[n]) { n = (b.slice(0, 27) + ' (' + k++ + ')'); } used[n] = 1; return n;
+  }
+  function buildXlsx(sheets) {
+    // sheets: [{name, title, headers, rows:[[...]], widths:[chars], totalRow:bool}]
+    var NS = 'xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"';
+    var files = {};
+    files['[Content_Types].xml'] = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>' +
+      sheets.map(function (s, i) { return '<Override PartName="/xl/worksheets/sheet' + (i + 1) + '.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'; }).join('') + '</Types>';
+    files['_rels/.rels'] = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>';
+    files['xl/workbook.xml'] = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<workbook ' + NS + '><sheets>' + sheets.map(function (s, i) { return '<sheet name="' + xesc(s.name) + '" sheetId="' + (i + 1) + '" r:id="rId' + (i + 1) + '"/>'; }).join('') + '</sheets>' +
+      '<definedNames>' + sheets.map(function (s, i) { return s.rows.length ? '<definedName name="_xlnm._FilterDatabase" localSheetId="' + i + '" hidden="1">\'' + xesc(s.name).replace(/'/g, "''") + '\'!$A$2:$' + colName(s.headers.length - 1) + '$' + (s.rows.length + 2) + '</definedName>' : ''; }).join('') + '</definedNames></workbook>';
+    files['xl/_rels/workbook.xml.rels'] = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' + sheets.map(function (s, i) { return '<Relationship Id="rId' + (i + 1) + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet' + (i + 1) + '.xml"/>'; }).join('') +
+      '<Relationship Id="rId' + (sheets.length + 1) + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>';
+    files['xl/styles.xml'] = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
+      '<fonts count="3"><font><sz val="10"/><name val="Mangal"/></font><font><b/><sz val="10"/><name val="Mangal"/></font><font><b/><sz val="13"/><name val="Mangal"/></font></fonts>' +
+      '<fills count="4"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFDCE6F2"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFF2F2F2"/><bgColor indexed="64"/></patternFill></fill></fills>' +
+      '<borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border><border><left style="thin"><color rgb="FF808080"/></left><right style="thin"><color rgb="FF808080"/></right><top style="thin"><color rgb="FF808080"/></top><bottom style="thin"><color rgb="FF808080"/></bottom><diagonal/></border></borders>' +
+      '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>' +
+      '<cellXfs count="6"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>' +
+      '<xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>' +
+      '<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment vertical="top" wrapText="1"/></xf>' +
+      '<xf numFmtId="0" fontId="1" fillId="3" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment vertical="top" wrapText="1"/></xf>' +
+      '<xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1"/>' +
+      '<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="top" wrapText="1"/></xf></cellXfs>' +
+      '<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>';
+    sheets.forEach(function (sh, si) {
+      var nc = sh.headers.length, last = colName(nc - 1);
+      var cell = function (r, c, v, st) {
+        var ref = colName(c) + r;
+        if (/^\d{1,6}$/.test(String(v)) && sh.numCols && sh.numCols.indexOf(c) >= 0) return '<c r="' + ref + '" s="' + st + '"><v>' + v + '</v></c>';
+        return '<c r="' + ref + '" s="' + st + '" t="inlineStr"><is><t xml:space="preserve">' + xesc(v) + '</t></is></c>';
+      };
+      var x = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<worksheet ' + NS + '><sheetViews><sheetView workbookViewId="0"' + (si === 0 ? ' tabSelected="1"' : '') + '><pane ySplit="2" topLeftCell="A3" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><sheetFormatPr defaultRowHeight="15"/>';
+      x += '<cols>' + sh.widths.map(function (w, i) { return '<col min="' + (i + 1) + '" max="' + (i + 1) + '" width="' + w + '" customWidth="1"/>'; }).join('') + '</cols><sheetData>';
+      x += '<row r="1" ht="22" customHeight="1">' + cell(1, 0, sh.title, 4) + '</row>';
+      x += '<row r="2">' + sh.headers.map(function (h, c) { return cell(2, c, h, 1); }).join('') + '</row>';
+      sh.rows.forEach(function (row, ri) {
+        var cells = Array.isArray(row) ? row : row.c, bold = !Array.isArray(row) && row.bold;
+        x += '<row r="' + (ri + 3) + '">' + cells.map(function (v, c) { return cell(ri + 3, c, v, bold ? 3 : (sh.center && sh.center.indexOf(c) >= 0 ? 5 : 2)); }).join('') + '</row>';
+      });
+      x += '</sheetData>';
+      if (sh.rows.length) x += '<autoFilter ref="A2:' + last + (sh.rows.length + 2) + '"/>';
+      x += '<mergeCells count="1"><mergeCell ref="A1:' + last + '1"/></mergeCells>';
+      x += '<pageMargins left="0.3" right="0.3" top="0.4" bottom="0.4" header="0.2" footer="0.2"/><pageSetup paperSize="9" orientation="landscape" fitToWidth="1" fitToHeight="0"/></worksheet>';
+      files['xl/worksheets/sheet' + (si + 1) + '.xml'] = x;
+    });
+    return files;
+  }
+  function yearlyXlsx(model, year) {
+    var used = {}, sheets = [], sm = model.summary;
+    var srows = sm.order.map(function (h, n) { var c = sm.cnt[h]; return [String(n + 1), h].concat(c.map(String)).concat([String(c.reduce(function (a, b) { return a + b; }, 0))]); });
+    srows.push({ c: ['', 'एकूण'].concat(sm.tot.map(String)).concat([String(sm.grand)]), bold: true });
+    var nums = []; for (var i = 2; i < sm.labels.length + 3; i++) nums.push(i);
+    sheets.push({ name: sheetName('सारांश', used), title: 'नागपूर विभाग – वार्षिक (एकत्रित) बी पार्ट – सन ' + year + ' (माहे ' + model.range + ')', headers: ['अ.क्र.', 'Head'].concat(sm.labels).concat(['एकूण']), rows: srows, widths: [6, 46].concat(sm.labels.map(function () { return 10; })).concat([9]), numCols: nums, center: [0].concat(nums) });
+    model.sections.slice(1).forEach(function (sec) {
+      var w = sec.headers.map(function (h) { return /अ\.क्र/.test(h) ? 6 : /पोस्टे|माहे/.test(h) ? 11 : /विवरण|कारण/.test(h) ? 60 : /फिर्यादी|मृतक/.test(h) ? 34 : /कलम/.test(h) ? 26 : /माल/.test(h) ? 26 : 16; });
+      sheets.push({ name: sheetName(sec.title, used), title: sec.title + ' – सन ' + year + ' (' + sec.rows.length + ' गुन्हे)', headers: sec.headers, rows: sec.rows, widths: w, numCols: [0], center: [0, 1, 2] });
+    });
+    return buildXlsx(sheets);
+  }
+  return { buildDocx: buildDocx, yearlyModel: yearlyModel, yearlyXlsx: yearlyXlsx, monthName: monthName, divisionModel: divisionModel, hbtModel: hbtModel, hbtPrefill: hbtPrefill, hbtKind: hbtKind, makeConv: makeConv, fields: fields, countReport: countReport, PSU: PSU, modelHtml: modelHtml };
 })();
 if (typeof module !== 'undefined') module.exports = REPORT;
 

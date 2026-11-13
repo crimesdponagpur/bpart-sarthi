@@ -42,7 +42,7 @@ function show(v) {
   VIEWS.forEach(function (x) { $('v-' + x).classList.toggle('hide', x !== v); });
   Array.prototype.forEach.call(document.querySelectorAll('#tabs button'), function (b) { b.classList.toggle('on', b.dataset.v === v); });
   if (v === 'home') renderHome(); if (v === 'dash') renderDash(); if (v === 'files') { renderPsStatus(); updateMergeBox(); renderLog(); } if (v === 'queue') { buildQueue(); renderQueue(); }
-  if (v === 'archive') renderArchive(); if (v === 'review') renderReview(); if (v === 'hbt') renderHbt(); if (v === 'preview') renderPreview(); if (v === 'reports') { renderDownload(); renderReports(); } if (v === 'rules') renderRules();
+  if (v === 'archive') renderArchive(); if (v === 'review') renderReview(); if (v === 'hbt') renderHbt(); if (v === 'preview') renderPreview(); if (v === 'reports') { renderDownload(); renderReports(); renderYear(); } if (v === 'rules') renderRules();
   renderSteps();
   window.scrollTo(0, 0);
 }
@@ -457,6 +457,80 @@ function applyFinal() {
     .then(function () { busy(false); S.pvDone = false; toast(rules.length + ' नियम शिकले ✓' + (nUpd ? ' · चालू महिन्यातील ' + nUpd + ' नोंदी बदलल्या' : '')); renderRules(); FINAL = null; $('finalBox').innerHTML = ''; renderSteps(); })
     .catch(fail);
 }
+
+/* ---------- वार्षिक (एकत्रित) B Part ---------- */
+var MONTHS_MR = ['जानेवारी', 'फेब्रुवारी', 'मार्च', 'एप्रिल', 'मे', 'जून', 'जुलै', 'ऑगस्ट', 'सप्टेंबर', 'ऑक्टोबर', 'नोव्हेंबर', 'डिसेंबर'];
+var YR = { list: [] };
+function yearMonths() {
+  return ARC.all().catch(function () { return []; }).then(function (list) {
+    var have = {}; (list || []).forEach(function (m) { if (m.records || m.drive) have[m.key] = m; });
+    var ck = monthKey(S.month);
+    if (S.records.length && ck && !have[ck]) have[ck] = { key: ck, month: S.month, cur: true, n: S.records.length };
+    YR.have = have; return have;
+  });
+}
+function renderYear() {
+  if (!$('yrYear')) return;
+  yearMonths().then(function (have) {
+    var years = {}; Object.keys(have).forEach(function (k) { years[k.slice(0, 4)] = 1; }); years[String(new Date().getFullYear())] = 1;
+    var ys = Object.keys(years).sort().reverse(), cy = $('yrYear').value || (monthKey(S.month) || '').slice(0, 4) || ys[0];
+    $('yrYear').innerHTML = ys.map(function (y) { return '<option' + (y === cy ? ' selected' : '') + '>' + y + '</option>'; }).join('');
+    var y = $('yrYear').value, lastHave = 0;
+    for (var i = 1; i <= 12; i++) if (have[y + '-' + ('0' + i).slice(-2)]) lastHave = i;
+    var cu = +$('yrUpto').value || 0; if (!cu || $('yrUpto').dataset.y !== y) cu = lastHave || 1;
+    $('yrUpto').dataset.y = y;
+    $('yrUpto').innerHTML = MONTHS_MR.map(function (m, i) { return '<option value="' + (i + 1) + '"' + (i + 1 === cu ? ' selected' : '') + '>' + m + '</option>'; }).join('');
+    var miss = [], ok = [], n = 0;
+    for (i = 1; i <= cu; i++) { var k = y + '-' + ('0' + i).slice(-2); if (have[k]) { ok.push(MONTHS_MR[i - 1]); n += have[k].n || (have[k].records || []).length || 0; } else miss.push(MONTHS_MR[i - 1]); }
+    $('yrMonths').innerHTML = (ok.length ? '<span style="color:var(--ok)">✓ ' + ok.length + ' महिने (' + ok.join(', ') + ') · सुमारे ' + n + ' नोंदी</span>' : '<span class="muted">अजून या वर्षाचा एकही महिना जतन नाही.</span>') +
+      (miss.length ? '<br><span style="color:var(--bad)">✗ जतन नसलेले महिने: ' + miss.join(', ') + '</span> <span class="muted">– ते महिने उघडून "जतन करा", किंवा "जुने महिने जोडा" ने अंतिम विभाग B Part द्या.</span>' : '');
+    Array.prototype.forEach.call(document.querySelectorAll('[data-yr]'), function (b) { b.disabled = !ok.length; });
+  });
+}
+['yrYear', 'yrUpto'].forEach(function (id) { $(id).addEventListener('change', renderYear); });
+document.addEventListener('click', function (e) {
+  var b = e.target.closest('[data-yr]'); if (!b) return;
+  var p = b.dataset.yr.split(':'), y = $('yrYear').value, upto = +$('yrUpto').value, keys = [];
+  for (var i = 1; i <= upto; i++) { var k = y + '-' + ('0' + i).slice(-2); if (YR.have && YR.have[k]) keys.push(k); }
+  if (!keys.length) { toast('या वर्षाचा जतन केलेला महिना नाही', true); return; }
+  busy(true, keys.length + ' महिन्यांची माहिती गोळा करत आहे…');
+  var ck = monthKey(S.month);
+  Promise.all(keys.map(function (k) {
+    if (k === ck && S.records.length && (YR.have[k].cur || S.arcDirty)) return Promise.resolve({ month: S.month, records: plainRecs() });
+    return loadFull(k).then(function (m) { return { month: m.month, records: (m.records || []).map(function (r) { var c = {}; for (var x in r) if (x !== 'u') c[x] = r[x]; return c; }) }; });
+  })).then(function (months) {
+    busy(true, p[0] === 'xlsx' ? 'Excel फाईल बनवत आहे…' : 'Word फाईल बनवत आहे…');
+    return call('api_yearly', { kind: p[0], kruti: p[1] === '1', year: y, months: months, heads: headOrder(), paper: $('dlPaper').value });
+  }).then(function (res) { busy(false); $('res-year').innerHTML = ''; showFile($('res-year'), res); toast(res.total + ' गुन्ह्यांचा वार्षिक अहवाल तयार ✓'); }).catch(fail);
+});
+$('yrImport').addEventListener('change', function () {
+  var fl = Array.prototype.slice.call(this.files); this.value = '';
+  if (!fl.length) return;
+  busy(true, fl.length + ' अंतिम फाईल्स वाचत आहे…');
+  Promise.all(fl.map(function (f) { return new Promise(function (res) { var rd = new FileReader(); rd.onload = function () { res({ name: f.name, b64: String(rd.result).split(',')[1] }); }; rd.readAsDataURL(f); }); }))
+    .then(function (files) { return call('api_finalImport', files); })
+    .then(function (list) {
+      busy(false);
+      return ARC.all().catch(function () { return []; }).then(function (cur) {
+        var have = {}; (cur || []).forEach(function (m) { have[m.key] = m; });
+        var done = [], skip = [], unk = {};
+        return list.reduce(function (pr, m) {
+          return pr.then(function () {
+            Object.keys(m.unknown || {}).forEach(function (t) { unk[t] = (unk[t] || 0) + m.unknown[t]; });
+            var old = have[m.key];
+            if (old && !old.fromFinal && (old.records || old.drive) && !confirm('माहे ' + m.month + ' app मध्ये आधीच जतन आहे (तुमच्या कामासह). अंतिम फाईलने बदलायचे?')) { skip.push(m.month); return; }
+            var rec = { key: m.key, month: m.month, savedAt: Date.now(), n: m.records.length, counts: psCounts(m.records), sum: monthSum(m.records), gen: true, ok: m.records.length, records: m.records, log: [{ t: Date.now(), txt: 'अंतिम विभाग B Part मधून: ' + m.name }], fromFinal: true };
+            return ARC.put(rec).then(function () { done.push(m.month + ' (' + m.records.length + ')'); });
+          });
+        }, Promise.resolve()).then(function () {
+          var u = Object.keys(unk);
+          toast(done.length + ' महिने जोडले ✓' + (skip.length ? ' · ' + skip.length + ' वगळले' : ''));
+          $('res-year').innerHTML = '<div class="small" style="color:var(--ok)">जोडले: ' + esc(done.join(', ') || '—') + '</div>' + (u.length ? '<div class="small" style="color:var(--warn)">ओळख न झालेली head शीर्षके (हे गुन्हे "अवर्गीकृत" मध्ये येतील): ' + u.map(function (t) { return esc(t) + ' (' + unk[t] + ')'; }).join(', ') + '</div>' : '');
+          renderYear();
+        });
+      });
+    }).catch(fail);
+});
 /* ---------- HBT ---------- */
 function kind(h) { if (!h) return ''; if (/घरफोडी/.test(h)) return 'H'; if (/चोरी/.test(h)) return 'T'; if (/दुखापत/.test(h)) return 'U'; return ''; }
 var HBTF = {

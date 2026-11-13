@@ -395,7 +395,7 @@ body.simple .adv{display:none!important}
     <div class="tiles" id="tiles"></div>
     <div class="card"><h2>PS कडून फाईल्स</h2><div id="psHome"></div></div>
     <div class="card">
-      <h2>दिसणे <span class="small muted appver" style="font-weight:400;margin-left:auto">आवृत्ती: 13-11-2026 (3)</span></h2>
+      <h2>दिसणे <span class="small muted appver" style="font-weight:400;margin-left:auto">आवृत्ती: 13-11-2026 (4)</span></h2>
       <div class="row" style="gap:18px">
         <div><div class="small muted" style="margin-bottom:4px">अक्षरांचा आकार</div><div class="seg" id="segFs"><button data-fs="1">अ</button><button data-fs="1.15" style="font-size:1.1em">अ</button><button data-fs="1.3" style="font-size:1.25em">अ</button></div></div>
         <div><div class="small muted" style="margin-bottom:4px">रंगसंगती</div><div class="seg" id="segTh"><button data-th="auto">आपोआप</button><button data-th="light">उजळ</button><button data-th="dark">गडद</button></div></div>
@@ -565,6 +565,23 @@ body.simple .adv{display:none!important}
         <div class="dl-res" id="res-hbt"></div>
       </div>
     </div>
+    <div class="card rcard" id="yearCard">
+      <div class="ricon" style="background:var(--okSoft);color:var(--ok)">व</div>
+      <h2>वार्षिक (एकत्रित) B Part <span class="small muted" style="font-weight:400">जानेवारीपासून</span></h2>
+      <p class="muted small" style="margin-top:0">जतन केलेले सर्व महिने एकत्र: पहिल्या पानावर head × महिना सारांश, मग प्रत्येक head (PS नुसार – बेला, बोरी, एमआयडीसी). Excel मध्ये सारांश व प्रत्येक head चा वेगळा tab.</p>
+      <div class="row" style="margin-left:52px">
+        <label class="small muted">वर्ष <select id="yrYear"></select></label>
+        <label class="small muted">महिन्यापर्यंत <select id="yrUpto"></select></label>
+      </div>
+      <div id="yrMonths" class="small" style="margin:10px 0 0 52px"></div>
+      <div class="row" style="margin:10px 0 0 52px">
+        <button class="btn pri" data-yr="docx:0">Word (Unicode)</button>
+        <button class="btn" data-yr="docx:1">Word (Kruti Dev)</button>
+        <button class="btn pri" data-yr="xlsx" style="background:linear-gradient(180deg,#1f8a55,#147a4a);border-color:#147a4a">Excel</button>
+        <label class="btn ghost" style="cursor:pointer">जुने महिने जोडा (अंतिम विभाग B Part)<input type="file" id="yrImport" accept=".docx" multiple hidden></label>
+      </div>
+      <div class="dl-res" id="res-year" style="margin-left:52px"></div>
+    </div>
     <p class="muted small"><span class="gdrive">फाईल्स Drive मध्ये "B-Part App Output" फोल्डरमध्येही जतन होतात. </span>Unicode: Mangal फॉन्ट · Kruti Dev: Kruti Dev 010 (इंग्रजी अक्षरे/क्रमांक Times New Roman).</p>
     <div class="card">
       <h2>इतर मासिक अहवाल</h2>
@@ -620,7 +637,7 @@ body.simple .adv{display:none!important}
   <!-- RULES -->
   <section id="v-rules" class="hide">
     <div class="card">
-      <h2>App पद्धत <span class="small muted appver" style="font-weight:400;margin-left:auto">आवृत्ती: 13-11-2026 (3)</span></h2>
+      <h2>App पद्धत <span class="small muted appver" style="font-weight:400;margin-left:auto">आवृत्ती: 13-11-2026 (4)</span></h2>
       <div class="seg" id="segMode"><button data-mode="simple">साधी (फक्त B Part)</button><button data-mode="full">सर्व साधने</button></div>
       <p class="muted small" style="margin-bottom:0">साधी पद्धत: मुख्य काम (फाईल्स → तपासणी → अहवाल) एवढेच. "सर्व साधने" निवडल्यास डॅशबोर्ड व टायपिंग ही अतिरिक्त साधने दिसतात.</p>
     </div>
@@ -759,7 +776,7 @@ window.BPS_PWA = true;
 
   /* ---------------- google.script.run stand-in ---------------- */
   async function prepare(fn, args) {
-    if (fn !== 'api_process' && fn !== 'api_histImport' && fn !== 'api_finalCompare') return;
+    if (fn !== 'api_process' && fn !== 'api_histImport' && fn !== 'api_finalCompare' && fn !== 'api_finalImport') return;
     for (var i = 0; i < args[0].length; i++) {
       var f = args[0][i];
       if (!f.b64) continue;
@@ -2261,7 +2278,7 @@ var REPORT = (function () {
     var n = 0;
     model.sections.forEach(function (sec) {
       var brk = model.flow ? !!sec.pageBreak && n > 0 : n > 0;
-      if (sec.title) body += paraXml(sec.title + (model.flow ? '' : '   (' + sec.rows.length + ')'), { bold: true, size: 12.5, before: n && !brk ? 240 : (n ? 0 : 60), after: 100, keepNext: true, pageBreak: brk, shade: 'F2F2F2', kruti: o.kruti, line: 300 });
+      if (sec.title) body += paraXml(sec.title + (model.flow || sec.noCount ? '' : '   (' + sec.rows.length + ')'), { bold: true, size: 12.5, before: n && !brk ? 240 : (n ? 0 : 60), after: 100, keepNext: true, pageBreak: brk, shade: 'F2F2F2', kruti: o.kruti, line: 300 });
       var tw = sec.widthPct ? Math.round(usable * sec.widthPct) : usable;
       body += tableXml(sec.headers, sec.rows, scale(sec.weights, tw), { size: sec.size || 9.5, kruti: o.kruti, hrows: sec.hrows, aligns: sec.aligns, hsize: sec.hsize, keep: !!model.flow && sec.rows.length <= 24 });
       if (sec.note) body += paraXml(sec.note, { size: 8.5, before: 40, kruti: o.kruti, color: '595959' });
@@ -2351,10 +2368,11 @@ var REPORT = (function () {
     var sections = [];
     order.forEach(function (h) {
       var rs = groups[h]; if (!rs.length) return;
-      rs.sort(function (a, b) { return (PS_ORDER[a.ps] || 9) - (PS_ORDER[b.ps] || 9) || (+a.no - +b.no); });
+      var mk = function (r) { var m = String(r._month || '').match(/(\d{1,2})\s*\/\s*(\d{4})/); return m ? +m[2] * 100 + +m[1] : 0; };
+      rs.sort(function (a, b) { return (PS_ORDER[a.ps] || 9) - (PS_ORDER[b.ps] || 9) || mk(a) - mk(b) || (+a.no - +b.no); });
       var marg = h === 'मर्ग', wide = isWide(h);
       var headers, weights, rows;
-      var fl = rs.map(function (r) { return fields(r, { cv: cv, month: month, full: opts.full }); });
+      var fl = rs.map(function (r) { return fields(r, { cv: cv, month: r._month || month, full: opts.full }); });
       if (marg) {
         headers = ['अ.क्र.', 'पोस्टे', 'मर्ग क्र. व कलम', 'घटनास्थळ', 'घ.ता.वेळ', 'दा.ता.वेळ', 'फिर्यादीचे नाव', 'मृतकाचे नाव', 'दाखल / तपास', 'मरणाचे कारण'];
         weights = [560, 1000, 1500, 1500, 1200, 1200, 2300, 2300, 1700, 2700];
@@ -2378,9 +2396,15 @@ var REPORT = (function () {
         weights = [560, 1050, 1700, 1300, 1150, 1150, 2400, 1200, 1300, 4100];
         rows = rs.map(function (r, i) { var f = fl[i]; return [String(i + 1), PSU[r.ps] || r.ps, f.crime, f.place, f.occ, f.filed, f.party, f.arrest, f.invest, f.details]; });
       }
-      sections.push({ title: h, headers: headers, weights: weights, rows: rows });
+      if (opts.withMonth) {
+        headers = headers.slice(0, 2).concat(['माहे']).concat(headers.slice(2));
+        weights = weights.slice(0, 2).concat([620]).concat(weights.slice(2));
+        weights[weights.length - 1] = Math.max(1800, weights[weights.length - 1] - 620);
+        rows = rows.map(function (row, i) { return row.slice(0, 2).concat([monthName(rs[i]._month)]).concat(row.slice(2)); });
+      }
+      sections.push({ title: h, headers: headers, weights: weights, rows: rows, wide: wide, marg: marg });
     });
-    return { titles: ['नागपूर विभाग', 'बी पार्ट', 'माहे ' + month], sections: sections };
+    return { titles: opts.titles || ['नागपूर विभाग', 'बी पार्ट', 'माहे ' + month], sections: sections };
   }
 
   /* ================================================================ */
@@ -2495,7 +2519,98 @@ var REPORT = (function () {
     return { rows: rows, totals: tot };
   }
 
-  return { buildDocx: buildDocx, divisionModel: divisionModel, hbtModel: hbtModel, hbtPrefill: hbtPrefill, hbtKind: hbtKind, makeConv: makeConv, fields: fields, countReport: countReport, PSU: PSU, modelHtml: modelHtml };
+
+  /* ================================================================ */
+  /* वार्षिक (एकत्रित) B Part : Word + Excel                            */
+  /* ================================================================ */
+  var MONTHS_MR = ['जानेवारी', 'फेब्रुवारी', 'मार्च', 'एप्रिल', 'मे', 'जून', 'जुलै', 'ऑगस्ट', 'सप्टेंबर', 'ऑक्टोबर', 'नोव्हेंबर', 'डिसेंबर'];
+  function monthName(m) { var x = String(m || '').match(/(\d{1,2})\s*\/\s*(\d{4})/); return x ? MONTHS_MR[+x[1] - 1] : String(m || ''); }
+  // months: [{month:'01/2026', records:[...]}]
+  function yearlyModel(months, heads, year, fixes, opts) {
+    opts = opts || {};
+    var all = [], labels = months.map(function (m) { return monthName(m.month); });
+    months.forEach(function (m) { (m.records || []).forEach(function (r) { var c = {}; for (var k in r) c[k] = r[k]; c._month = m.month; all.push(c); }); });
+    var range = labels.length ? (labels[0] + (labels.length > 1 ? ' ते ' + labels[labels.length - 1] : '')) + ' ' + year : String(year);
+    var dm = divisionModel(all, heads, months.length ? months[months.length - 1].month : '', fixes, { withMonth: true, full: false, titles: ['नागपूर विभाग', 'वार्षिक (एकत्रित) बी पार्ट – सन ' + year, 'माहे ' + range] });
+    // summary: head x month
+    var cnt = {}, order = [];
+    dm.sections.forEach(function (sec) { order.push(sec.title); cnt[sec.title] = months.map(function () { return 0; }); });
+    all.forEach(function (r) { var h = r.head || 'अवर्गीकृत', i = months.map(function (m) { return m.month; }).indexOf(r._month); if (cnt[h] && i >= 0) cnt[h][i]++; });
+    var tot = months.map(function () { return 0; }), grand = 0;
+    var rows = order.map(function (h, n) { var c = cnt[h], t = c.reduce(function (a, b) { return a + b; }, 0); c.forEach(function (v, i) { tot[i] += v; }); grand += t; return [String(n + 1), h].concat(c.map(function (v) { return v ? String(v) : '-'; })).concat([String(t)]); });
+    rows.push({ c: ['', 'एकूण'].concat(tot.map(String)).concat([String(grand)]), bold: true, shade: 'F2F2F2' });
+    var summary = { noCount: true, title: 'सारांश – head नुसार महिनावार गुन्हे', headers: ['अ.क्र.', 'Head'].concat(labels).concat(['एकूण']), weights: [500, 4200].concat(labels.map(function () { return 760; })).concat([800]), rows: rows, aligns: ['center', 'left'].concat(labels.map(function () { return 'center'; })).concat(['center']), size: 9 };
+    dm.sections.unshift(summary);
+    dm.summary = { labels: labels, order: order, cnt: cnt, tot: tot, grand: grand };
+    dm.range = range; dm.total = all.length;
+    return dm;
+  }
+  /* minimal .xlsx writer (inline strings, one sheet per section) */
+  function xesc(s) { return String(s == null ? '' : s).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+  function colName(i) { var s = ''; i++; while (i > 0) { var m = (i - 1) % 26; s = String.fromCharCode(65 + m) + s; i = Math.floor((i - 1) / 26); } return s; }
+  function sheetName(t, used) {
+    var n = String(t || 'Sheet').replace(/[\\\/\?\*\[\]:]/g, ' ').replace(/\s*कलम\s*/g, ' ').replace(/\s*बीएनएस\s*$/g, '').replace(/\s{2,}/g, ' ').trim().slice(0, 31) || 'Sheet';
+    var b = n, k = 2; while (used[n]) { n = (b.slice(0, 27) + ' (' + k++ + ')'); } used[n] = 1; return n;
+  }
+  function buildXlsx(sheets) {
+    // sheets: [{name, title, headers, rows:[[...]], widths:[chars], totalRow:bool}]
+    var NS = 'xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"';
+    var files = {};
+    files['[Content_Types].xml'] = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>' +
+      sheets.map(function (s, i) { return '<Override PartName="/xl/worksheets/sheet' + (i + 1) + '.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'; }).join('') + '</Types>';
+    files['_rels/.rels'] = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>';
+    files['xl/workbook.xml'] = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<workbook ' + NS + '><sheets>' + sheets.map(function (s, i) { return '<sheet name="' + xesc(s.name) + '" sheetId="' + (i + 1) + '" r:id="rId' + (i + 1) + '"/>'; }).join('') + '</sheets>' +
+      '<definedNames>' + sheets.map(function (s, i) { return s.rows.length ? '<definedName name="_xlnm._FilterDatabase" localSheetId="' + i + '" hidden="1">\'' + xesc(s.name).replace(/'/g, "''") + '\'!$A$2:$' + colName(s.headers.length - 1) + '$' + (s.rows.length + 2) + '</definedName>' : ''; }).join('') + '</definedNames></workbook>';
+    files['xl/_rels/workbook.xml.rels'] = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' + sheets.map(function (s, i) { return '<Relationship Id="rId' + (i + 1) + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet' + (i + 1) + '.xml"/>'; }).join('') +
+      '<Relationship Id="rId' + (sheets.length + 1) + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>';
+    files['xl/styles.xml'] = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
+      '<fonts count="3"><font><sz val="10"/><name val="Mangal"/></font><font><b/><sz val="10"/><name val="Mangal"/></font><font><b/><sz val="13"/><name val="Mangal"/></font></fonts>' +
+      '<fills count="4"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFDCE6F2"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFF2F2F2"/><bgColor indexed="64"/></patternFill></fill></fills>' +
+      '<borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border><border><left style="thin"><color rgb="FF808080"/></left><right style="thin"><color rgb="FF808080"/></right><top style="thin"><color rgb="FF808080"/></top><bottom style="thin"><color rgb="FF808080"/></bottom><diagonal/></border></borders>' +
+      '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>' +
+      '<cellXfs count="6"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>' +
+      '<xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>' +
+      '<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment vertical="top" wrapText="1"/></xf>' +
+      '<xf numFmtId="0" fontId="1" fillId="3" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment vertical="top" wrapText="1"/></xf>' +
+      '<xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1"/>' +
+      '<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="top" wrapText="1"/></xf></cellXfs>' +
+      '<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>';
+    sheets.forEach(function (sh, si) {
+      var nc = sh.headers.length, last = colName(nc - 1);
+      var cell = function (r, c, v, st) {
+        var ref = colName(c) + r;
+        if (/^\d{1,6}$/.test(String(v)) && sh.numCols && sh.numCols.indexOf(c) >= 0) return '<c r="' + ref + '" s="' + st + '"><v>' + v + '</v></c>';
+        return '<c r="' + ref + '" s="' + st + '" t="inlineStr"><is><t xml:space="preserve">' + xesc(v) + '</t></is></c>';
+      };
+      var x = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<worksheet ' + NS + '><sheetViews><sheetView workbookViewId="0"' + (si === 0 ? ' tabSelected="1"' : '') + '><pane ySplit="2" topLeftCell="A3" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><sheetFormatPr defaultRowHeight="15"/>';
+      x += '<cols>' + sh.widths.map(function (w, i) { return '<col min="' + (i + 1) + '" max="' + (i + 1) + '" width="' + w + '" customWidth="1"/>'; }).join('') + '</cols><sheetData>';
+      x += '<row r="1" ht="22" customHeight="1">' + cell(1, 0, sh.title, 4) + '</row>';
+      x += '<row r="2">' + sh.headers.map(function (h, c) { return cell(2, c, h, 1); }).join('') + '</row>';
+      sh.rows.forEach(function (row, ri) {
+        var cells = Array.isArray(row) ? row : row.c, bold = !Array.isArray(row) && row.bold;
+        x += '<row r="' + (ri + 3) + '">' + cells.map(function (v, c) { return cell(ri + 3, c, v, bold ? 3 : (sh.center && sh.center.indexOf(c) >= 0 ? 5 : 2)); }).join('') + '</row>';
+      });
+      x += '</sheetData>';
+      if (sh.rows.length) x += '<autoFilter ref="A2:' + last + (sh.rows.length + 2) + '"/>';
+      x += '<mergeCells count="1"><mergeCell ref="A1:' + last + '1"/></mergeCells>';
+      x += '<pageMargins left="0.3" right="0.3" top="0.4" bottom="0.4" header="0.2" footer="0.2"/><pageSetup paperSize="9" orientation="landscape" fitToWidth="1" fitToHeight="0"/></worksheet>';
+      files['xl/worksheets/sheet' + (si + 1) + '.xml'] = x;
+    });
+    return files;
+  }
+  function yearlyXlsx(model, year) {
+    var used = {}, sheets = [], sm = model.summary;
+    var srows = sm.order.map(function (h, n) { var c = sm.cnt[h]; return [String(n + 1), h].concat(c.map(String)).concat([String(c.reduce(function (a, b) { return a + b; }, 0))]); });
+    srows.push({ c: ['', 'एकूण'].concat(sm.tot.map(String)).concat([String(sm.grand)]), bold: true });
+    var nums = []; for (var i = 2; i < sm.labels.length + 3; i++) nums.push(i);
+    sheets.push({ name: sheetName('सारांश', used), title: 'नागपूर विभाग – वार्षिक (एकत्रित) बी पार्ट – सन ' + year + ' (माहे ' + model.range + ')', headers: ['अ.क्र.', 'Head'].concat(sm.labels).concat(['एकूण']), rows: srows, widths: [6, 46].concat(sm.labels.map(function () { return 10; })).concat([9]), numCols: nums, center: [0].concat(nums) });
+    model.sections.slice(1).forEach(function (sec) {
+      var w = sec.headers.map(function (h) { return /अ\.क्र/.test(h) ? 6 : /पोस्टे|माहे/.test(h) ? 11 : /विवरण|कारण/.test(h) ? 60 : /फिर्यादी|मृतक/.test(h) ? 34 : /कलम/.test(h) ? 26 : /माल/.test(h) ? 26 : 16; });
+      sheets.push({ name: sheetName(sec.title, used), title: sec.title + ' – सन ' + year + ' (' + sec.rows.length + ' गुन्हे)', headers: sec.headers, rows: sec.rows, widths: w, numCols: [0], center: [0, 1, 2] });
+    });
+    return buildXlsx(sheets);
+  }
+  return { buildDocx: buildDocx, yearlyModel: yearlyModel, yearlyXlsx: yearlyXlsx, monthName: monthName, divisionModel: divisionModel, hbtModel: hbtModel, hbtPrefill: hbtPrefill, hbtKind: hbtKind, makeConv: makeConv, fields: fields, countReport: countReport, PSU: PSU, modelHtml: modelHtml };
 })();
 if (typeof module !== 'undefined') module.exports = REPORT;
 
@@ -3501,9 +3616,65 @@ function test_converter() {
 }
 
 
+
+/* ---------------- API: वार्षिक (एकत्रित) B Part ---------------- */
+// payload: {kind:'docx'|'xlsx', year, months:[{month, records}], heads, paper, kruti}
+function api_yearly(payload) {
+  var fixes = getFixes_();
+  var model = REPORT.yearlyModel(payload.months || [], payload.heads || getHeads_(), payload.year, fixes);
+  var xl = payload.kind === 'xlsx';
+  var files = xl ? REPORT.yearlyXlsx(model, payload.year) : REPORT.buildDocx(model, { kruti: !!payload.kruti, paper: payload.paper });
+  var blobs = Object.keys(files).map(function (path) { return Utilities.newBlob(files[path], 'application/xml', path); });
+  var last = (payload.months || []).slice(-1)[0], upto = last ? REPORT.monthName(last.month) : '';
+  var name = 'NAGPUR DIVISION YEARLY B PART ' + payload.year + (upto ? ' (जानेवारी ते ' + upto + ')' : '') + (xl ? '' : (payload.kruti ? ' (Kruti Dev)' : ' (Unicode)')) + (xl ? '.xlsx' : '.docx');
+  var mime = xl ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+  var zip = Utilities.zip(blobs, name);
+  zip.setContentType(mime);
+  var url = '';
+  try { var folder = outputFolder_(); var old = folder.getFilesByName(name); while (old.hasNext()) old.next().setTrashed(true); url = folder.createFile(zip).getUrl(); } catch (e) {}
+  return { name: name, url: url, b64: Utilities.base64Encode(zip.getBytes()), mime: mime, total: model.total };
+}
+/* ---------------- API: जुने महिने – अंतिम विभाग B Part मधून पूर्ण नोंदी ---------------- */
+// files: [{name,b64}] -> [{key, month, records:[...], unknown:{title:n}}]
+function api_finalImport(files) {
+  var PSN = { 'बेला': 'bela', 'बोरी': 'bori', 'बुटीबोरी': 'bori', 'एमआयडीसी': 'midc' };
+  var U = function (x) { return KD.convert(String(x || '').replace(/[¼]/g, '(').replace(/[½]/g, ')')).replace(/\s+/g, ' ').trim(); };
+  var heads = getHeads_();
+  return files.map(function (f) {
+    var parts = Utilities.unzip(Utilities.newBlob(Utilities.base64Decode(f.b64), 'application/zip', f.name));
+    var docPart = parts.filter(function (b) { return b.getName() === 'word/document.xml'; })[0];
+    if (!docPart) throw new Error(f.name + ': Word document सापडला नाही.');
+    var stylesPart = parts.filter(function (b) { return b.getName() === 'word/styles.xml'; })[0];
+    var parsed = CORE.parseDocumentXml(docPart.getDataAsString('UTF-8'), CORE.defaultIsLegacy(stylesPart ? stylesPart.getDataAsString('UTF-8') : ''));
+    var mo = CORE.detectMonth(parsed.paras.map(U));
+    if (!mo) { var fm = f.name.match(/(\d{1,2})\s*[-_ .]\s*(20\d\d|\d\d)(?!\d)/); if (fm) mo = { mm: ('0' + fm[1]).slice(-2), yyyy: fm[2].length === 2 ? '20' + fm[2] : fm[2] }; }
+    if (!mo) throw new Error(f.name + ': माहे ओळखता आला नाही (फाईलच्या नावात 08-2026 असे लिहा).');
+    var recs = [], unknown = {};
+    parsed.tables.forEach(function (t, ti) {
+      if (t.rows.length < 2) return;
+      var hdr = t.rows[0].map(U), hj = hdr.join('|');
+      var pick = function (re) { for (var i = 0; i < hdr.length; i++) if (re.test(hdr[i])) return i; return -1; };
+      var ci = pick(/अप.*क्र|मर्ग.*क्र|कलम/); if (ci < 0) return;
+      var marg = /मर्ग/.test(hj), title = U(t.prev.slice(-1)[0] || ''), head = titleHead_(title, heads);
+      var col = { ps: pick(/पोस्टे|पो.स्टे/), place: pick(/घटनास्थळ/), occ: pick(/घ[.\-]?\s*ता|घटना\s*ता/), filed: pick(/दा[.\-]?\s*ता|दाखल\s*ता/), party: pick(/फिर्यादी/), arrest: pick(/अटक/), stolen: pick(/चोरीस/), recovered: pick(/वसुल|जप्त/), invest: pick(/तपास/), details: pick(/हकि?ी?कत|हकीगत|विवरण/), deceased: pick(/मृतक/), cause: pick(/कारण/) };
+      t.rows.slice(1).forEach(function (row, ri) {
+        var crime = row[ci] || ''; if (!/\d/.test(crime)) return;
+        if (!head) { unknown[title] = (unknown[title] || 0) + 1; }
+        var g = function (k) { return col[k] >= 0 ? (row[col[k]] || '') : ''; };
+        var cu = U(crime), nm = cu.match(/(\d+)\s*\/\s*(\d{2,4})/);
+        var ps = PSN[U(g('ps')).replace(/\s|उघड/g, '')] || '';
+        recs.push({ id: 'F' + mo.yyyy + mo.mm + ':' + ps + ':' + (marg ? 'M' : '') + (nm ? +nm[1] : ri) + ':' + ti + ':' + ri, ps: ps, table: marg ? 'M' : 'A', no: nm ? String(+nm[1]) : '',
+          crime: crime, place: g('place'), occ: g('occ'), filed: g('filed'), party: g('party'), arrest: g('arrest'), stolen: g('stolen'), recovered: g('recovered'), invest: g('invest'), details: g('details'), deceased: g('deceased'), cause: g('cause'),
+          head: head || null, rule: 'final', manual: true, ok: true, fromFinal: true });
+      });
+    });
+    return { key: mo.yyyy + '-' + mo.mm, month: mo.mm + '/' + mo.yyyy, records: recs, unknown: unknown, name: f.name };
+  });
+}
 /* ---------------- API: अंतिम विभाग B Part वरून शिकणे ---------------- */
 // विभागाच्या head शीर्षकांचे (जुने/नवे लेखन) app head मध्ये रूपांतर
 var TITLE_MAP = [
+    [/वि[द|]?्?\|?यु?ुत|विदयुत|भाविका/, 'विद्युत कायदा'], [/लोकसेवक/, 'लोकसेवकावर'],
     [/मा[हि]ी?ती\s*तं|आयटी\s*(?:ॲक्ट|अॅक्ट)/, 'माहिती तंत्रज्ञान'], [/रॅगिंग|छळवाद/, 'महाराष्ट्र छळवाद'], [/भ्रष्टाचार|भ्रश्टाचार|लाचलुचपत/, 'भ्रष्टाचार'], [/स्नॅचिंग|स्नैचिंग/, 'चोरी'], [/दंगा/, 'दंगल'], [/जादुटोना|इतर\s*एस\s*एल\s*एल/, 'इतर एसएलएल'], [/पशु\s*संरक्षण/, 'महाराष्ट्र प्राणी संरक्षण'], [/निवडणुक/, 'निवडणुकीशी'], [/अपव्यापार|मानवी\s*तस्करी/, 'मानवी तस्करी'], [/^इतर\s*भादवि|^कलम\s*(?:291|217|112|188|298)/, 'इतर बीएनएस'],
     [/मर्ग/, 'मर्ग'],
     [/दारू/, 'महाराष्ट्र दारूबंदी'],
@@ -3696,7 +3867,7 @@ function show(v) {
   VIEWS.forEach(function (x) { $('v-' + x).classList.toggle('hide', x !== v); });
   Array.prototype.forEach.call(document.querySelectorAll('#tabs button'), function (b) { b.classList.toggle('on', b.dataset.v === v); });
   if (v === 'home') renderHome(); if (v === 'dash') renderDash(); if (v === 'files') { renderPsStatus(); updateMergeBox(); renderLog(); } if (v === 'queue') { buildQueue(); renderQueue(); }
-  if (v === 'archive') renderArchive(); if (v === 'review') renderReview(); if (v === 'hbt') renderHbt(); if (v === 'preview') renderPreview(); if (v === 'reports') { renderDownload(); renderReports(); } if (v === 'rules') renderRules();
+  if (v === 'archive') renderArchive(); if (v === 'review') renderReview(); if (v === 'hbt') renderHbt(); if (v === 'preview') renderPreview(); if (v === 'reports') { renderDownload(); renderReports(); renderYear(); } if (v === 'rules') renderRules();
   renderSteps();
   window.scrollTo(0, 0);
 }
@@ -4111,6 +4282,80 @@ function applyFinal() {
     .then(function () { busy(false); S.pvDone = false; toast(rules.length + ' नियम शिकले ✓' + (nUpd ? ' · चालू महिन्यातील ' + nUpd + ' नोंदी बदलल्या' : '')); renderRules(); FINAL = null; $('finalBox').innerHTML = ''; renderSteps(); })
     .catch(fail);
 }
+
+/* ---------- वार्षिक (एकत्रित) B Part ---------- */
+var MONTHS_MR = ['जानेवारी', 'फेब्रुवारी', 'मार्च', 'एप्रिल', 'मे', 'जून', 'जुलै', 'ऑगस्ट', 'सप्टेंबर', 'ऑक्टोबर', 'नोव्हेंबर', 'डिसेंबर'];
+var YR = { list: [] };
+function yearMonths() {
+  return ARC.all().catch(function () { return []; }).then(function (list) {
+    var have = {}; (list || []).forEach(function (m) { if (m.records || m.drive) have[m.key] = m; });
+    var ck = monthKey(S.month);
+    if (S.records.length && ck && !have[ck]) have[ck] = { key: ck, month: S.month, cur: true, n: S.records.length };
+    YR.have = have; return have;
+  });
+}
+function renderYear() {
+  if (!$('yrYear')) return;
+  yearMonths().then(function (have) {
+    var years = {}; Object.keys(have).forEach(function (k) { years[k.slice(0, 4)] = 1; }); years[String(new Date().getFullYear())] = 1;
+    var ys = Object.keys(years).sort().reverse(), cy = $('yrYear').value || (monthKey(S.month) || '').slice(0, 4) || ys[0];
+    $('yrYear').innerHTML = ys.map(function (y) { return '<option' + (y === cy ? ' selected' : '') + '>' + y + '</option>'; }).join('');
+    var y = $('yrYear').value, lastHave = 0;
+    for (var i = 1; i <= 12; i++) if (have[y + '-' + ('0' + i).slice(-2)]) lastHave = i;
+    var cu = +$('yrUpto').value || 0; if (!cu || $('yrUpto').dataset.y !== y) cu = lastHave || 1;
+    $('yrUpto').dataset.y = y;
+    $('yrUpto').innerHTML = MONTHS_MR.map(function (m, i) { return '<option value="' + (i + 1) + '"' + (i + 1 === cu ? ' selected' : '') + '>' + m + '</option>'; }).join('');
+    var miss = [], ok = [], n = 0;
+    for (i = 1; i <= cu; i++) { var k = y + '-' + ('0' + i).slice(-2); if (have[k]) { ok.push(MONTHS_MR[i - 1]); n += have[k].n || (have[k].records || []).length || 0; } else miss.push(MONTHS_MR[i - 1]); }
+    $('yrMonths').innerHTML = (ok.length ? '<span style="color:var(--ok)">✓ ' + ok.length + ' महिने (' + ok.join(', ') + ') · सुमारे ' + n + ' नोंदी</span>' : '<span class="muted">अजून या वर्षाचा एकही महिना जतन नाही.</span>') +
+      (miss.length ? '<br><span style="color:var(--bad)">✗ जतन नसलेले महिने: ' + miss.join(', ') + '</span> <span class="muted">– ते महिने उघडून "जतन करा", किंवा "जुने महिने जोडा" ने अंतिम विभाग B Part द्या.</span>' : '');
+    Array.prototype.forEach.call(document.querySelectorAll('[data-yr]'), function (b) { b.disabled = !ok.length; });
+  });
+}
+['yrYear', 'yrUpto'].forEach(function (id) { $(id).addEventListener('change', renderYear); });
+document.addEventListener('click', function (e) {
+  var b = e.target.closest('[data-yr]'); if (!b) return;
+  var p = b.dataset.yr.split(':'), y = $('yrYear').value, upto = +$('yrUpto').value, keys = [];
+  for (var i = 1; i <= upto; i++) { var k = y + '-' + ('0' + i).slice(-2); if (YR.have && YR.have[k]) keys.push(k); }
+  if (!keys.length) { toast('या वर्षाचा जतन केलेला महिना नाही', true); return; }
+  busy(true, keys.length + ' महिन्यांची माहिती गोळा करत आहे…');
+  var ck = monthKey(S.month);
+  Promise.all(keys.map(function (k) {
+    if (k === ck && S.records.length && (YR.have[k].cur || S.arcDirty)) return Promise.resolve({ month: S.month, records: plainRecs() });
+    return loadFull(k).then(function (m) { return { month: m.month, records: (m.records || []).map(function (r) { var c = {}; for (var x in r) if (x !== 'u') c[x] = r[x]; return c; }) }; });
+  })).then(function (months) {
+    busy(true, p[0] === 'xlsx' ? 'Excel फाईल बनवत आहे…' : 'Word फाईल बनवत आहे…');
+    return call('api_yearly', { kind: p[0], kruti: p[1] === '1', year: y, months: months, heads: headOrder(), paper: $('dlPaper').value });
+  }).then(function (res) { busy(false); $('res-year').innerHTML = ''; showFile($('res-year'), res); toast(res.total + ' गुन्ह्यांचा वार्षिक अहवाल तयार ✓'); }).catch(fail);
+});
+$('yrImport').addEventListener('change', function () {
+  var fl = Array.prototype.slice.call(this.files); this.value = '';
+  if (!fl.length) return;
+  busy(true, fl.length + ' अंतिम फाईल्स वाचत आहे…');
+  Promise.all(fl.map(function (f) { return new Promise(function (res) { var rd = new FileReader(); rd.onload = function () { res({ name: f.name, b64: String(rd.result).split(',')[1] }); }; rd.readAsDataURL(f); }); }))
+    .then(function (files) { return call('api_finalImport', files); })
+    .then(function (list) {
+      busy(false);
+      return ARC.all().catch(function () { return []; }).then(function (cur) {
+        var have = {}; (cur || []).forEach(function (m) { have[m.key] = m; });
+        var done = [], skip = [], unk = {};
+        return list.reduce(function (pr, m) {
+          return pr.then(function () {
+            Object.keys(m.unknown || {}).forEach(function (t) { unk[t] = (unk[t] || 0) + m.unknown[t]; });
+            var old = have[m.key];
+            if (old && !old.fromFinal && (old.records || old.drive) && !confirm('माहे ' + m.month + ' app मध्ये आधीच जतन आहे (तुमच्या कामासह). अंतिम फाईलने बदलायचे?')) { skip.push(m.month); return; }
+            var rec = { key: m.key, month: m.month, savedAt: Date.now(), n: m.records.length, counts: psCounts(m.records), sum: monthSum(m.records), gen: true, ok: m.records.length, records: m.records, log: [{ t: Date.now(), txt: 'अंतिम विभाग B Part मधून: ' + m.name }], fromFinal: true };
+            return ARC.put(rec).then(function () { done.push(m.month + ' (' + m.records.length + ')'); });
+          });
+        }, Promise.resolve()).then(function () {
+          var u = Object.keys(unk);
+          toast(done.length + ' महिने जोडले ✓' + (skip.length ? ' · ' + skip.length + ' वगळले' : ''));
+          $('res-year').innerHTML = '<div class="small" style="color:var(--ok)">जोडले: ' + esc(done.join(', ') || '—') + '</div>' + (u.length ? '<div class="small" style="color:var(--warn)">ओळख न झालेली head शीर्षके (हे गुन्हे "अवर्गीकृत" मध्ये येतील): ' + u.map(function (t) { return esc(t) + ' (' + unk[t] + ')'; }).join(', ') + '</div>' : '');
+          renderYear();
+        });
+      });
+    }).catch(fail);
+});
 /* ---------- HBT ---------- */
 function kind(h) { if (!h) return ''; if (/घरफोडी/.test(h)) return 'H'; if (/चोरी/.test(h)) return 'T'; if (/दुखापत/.test(h)) return 'U'; return ''; }
 var HBTF = {
@@ -5032,7 +5277,7 @@ $('histIn').addEventListener('change', function () {
   };
   Array.prototype.forEach.call(document.querySelectorAll('#tabs button[data-v]'), function (b) { if (I[b.dataset.v]) b.insertAdjacentHTML('afterbegin', '<svg viewBox="0 0 24 24" aria-hidden="true">' + I[b.dataset.v] + '</svg>'); });
   var sec = { home: 'काम', reports: 'निकाल', archive: 'साधने' };
-  document.getElementById('tabs').insertAdjacentHTML('beforeend', '<div class="navh" style="margin-top:auto;text-transform:none;letter-spacing:0;font-weight:500">आवृत्ती: 13-11-2026 (3)</div>');
+  document.getElementById('tabs').insertAdjacentHTML('beforeend', '<div class="navh" style="margin-top:auto;text-transform:none;letter-spacing:0;font-weight:500">आवृत्ती: 13-11-2026 (4)</div>');
   Object.keys(sec).forEach(function (v) { var b = document.querySelector('#tabs button[data-v="' + v + '"]'); if (b) b.insertAdjacentHTML('beforebegin', '<div class="navh">' + sec[v] + '</div>'); });
 })();
 /* न जतन केलेले काम: वरच्या माहे-चिपवर खूण + बंद करताना इशारा */
