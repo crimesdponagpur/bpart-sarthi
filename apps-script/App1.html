@@ -35,16 +35,18 @@ function copyText(t) {
 function warnsOf(r) { try { return TEXT.validate(r); } catch (e) { return []; } }
 
 /* ---------- tabs ---------- */
-var VIEWS = ['home', 'dash', 'files', 'queue', 'review', 'hbt', 'preview', 'download', 'archive', 'reports', 'typing', 'rules'];
+var VIEWS = ['home', 'dash', 'files', 'queue', 'review', 'hbt', 'preview', 'archive', 'reports', 'typing', 'rules'];
 function show(v) {
+  if (v === 'download') v = 'reports';
   S.cur = v;
   VIEWS.forEach(function (x) { $('v-' + x).classList.toggle('hide', x !== v); });
   Array.prototype.forEach.call(document.querySelectorAll('#tabs button'), function (b) { b.classList.toggle('on', b.dataset.v === v); });
   if (v === 'home') renderHome(); if (v === 'dash') renderDash(); if (v === 'files') { renderPsStatus(); updateMergeBox(); renderLog(); } if (v === 'queue') { buildQueue(); renderQueue(); }
-  if (v === 'archive') renderArchive(); if (v === 'review') renderReview(); if (v === 'hbt') renderHbt(); if (v === 'preview') renderPreview(); if (v === 'download') renderDownload(); if (v === 'reports') renderReports(); if (v === 'rules') renderRules();
+  if (v === 'archive') renderArchive(); if (v === 'review') renderReview(); if (v === 'hbt') renderHbt(); if (v === 'preview') renderPreview(); if (v === 'reports') { renderDownload(); renderReports(); } if (v === 'rules') renderRules();
   renderSteps();
   window.scrollTo(0, 0);
 }
+document.addEventListener('click', function (e) { var g = e.target.closest('[data-go]'); if (g && !g.closest('#v-home')) show(g.dataset.go); });
 $('tabs').addEventListener('click', function (e) { var b = e.target.closest('button'); if (b) show(b.dataset.v); });
 $('steps').addEventListener('click', function (e) { var b = e.target.closest('button[data-s]'); if (b) show(b.dataset.s); });
 function refreshView() { if (S.cur === 'queue') renderQueue(); else renderReview(); renderSteps(); }
@@ -184,6 +186,7 @@ $('procBtn').addEventListener('click', function () {
     r.files.forEach(function (f, i) { var part = r.records.slice(pos, pos + f.count); pos += f.count; if (lastF[f.ps] === i) { keepR = keepR.concat(part); keepF.push(f); } });
     if (keepF.length < r.files.length) toast('एका PS ची एकापेक्षा जास्त फाईल – फक्त शेवटची वापरली');
     r.records = keepR; r.files = keepF;
+    S.skipped = []; r.files.forEach(function (f) { (f.skipped || []).forEach(function (x) { S.skipped.push({ ps: f.ps, file: f.name, table: x.table, row: x.row, text: x.text }); }); });
     r.records.forEach(function (x) { x.hx0 = clone(x.hx); });
     if (merge && r.month && S.month && r.month !== S.month && !confirm('फाईलचा महिना ' + r.month + ' आहे, पण चालू काम ' + S.month + ' चे आहे. तरीही मिसळायचे?')) return;
     if (merge) {
@@ -414,6 +417,46 @@ function reclassify() {
   });
 }
 
+
+/* ---------- अंतिम विभाग B Part वरून शिकणे ---------- */
+var FINAL = null;
+function ruleSig(x) { var sx = (x.secs || []).filter(function (q) { return CHECKS.GENERIC.indexOf(q) < 0; }).sort(); return sx.length ? (x.act || '') + '|' + x.table + '|' + sx.join(',') : ''; }
+$('finalIn').addEventListener('change', function () {
+  var fl = Array.prototype.slice.call(this.files); this.value = '';
+  if (!fl.length) return;
+  busy(true, 'अंतिम फाईल तपासत आहे…');
+  Promise.all(fl.map(function (f) { return new Promise(function (res) { var rd = new FileReader(); rd.onload = function () { res({ name: f.name, b64: String(rd.result).split(',')[1] }); }; rd.readAsDataURL(f); }); }))
+    .then(function (files) { return call('api_finalCompare', files); })
+    .then(function (r) { busy(false); FINAL = r; renderFinal(); }).catch(fail);
+});
+function renderFinal() {
+  var r = FINAL; if (!r) return;
+  var cnt = {}; r.rows.forEach(function (x) { var k = ruleSig(x) + '>' + x.finalHead; cnt[k] = (cnt[k] || 0) + 1; });
+  var un = Object.keys(r.unknownTitles || {});
+  $('finalInfo').textContent = r.total + ' गुन्हे तपासले · ' + (r.mapped - r.rows.length) + ' जुळले · ' + r.rows.length + ' फरक';
+  $('finalBox').innerHTML = (r.rows.length ? '<div class="small muted" style="margin-bottom:6px">✓ असलेल्यांसाठी नियम बनेल. एकाच प्रकारचा फरक 2 किंवा अधिक वेळा आला तरच नियम आपोआप निवडलेला असतो – एखादा अपवादात्मक गुन्हा (उदा. नंतर मृत्यू झाल्याने 109 → खून) सर्वांना लागू होऊ नये म्हणून.</div><div style="overflow:auto"><table class="tblv"><tr><th>नियम?</th><th>महिना / PS / अप.क्र.</th><th>कलम</th><th>app चा head</th><th>तुमचा head</th></tr>' +
+    r.rows.map(function (x, i) { var sg = ruleSig(x), many = cnt[sg + '>' + x.finalHead] >= 2; return '<tr><td style="text-align:center"><input type="checkbox" data-fin="' + i + '"' + (sg && many ? ' checked' : '') + (sg ? '' : ' disabled title="कलम नाही"') + '></td><td>' + esc(x.month) + ' · ' + (PSU[x.ps] || '') + ' · ' + esc(x.no) + '</td><td style="text-align:left">' + esc(x.crime) + '</td><td>' + esc(x.appHead) + '</td><td><b>' + esc(x.finalHead) + '</b></td></tr>'; }).join('') +
+    '</table></div><div class="row" style="margin-top:10px"><button class="btn pri" id="finalApply">निवडलेल्यांसाठी नियम शिका</button></div>' : '<div class="small" style="color:var(--ok)">✓ सर्व गुन्ह्यांचे head तुमच्या अंतिम फाईलशी जुळतात.</div>') +
+    (un.length ? '<div class="small muted" style="margin-top:8px">ओळख न झालेली head शीर्षके (त्यातील गुन्हे तपासले नाहीत): ' + un.map(function (t) { return esc(t) + ' (' + r.unknownTitles[t] + ')'; }).join(', ') + '</div>' : '');
+  var b = $('finalApply'); if (b) b.addEventListener('click', applyFinal);
+}
+function applyFinal() {
+  var picked = Array.prototype.filter.call(document.querySelectorAll('[data-fin]'), function (c) { return c.checked; }).map(function (c) { return FINAL.rows[+c.dataset.fin]; });
+  // current month's records get the final head too
+  var nUpd = 0;
+  FINAL.rows.forEach(function (x) { S.records.forEach(function (r) { if (r.ps === x.ps && String(+r.no) === x.no && monthKey(S.month) === monthKey(x.month) && r.head !== x.finalHead) { r.head = x.finalHead; r.manual = true; r.rule = 'manual'; nUpd++; } }); });
+  var seen = {}, rules = [];
+  picked.forEach(function (x) {
+    var sg = ruleSig(x); if (!sg || seen[sg]) return; seen[sg] = 1;
+    var secs = (x.secs || []).filter(function (q) { return CHECKS.GENERIC.indexOf(q) < 0; });
+    rules.push({ head: x.finalHead, sections: secs, act: x.act || '', keywords: [], table: x.table, example: (PSU[x.ps] || '') + ' ' + x.no + ' (' + x.month + ', अंतिम फाईल)' });
+  });
+  busy(true, 'नियम शिकत आहे…');
+  rules.reduce(function (pr, rule) { return pr.then(function () { return call('api_saveRule', rule).then(function (res) { S.rules = res.rules; S.heads = res.heads; }); }); }, Promise.resolve())
+    .then(function () { return S.records.length ? reclassify() : 0; })
+    .then(function () { busy(false); S.pvDone = false; toast(rules.length + ' नियम शिकले ✓' + (nUpd ? ' · चालू महिन्यातील ' + nUpd + ' नोंदी बदलल्या' : '')); renderRules(); FINAL = null; $('finalBox').innerHTML = ''; renderSteps(); })
+    .catch(fail);
+}
 /* ---------- HBT ---------- */
 function kind(h) { if (!h) return ''; if (/घरफोडी/.test(h)) return 'H'; if (/चोरी/.test(h)) return 'T'; if (/दुखापत/.test(h)) return 'U'; return ''; }
 var HBTF = {

@@ -99,7 +99,7 @@ function renderHome() {
   var T, P, B, G;
   if (!n) { T = 'नमस्कार! नवीन महिना सुरू करूया'; P = 'तिन्ही PS ची B Part फाईल निवडा – बाकी काम app करेल.'; B = 'फाईल्स निवडा →'; G = 'files'; }
   else if (pend || unc) { T = pend + ' नोंदी तपासायच्या'; P = mo + ' · एकूण ' + n + ' नोंदी' + (unc ? ' · ' + unc + ' अवर्गीकृत' : ''); B = 'तपासणी रांग सुरू करा →'; G = pend ? 'queue' : 'review'; }
-  else if (!S.gen) { T = 'सर्व तपासले ✓'; P = mo + ' · ' + n + ' नोंदी तयार आहेत'; B = 'Word बनवा →'; G = 'download'; }
+  else if (!S.gen) { T = 'सर्व तपासले ✓'; P = mo + ' · ' + n + ' नोंदी तयार आहेत'; B = 'B Part Word बनवा →'; G = 'reports'; }
   else if (S.arcDirty) { T = 'Word तयार ✓ – महिना जतन करा'; P = mo + ' · जतन केले की पुढच्या महिन्यात तुलना व शोध करता येईल'; B = 'महिना जतन करा →'; G = 'archive'; }
   else { T = 'Word तयार ✓ · जतन झाले'; P = mo + ' · आता अहवाल पाहा'; B = 'अहवाल पाहा →'; G = 'reports'; }
   $('heroT').textContent = T; $('heroP').textContent = P; $('heroBtn').textContent = B; $('heroBtn').dataset.go = G;
@@ -111,6 +111,9 @@ function renderHome() {
   Array.prototype.forEach.call(document.querySelectorAll('#segFs button'), function (b) { b.classList.toggle('on', b.dataset.fs === (lsGet('bps_fs') || '1')); });
   Array.prototype.forEach.call(document.querySelectorAll('#segTh button'), function (b) { b.classList.toggle('on', b.dataset.th === (lsGet('bps_th') || 'auto')); });
   renderPsStatus(); homeArc();
+  var sk = S.records.length ? (S.skipped || []) : [];
+  $('skipBox').innerHTML = sk.length ? '<div class="card" style="border-color:var(--bad);background:var(--badSoft)"><h2 style="color:var(--bad)">⚠ ' + sk.length + ' ओळी app ला वाचता आल्या नाहीत</h2><p class="small" style="margin-top:0">PS फाईलमधील खालील ओळींत गुन्हा क्रमांक / कलम ओळखता आले नाही. त्या B Part मध्ये आलेल्या नाहीत – PS कडून दुरुस्त फाईल घ्या किंवा तपासा.</p><div class="list">' +
+    sk.map(function (x) { return '<div class="li"><span class="badge ps">' + (PSU[x.ps] || x.ps) + '</span><div class="tx small">तक्ता ' + x.table + ', ओळ ' + x.row + ': ' + esc(x.text || '(रिकामा गुन्हा क्र. रकाना)') + '</div></div>'; }).join('') + '</div></div>' : '';
 }
 $('heroBtn').addEventListener('click', function () { show(this.dataset.go || 'files'); });
 $('v-home').addEventListener('click', function (e) {
@@ -132,7 +135,7 @@ function applyMode() {
   var full = lsGet('bps_mode') === 'full';
   document.body.classList.toggle('simple', !full);
   Array.prototype.forEach.call(document.querySelectorAll('#segMode button'), function (b) { b.classList.toggle('on', b.dataset.mode === (full ? 'full' : 'simple')); });
-  if (!full && ['dash', 'hbt', 'archive', 'reports', 'typing'].indexOf(S.cur) >= 0) show('home');
+  if (!full && ['dash', 'typing'].indexOf(S.cur) >= 0) show('home');
 }
 $('segMode').addEventListener('click', function (e) { var b = e.target.closest('[data-mode]'); if (!b) return; lsSet('bps_mode', b.dataset.mode); applyMode(); toast(b.dataset.mode === 'full' ? 'सर्व साधने दाखवली' : 'साधी पद्धत'); });
 function applyLook() {
@@ -643,8 +646,8 @@ $('histIn').addEventListener('change', function () {
     rules: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>'
   };
   Array.prototype.forEach.call(document.querySelectorAll('#tabs button[data-v]'), function (b) { if (I[b.dataset.v]) b.insertAdjacentHTML('afterbegin', '<svg viewBox="0 0 24 24" aria-hidden="true">' + I[b.dataset.v] + '</svg>'); });
-  var sec = { home: 'काम', preview: 'निकाल', archive: 'साधने' };
-  document.getElementById('tabs').insertAdjacentHTML('beforeend', '<div class="navh" style="margin-top:auto;text-transform:none;letter-spacing:0;font-weight:500">आवृत्ती: 13-11-2026 (2)</div>');
+  var sec = { home: 'काम', reports: 'निकाल', archive: 'साधने' };
+  document.getElementById('tabs').insertAdjacentHTML('beforeend', '<div class="navh" style="margin-top:auto;text-transform:none;letter-spacing:0;font-weight:500">आवृत्ती: 13-11-2026 (3)</div>');
   Object.keys(sec).forEach(function (v) { var b = document.querySelector('#tabs button[data-v="' + v + '"]'); if (b) b.insertAdjacentHTML('beforebegin', '<div class="navh">' + sec[v] + '</div>'); });
 })();
 /* न जतन केलेले काम: वरच्या माहे-चिपवर खूण + बंद करताना इशारा */

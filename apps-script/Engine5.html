@@ -281,7 +281,7 @@ function api_process(files) {
     var mo = CORE.detectMonth(parsed.paras);
     if (mo && !month) month = mo.mm + '/' + mo.yyyy;
     var recs = CORE.extractRecords(parsed, ps, f.name);
-    info.push({ name: f.name, ps: ps, count: recs.length, tables: parsed.tables.length });
+    info.push({ name: f.name, ps: ps, count: recs.length, tables: parsed.tables.length, skipped: CORE.skippedRows(parsed, recs).slice(0, 30) });
     all = all.concat(recs);
   });
   // the month in the PS file heading is sometimes typed wrong: trust the filing dates when most agree
@@ -411,11 +411,116 @@ function test_converter() {
   Logger.log(KD.convert('?kVukLFkG'));          // घटनास्थळ
 }
 
+
+/* ---------------- API: अंतिम विभाग B Part वरून शिकणे ---------------- */
+// विभागाच्या head शीर्षकांचे (जुने/नवे लेखन) app head मध्ये रूपांतर
+var TITLE_MAP = [
+    [/मा[हि]ी?ती\s*तं|आयटी\s*(?:ॲक्ट|अॅक्ट)/, 'माहिती तंत्रज्ञान'], [/रॅगिंग|छळवाद/, 'महाराष्ट्र छळवाद'], [/भ्रष्टाचार|भ्रश्टाचार|लाचलुचपत/, 'भ्रष्टाचार'], [/स्नॅचिंग|स्नैचिंग/, 'चोरी'], [/दंगा/, 'दंगल'], [/जादुटोना|इतर\s*एस\s*एल\s*एल/, 'इतर एसएलएल'], [/पशु\s*संरक्षण/, 'महाराष्ट्र प्राणी संरक्षण'], [/निवडणुक/, 'निवडणुकीशी'], [/अपव्यापार|मानवी\s*तस्करी/, 'मानवी तस्करी'], [/^इतर\s*भादवि|^कलम\s*(?:291|217|112|188|298)/, 'इतर बीएनएस'],
+    [/मर्ग/, 'मर्ग'],
+    [/दारू/, 'महाराष्ट्र दारूबंदी'],
+    [/जुगार/, 'महाराष्ट्र जुगार'],
+    [/आर्म/, 'आर्म'],
+    [/अत्यावश्यक|जि?वनावश्यक|जीवनावश्यक/, 'जिवनावश्यक'],
+    [/वेठबिगारी|बाल\s*मजुरी/, 'वेठबिगारी'],
+    [/माहिती तंत्रज्ञान/, 'माहिती तंत्रज्ञान'],
+    [/प्राणी संरक्षण|प्राणीवधा|गोवंश/, 'महाराष्ट्र प्राणी संरक्षण'],
+    [/प्राणि?ी?वाका|प्राण्यांना/, 'प्राण्यांना'],
+    [/मपोका|पोलीस अधिनियम|122/, 'महाराष्ट्र पोलीस'],
+    [/मोवाका\s*1988|मोटार वाहन कायदा|मोटर वाहन कायदा/, 'मोटार वाहन'],
+    [/हुंडाबळी/, 'हुंडाबळी'],
+    [/सदोष मनुष्यवधाचा/, 'सदोष मनुष्यवधाचा'],
+    [/सदोष मनुष्यवध/, 'सदोष'],
+    [/खुनाचा प्रयत्न/, 'खुनाचा'],
+    [/खुन|खून/, 'खून कलम'],
+    [/आत्मह/, 'आत्महत्येस'],
+    [/निष्काळजी|304\s*A/, 'निष्काळजीपणाने'],
+    [/(बलात्कार|जबरी संभोग).*(पोक्सो|अवयस्क|अल्पवयीन)/, 'बलात्कार अल्पवयीन'],
+    [/बलात्कार|जबरी संभोग/, 'बलात्कार वयस्क'],
+    [/विनयभंग.*(पोक्सो|अवयस्क|अल्पवयीन)/, 'विनयभंग अल्पवयीन'],
+    [/विनयभंग/, 'विनयभंग वयस्क'],
+    [/कलम 79/, 'स्त्रीच्या नम्रतेचा'],
+    [/पळव/, 'पळवून नेणे'],
+    [/338/, '338'],
+    [/337/, '337'],
+    [/336|279/, '336'],
+    [/285|283/, 'कलम 285'],
+    [/घरफोडी.*रात्री|रात्री.*घरफोडी/, 'घरफोडी रात्री'],
+    [/घरफोडी/, 'घरफोडी दिवसा'],
+    [/जबरी चोरी/, 'जबरी'],
+    [/दरोडा/, 'दरोडा'],
+    [/चोरी|चारी/, 'चोरी'],
+    [/विश्वासघात/, 'विश्वासघात'],
+    [/फसवणुक|फसवणूक/, 'फसवणूक'],
+    [/अश्लि?ी?ल शिवी|296|294 भादवि/, 'अश्लिल'],
+    [/दुखापत/, 'दुखापत'],
+    [/85 बीएनएस|498/, 'पती'],
+    [/मंडळी|बेकायदेशीर सभा|189/, 'बेकायदेशीर सभा'],
+    [/दंगल/, 'दंगल'],
+    [/धार्मिक|299/, 'धर्माशी'],
+    [/आगळीक|अपकि्रया|अपक्रिया|गैरप्रकार|32[4-6] बीएनएस/, 'गैरप्रकार'],
+    [/अतिक्रमण|अतीक्रमण|452|333/, 'फौजदारी अतिक्रमण'],
+    [/पर्यावरण/, 'पर्यावरण'],
+    [/वि.?ुत|भाविका/, 'विद्युत'],
+    [/सार्वजनिक संपत्ती|सार्वजनिक मालमत्ता/, 'सार्वजनिक मालमत्ता'],
+    [/अ-जा-ज|अत्याचार/, 'अनुसूचित'],
+    [/मुलांची काळजी|बाल न्याय/, 'बाल न्याय'],
+    [/बालविवाह/, 'बालविवाह'],
+    [/खंडणी/, 'खंडणी']
+];
+function titleHead_(title, heads) {
+  var t = String(title || '').replace(/\(\s*\d+\s*\)\s*$/, '').replace(/\s+/g, ' ').trim();
+  if (!t) return '';
+  for (var i = 0; i < heads.length; i++) if (heads[i] === t) return heads[i];
+  for (i = 0; i < TITLE_MAP.length; i++) if (TITLE_MAP[i][0].test(t)) { var p = TITLE_MAP[i][1]; for (var j = 0; j < heads.length; j++) if (heads[j].indexOf(p) === 0) return heads[j]; }
+  var tok = function (x) { return x.replace(/[(),.\-\/]/g, ' ').split(/\s+/).filter(function (w) { return w && !/^(कलम|बीएनएस|व|ते)$/.test(w); }); };
+  var tt = tok(t), best = '', bs = 0;
+  heads.forEach(function (h) { var ht = tok(h), c = tt.filter(function (w) { return ht.indexOf(w) >= 0; }).length / Math.max(tt.length, 1); if (c > bs) { bs = c; best = h; } });
+  return bs >= 0.6 ? best : '';
+}
+// files: [{name,b64}] -> {rows:[{key, ps, no, crime, finalHead, appHead, secs, act, table}], total, mapped, unknownTitles}
+function api_finalCompare(files) {
+  var PSN = { 'बेला': 'bela', 'बोरी': 'bori', 'बुटीबोरी': 'bori', 'एमआयडीसी': 'midc' };
+  var U = function (x) { return KD.convert(String(x || '').replace(/[¼]/g, '(').replace(/[½]/g, ')')).replace(/\s+/g, ' ').trim(); };
+  var heads = getHeads_(), learned = getRules_(), out = [], total = 0, mapped = 0, unknown = {};
+  files.forEach(function (f) {
+    var blob = Utilities.newBlob(Utilities.base64Decode(f.b64), 'application/zip', f.name);
+    var parts = Utilities.unzip(blob);
+    var docPart = parts.filter(function (b) { return b.getName() === 'word/document.xml'; })[0];
+    if (!docPart) throw new Error(f.name + ': Word document सापडला नाही.');
+    var stylesPart = parts.filter(function (b) { return b.getName() === 'word/styles.xml'; })[0];
+    var parsed = CORE.parseDocumentXml(docPart.getDataAsString('UTF-8'), CORE.defaultIsLegacy(stylesPart ? stylesPart.getDataAsString('UTF-8') : ''));
+    var mo = CORE.detectMonth(parsed.paras.map(U));
+    parsed.tables.forEach(function (t) {
+      if (t.rows.length < 2) return;
+      var hdr = t.rows[0].map(U), hj = hdr.join('|');
+      var ci = -1; hdr.forEach(function (h, i) { if (ci < 0 && /अप.*क्र|मर्ग.*क्र|कलम/.test(h)) ci = i; });
+      if (ci < 0) return;
+      var pick = function (re) { for (var i = 0; i < hdr.length; i++) if (re.test(hdr[i])) return i; return -1; };
+      var psi = pick(/पोस्टे|पो.स्टे/), di = pick(/हकि?ी?कत|हकीगत|विवरण|कारण/), pi = pick(/फिर्यादी/), si = pick(/चोरीस/);
+      var marg = /मर्ग/.test(hj), title = U(t.prev.slice(-1)[0] || ''), fh = titleHead_(title, heads);
+      t.rows.slice(1).forEach(function (row) {
+        var crime = row[ci] || ''; if (!/\d/.test(crime)) return;
+        total++;
+        if (!fh) { unknown[title] = (unknown[title] || 0) + 1; return; }
+        mapped++;
+        var rec = { table: marg ? 'M' : 'A', crimeText: crime, extraText: [row[si] || '', row[di] || '', row[pi] || ''].join(' ') };
+        var res = ENG.classify(rec, null, learned);
+        if (res.head === fh) return;
+        var sec = ENG.parseSections(crime), secs = [];
+        sec.order.forEach(function (n) { var sb = sec.nums[n].filter(function (x, i, a) { return a.indexOf(x) === i; }); if (sb.length) sb.forEach(function (x) { secs.push(n + ':' + x); }); else secs.push(n); });
+        var acts = Object.keys(ENG.acts(ENG.norm(crime))).filter(function (a) { return a !== 'IPC'; });
+        var cu = U(crime), nm = cu.match(/(\d+)\s*\/\s*(\d{2,4})/);
+        out.push({ month: mo ? mo.mm + '/' + mo.yyyy : '', ps: PSN[U(row[psi]).replace(/\s|उघड/g, '')] || '', no: nm ? String(+nm[1]) : '', crime: cu.slice(0, 120), finalHead: fh, appHead: res.head || 'अवर्गीकृत', secs: secs, act: acts[0] || '', table: marg ? 'M' : 'A' });
+      });
+    });
+  });
+  return { rows: out, total: total, mapped: mapped, unknownTitles: unknown };
+}
 /* ---------------- API: इतिहास – जुने विभाग B Part (head-wise) वाचून महिन्याचा सारांश ---------------- */
 // files: [{name,b64}] -> [{key, month, rows:[{ps, head, det}]}]
 function api_histImport(files) {
   var PSN = { 'बेला': 'bela', 'बोरी': 'bori', 'बुटीबोरी': 'bori', 'एमआयडीसी': 'midc' };
-  var U = function (x) { return KD.convert(ENG.norm(x || '')).replace(/\s+/g, ' ').trim(); };
+  var U = function (x) { return KD.convert(String(x || '').replace(/[¼]/g, '(').replace(/[½]/g, ')')).replace(/\s+/g, ' ').trim(); };
   return files.map(function (f) {
     var blob = Utilities.newBlob(Utilities.base64Decode(f.b64), 'application/zip', f.name);
     var parts = Utilities.unzip(blob);

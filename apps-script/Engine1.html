@@ -96,7 +96,7 @@ window.BPS_PWA = true;
 
   /* ---------------- google.script.run stand-in ---------------- */
   async function prepare(fn, args) {
-    if (fn !== 'api_process' && fn !== 'api_histImport') return;
+    if (fn !== 'api_process' && fn !== 'api_histImport' && fn !== 'api_finalCompare') return;
     for (var i = 0; i < args[0].length; i++) {
       var f = args[0][i];
       if (!f.b64) continue;

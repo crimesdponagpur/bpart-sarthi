@@ -327,6 +327,16 @@ nav.tabs .navh{display:none}
 .tblv th:first-child,.tblv td:first-child{text-align:left}
 .tblv th{color:var(--muted);font-weight:600;font-size:12px}
 body.simple .adv{display:none!important}
+.rhead{display:flex;gap:14px;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;margin-bottom:14px}
+.ropts{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:8px 12px;box-shadow:var(--shadow)}
+.ropts select{max-width:260px}
+.rcard{position:relative;padding-top:20px}
+.rcard h2{margin-left:52px;margin-top:2px}
+.rcard>p{margin-left:52px}
+.ricon{position:absolute;left:18px;top:18px;width:38px;height:38px;border-radius:11px;display:grid;place-items:center;font-weight:800;font-size:17px;background:var(--brandSoft);color:var(--brand2)}
+.btn.ghost{color:var(--brand2);font-weight:600}
+.btn.ghost:hover{background:var(--brandSoft)}
+@media (max-width:600px){.rcard h2,.rcard>p{margin-left:48px}}
 </style>
 </head>
 <body>
@@ -357,21 +367,18 @@ body.simple .adv{display:none!important}
 <div class="steps" id="steps">
   <button data-s="files" id="stp1"><i>1</i><span>फाईल्स<small id="stpT1">निवडा</small></span></button><span class="ln" id="ln1"></span>
   <button data-s="queue" id="stp2"><i>2</i><span>तपासा<small id="stpT2">—</small></span></button><span class="ln" id="ln2"></span>
-  <button data-s="download" id="stp3"><i>3</i><span>Word<small id="stpT3">बनवा</small></span></button>
+  <button data-s="reports" id="stp3"><i>3</i><span>अहवाल<small id="stpT3">बनवा</small></span></button>
 </div>
 <nav class="tabs" id="tabs">
   <button data-v="home" class="on">मुख्य</button>
-  <button data-v="dash" class="adv">डॅशबोर्ड</button>
   <button data-v="files">फाईल्स</button>
   <button data-v="queue">तपासणी रांग <span class="n hide" id="qN"></span></button>
   <button data-v="review">वर्गीकरण <span class="n hide" id="uncN"></span></button>
-  <button data-v="hbt" class="adv">HBT तपशील</button>
-  <button data-v="preview">पूर्वावलोकन</button>
-  <button data-v="download">Word डाउनलोड</button>
-  <button data-v="archive" class="adv">संग्रह</button>
-  <button data-v="reports" class="adv">अहवाल</button>
-  <button data-v="typing" class="adv">टायपिंग</button>
+  <button data-v="reports">अहवाल</button>
+  <button data-v="archive">संग्रह</button>
   <button data-v="rules">नियम व सेटिंग</button>
+  <button data-v="dash" class="adv">डॅशबोर्ड</button>
+  <button data-v="typing" class="adv">टायपिंग</button>
 </nav>
 <main>
   <!-- HOME -->
@@ -382,12 +389,13 @@ body.simple .adv{display:none!important}
       <button class="btn" id="heroBtn">सुरू करा →</button>
     </div>
     <div id="draftBox"></div>
+    <div id="skipBox"></div>
     <div id="arcHome" class="adv"></div>
     <div id="bkBanner"></div>
     <div class="tiles" id="tiles"></div>
     <div class="card"><h2>PS कडून फाईल्स</h2><div id="psHome"></div></div>
     <div class="card">
-      <h2>दिसणे <span class="small muted appver" style="font-weight:400;margin-left:auto">आवृत्ती: 13-11-2026 (2)</span></h2>
+      <h2>दिसणे <span class="small muted appver" style="font-weight:400;margin-left:auto">आवृत्ती: 13-11-2026 (3)</span></h2>
       <div class="row" style="gap:18px">
         <div><div class="small muted" style="margin-bottom:4px">अक्षरांचा आकार</div><div class="seg" id="segFs"><button data-fs="1">अ</button><button data-fs="1.15" style="font-size:1.1em">अ</button><button data-fs="1.3" style="font-size:1.25em">अ</button></div></div>
         <div><div class="small muted" style="margin-bottom:4px">रंगसंगती</div><div class="seg" id="segTh"><button data-th="auto">आपोआप</button><button data-th="light">उजळ</button><button data-th="dark">गडद</button></div></div>
@@ -501,6 +509,7 @@ body.simple .adv{display:none!important}
 
   <!-- HBT -->
   <section id="v-hbt" class="hide">
+    <div class="row" style="margin-bottom:8px"><button class="btn sm ghost" data-go="reports">← अहवाल</button></div>
     <div class="card small muted" style="margin-bottom:12px">घरफोडी, चोरी, दुखापत गुन्ह्यांचे तपशील इथे भरा/तपासा. चोरीस गेलेला माल रकान्यात नसल्यास हकिगतीतून आपोआप घेतला जातो. हे तपशील HBT यादीत आणि विभाग B Part च्या चोरी/घरफोडी तक्त्यातही वापरले जातात.</div>
     <div id="hbtBody"></div>
   </section>
@@ -509,6 +518,7 @@ body.simple .adv{display:none!important}
   <section id="v-preview" class="hide">
     <div class="card">
       <div class="row">
+        <button class="btn sm ghost" data-go="reports">← अहवाल</button>
         <b>विभाग B Part – head नुसार</b>
         <div style="flex:1"></div>
         <select id="pvFull"><option value="0">हकिगत: संक्षिप्त</option><option value="1">हकिगत: पूर्ण</option></select>
@@ -520,43 +530,44 @@ body.simple .adv{display:none!important}
     <div id="pvBody"></div>
   </section>
 
-  <!-- DOWNLOAD -->
-  <section id="v-download" class="hide">
-    <div class="card">
-      <div class="row">
+  <!-- REPORTS (अहवाल) -->
+  <section id="v-reports" class="hide">
+    <div class="rhead">
+      <div><h2 style="margin:0;font-size:22px;font-weight:700">अहवाल</h2><div class="small muted" id="divSum">—</div></div>
+      <div class="row ropts">
         <b>हकिगत:</b>
         <select id="dlFull"><option value="0">संक्षिप्त (साचेबद्ध वाक्ये काढून, माहिती तीच)</option><option value="1">पूर्ण (जशी PS ने दिली तशी)</option></select>
         <b style="margin-left:8px">कागद:</b>
         <select id="dlPaper"><option value="a4">A4 (आडवा)</option><option value="legal">Legal (आडवा)</option></select>
       </div>
-      <p class="muted small" id="divSum" style="margin-bottom:0"></p>
     </div>
     <div class="dlgrid">
-      <div class="card">
-        <h2>विभाग B Part</h2>
+      <div class="card rcard">
+        <div class="ricon">B</div>
+        <h2>विभाग B Part <span class="small muted" style="font-weight:400">head नुसार</span></h2>
+        <p class="muted small" style="margin-top:0">तिन्ही PS चे गुन्हे head-wise, प्रत्येक head नवीन पानावर.</p>
         <div class="row">
           <button class="btn pri" data-gen="division:0">Unicode Word</button>
           <button class="btn" data-gen="division:1">Kruti Dev Word</button>
+          <button class="btn ghost" data-go="preview">पूर्वावलोकन →</button>
         </div>
         <div class="dl-res" id="res-division"></div>
       </div>
-      <div class="card adv">
+      <div class="card rcard">
+        <div class="ricon" style="background:var(--accentSoft);color:var(--accent)">H</div>
         <h2>HBT, THEFT, HURT यादी</h2>
         <p class="muted small" style="margin-top:0" id="hbtSum"></p>
         <div class="row">
           <button class="btn pri" data-gen="hbt:0">Unicode Word</button>
           <button class="btn" data-gen="hbt:1">Kruti Dev Word</button>
+          <button class="btn ghost" data-go="hbt">तपशील भरा / तपासा →</button>
         </div>
         <div class="dl-res" id="res-hbt"></div>
       </div>
     </div>
     <p class="muted small"><span class="gdrive">फाईल्स Drive मध्ये "B-Part App Output" फोल्डरमध्येही जतन होतात. </span>Unicode: Mangal फॉन्ट · Kruti Dev: Kruti Dev 010 (इंग्रजी अक्षरे/क्रमांक Times New Roman).</p>
-  </section>
-
-  <!-- REPORTS -->
-  <section id="v-reports" class="hide">
     <div class="card">
-      <h2>मासिक अहवाल</h2>
+      <h2>इतर मासिक अहवाल</h2>
       <p class="muted small" style="margin-top:0">वर्गीकरण झाल्यावर प्रत्येक अहवाल "पहा" ने app मध्ये दिसतो, आणि Word / PDF (Unicode) मध्ये download होतो. आकडे चुकीचे वाटल्यास वर्गीकरण टॅबमध्ये त्या गुन्ह्याच्या "तपशील" मध्ये उघड / प्रकार बदला.</p>
       <div class="list" id="ahList"></div>
       <div class="dl-res" id="res-ahwal"></div>
@@ -566,7 +577,7 @@ body.simple .adv{display:none!important}
       <div id="ahPrev" class="ahprev" style="margin-top:10px;overflow:auto"></div>
     </div>
     <div class="card">
-      <h2>त्रुटी / माहिती राहिलेली यादी <span class="count" id="warnCount">0</span></h2>
+      <h2>त्रुटी यादी व PS ला दुरुस्तीसाठी पाठवा <span class="count" id="warnCount">0</span></h2>
       <div id="warnList" class="list"></div>
       <div class="row" style="margin-top:10px"><button class="btn sm" id="copyWarn">यादी कॉपी</button></div>
       <div class="small muted" style="margin-top:12px">PS ला दुरुस्तीसाठी पाठवा (WhatsApp / शेअर):</div>
@@ -609,9 +620,15 @@ body.simple .adv{display:none!important}
   <!-- RULES -->
   <section id="v-rules" class="hide">
     <div class="card">
-      <h2>App पद्धत <span class="small muted appver" style="font-weight:400;margin-left:auto">आवृत्ती: 13-11-2026 (2)</span></h2>
+      <h2>App पद्धत <span class="small muted appver" style="font-weight:400;margin-left:auto">आवृत्ती: 13-11-2026 (3)</span></h2>
       <div class="seg" id="segMode"><button data-mode="simple">साधी (फक्त B Part)</button><button data-mode="full">सर्व साधने</button></div>
-      <p class="muted small" style="margin-bottom:0">साधी पद्धत: फाईल्स → तपासणी → head-wise Word एवढेच दिसते. "सर्व साधने" निवडल्यास डॅशबोर्ड, HBT यादी, अहवाल, संग्रह, टायपिंग परत दिसतात.</p>
+      <p class="muted small" style="margin-bottom:0">साधी पद्धत: मुख्य काम (फाईल्स → तपासणी → अहवाल) एवढेच. "सर्व साधने" निवडल्यास डॅशबोर्ड व टायपिंग ही अतिरिक्त साधने दिसतात.</p>
+    </div>
+    <div class="card">
+      <h2>अंतिम विभाग B Part वरून शिका</h2>
+      <p class="muted small" style="margin-top:0">तुम्ही हाताने तपासून पाठवलेली <b>अंतिम विभाग B Part</b> (.docx, एक किंवा अनेक महिने) निवडा. app प्रत्येक गुन्ह्याचा तुमचा head आणि app चा head जुळवून पाहील. जिथे फरक आहे ते खाली दिसेल – निवडलेल्यांसाठी नियम शिकला जाईल आणि पुढच्या महिन्यापासून तसाच head लागेल. चालू महिन्याच्या नोंदी उघड्या असतील तर त्यांनाही तो head लागतो.</p>
+      <div class="row"><label class="btn pri" style="cursor:pointer">अंतिम विभाग B Part निवडा<input type="file" id="finalIn" accept=".docx" multiple hidden></label><span class="small muted" id="finalInfo"></span></div>
+      <div id="finalBox" style="margin-top:10px"></div>
     </div>
     <div class="card">
       <h2>शिकलेले नियम <span class="count" id="ruleN">0</span></h2>
@@ -742,7 +759,7 @@ window.BPS_PWA = true;
 
   /* ---------------- google.script.run stand-in ---------------- */
   async function prepare(fn, args) {
-    if (fn !== 'api_process' && fn !== 'api_histImport') return;
+    if (fn !== 'api_process' && fn !== 'api_histImport' && fn !== 'api_finalCompare') return;
     for (var i = 0; i < args[0].length; i++) {
       var f = args[0][i];
       if (!f.b64) continue;
@@ -1560,6 +1577,7 @@ var TEXT = (function () {
     if (e <= 0 || e > 900) return t;
     return (t.slice(0, start) + ' ' + rest.slice(e)).replace(/\s{2,}/g, ' ');
   }
+
   function tplHakikat(head, crimeU, detU) {
     var t = (detU || '').replace(/\s+/g, ' ').replace(/ध-/g, '/-');
     if (!t || !head) return '';
@@ -1966,7 +1984,22 @@ var CORE = (function () {
     });
     return recs;
   }
-  return { parseDocumentXml: parseDocumentXml, defaultIsLegacy: defaultIsLegacy, detectPs: detectPs, detectMonth: detectMonth, extractRecords: extractRecords, classifyAll: classifyAll, tableType: tableType };
+  // table rows that look like a crime entry but were not read (so nothing goes missing silently)
+  function skippedRows(parsed, recs) {
+    var got = {}, out = [];
+    recs.forEach(function (r) { var m = String(r.id).match(/:(\d+):(\d+)$/); if (m) got[m[1] + ':' + m[2]] = 1; });
+    parsed.tables.forEach(function (t, ti) {
+      t.rows.forEach(function (row, ri) {
+        if (!ri || got[ti + ':' + ri]) return;
+        var txt = row.join(' ');
+        if (!/\d/.test(txt) || !row.some(function (c) { return c.length > 60; })) return;
+        var cell = function (i) { try { return KD.convert(row[i] || '').replace(/\s+/g, ' ').trim().slice(0, 70); } catch (e) { return ''; } };
+        out.push({ table: ti + 1, row: ri, text: [cell(1), cell(2)].filter(function (x) { return x; }).join(' | ') });
+      });
+    });
+    return out;
+  }
+  return { parseDocumentXml: parseDocumentXml, defaultIsLegacy: defaultIsLegacy, detectPs: detectPs, detectMonth: detectMonth, extractRecords: extractRecords, classifyAll: classifyAll, tableType: tableType, skippedRows: skippedRows };
 })();
 if (typeof module !== 'undefined') module.exports = CORE;
 
@@ -1980,10 +2013,150 @@ var REPORT = (function () {
   function esc(s) { return String(s == null ? '' : s).replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
   // ---- conversion with user fixes ----
+
+  /* PS च्या मजकुरातील नेहमीच्या शब्दलेखन चुका (फक्त पूर्ण शब्द) व Kruti Dev टायपिंगमुळे उलटलेल्या मात्रा */
+  var SPELL = [
+    ['गून्हा', 'गुन्हा'],
+    ['गूनहा', 'गुन्हा'],
+    ['गुनहा', 'गुन्हा'],
+    ['गुंन्हा', 'गुन्हा'],
+    ['गून्हां', 'गुन्हा'],
+    ['गून्हयाचा', 'गुन्ह्याचा'],
+    ['फीर्यादी', 'फिर्यादी'],
+    ['फिर्यादि', 'फिर्यादी'],
+    ['फीर्यादीचे', 'फिर्यादीचे'],
+    ['फिर्यादिचे', 'फिर्यादीचे'],
+    ['फीर्यादीने', 'फिर्यादीने'],
+    ['फिर्यादिने', 'फिर्यादीने'],
+    ['फीर्यादीच्या', 'फिर्यादीच्या'],
+    ['ठीकानी', 'ठिकाणी'],
+    ['ठिकानी', 'ठिकाणी'],
+    ['ठीकाणी', 'ठिकाणी'],
+    ['ठिकणी', 'ठिकाणी'],
+    ['ठीकनी', 'ठिकाणी'],
+    ['ठीकाणी', 'ठिकाणी'],
+    ['नोद', 'नोंद'],
+    ['हकीकत', 'हकिकत'],
+    ['हीकीकत', 'हकिकत'],
+    ['हिकगत', 'हकिकत'],
+    ['मीळून', 'मिळून'],
+    ['मिळुन', 'मिळून'],
+    ['मीळुन', 'मिळून'],
+    ['मींळून', 'मिळून'],
+    ['मिळुण', 'मिळून'],
+    ['अल्याने', 'आल्याने'],
+    ['करुन', 'करून'],
+    ['करूण', 'करून'],
+    ['वरुन', 'वरून'],
+    ['वरूण', 'वरून'],
+    ['वर्श', 'वर्ष'],
+    ['वर्शे', 'वर्षे'],
+    ['अषा', 'अशा'],
+    ['एकुन', 'एकूण'],
+    ['एकुण', 'एकूण'],
+    ['एकून', 'एकूण'],
+    ['घटणा', 'घटना'],
+    ['वाहण', 'वाहन'],
+    ['सुचणापत्र', 'सूचनापत्र'],
+    ['सुचनापत्र', 'सूचनापत्र'],
+    ['सुचणापत्रावर', 'सूचनापत्रावर'],
+    ['सुचनापत्रावर', 'सूचनापत्रावर'],
+    ['सुचना', 'सूचना'],
+    ['कीमी', 'किमी'],
+    ['किमि', 'किमी'],
+    ['कीमती', 'किंमती'],
+    ['किमती', 'किंमती'],
+    ['किमंती', 'किंमती'],
+    ['कीमत', 'किंमत'],
+    ['किमत', 'किंमत'],
+    ['नीर्मान', 'निर्माण'],
+    ['निर्मान', 'निर्माण'],
+    ['नीर्माण', 'निर्माण'],
+    ['पुर्व', 'पूर्व'],
+    ['पश्चीम', 'पश्चिम'],
+    ['पष्चिम', 'पश्चिम'],
+    ['दक्षीण', 'दक्षिण'],
+    ['दक्षीन', 'दक्षिण'],
+    ['दक्षिन', 'दक्षिण'],
+    ['प्रत्येकि', 'प्रत्येकी'],
+    ['प्रमाने', 'प्रमाणे'],
+    ['रीपोर्ट', 'रिपोर्ट'],
+    ['रिपोट्र', 'रिपोर्ट'],
+    ['रीपोट्र', 'रिपोर्ट'],
+    ['पचासमक्ष', 'पंचासमक्ष'],
+    ['पंचांसमक्ष', 'पंचासमक्ष'],
+    ['देशि', 'देशी'],
+    ['देषी', 'देशी'],
+    ['देषि', 'देशी'],
+    ['ताब्यातुन', 'ताब्यातून'],
+    ['सार्वजनीक', 'सार्वजनिक'],
+    ['कींवा', 'किंवा'],
+    ['वीनापरवाना', 'विनापरवाना'],
+    ['कोनतेही', 'कोणतेही'],
+    ['विरूध्द', 'विरुद्ध'],
+    ['विरुध्द', 'विरुद्ध'],
+    ['विरूद्ध', 'विरुद्ध'],
+    ['स्थीतीत', 'स्थितीत'],
+    ['चालवीतांना', 'चालविताना'],
+    ['चालवितांना', 'चालविताना'],
+    ['प्रमान', 'प्रमाण'],
+    ['रूपये', 'रुपये'],
+    ['षाखा', 'शाखा'],
+    ['षीवार', 'शिवार'],
+    ['शीवार', 'शिवार'],
+    ['षिवार', 'शिवार'],
+    ['जील्हा', 'जिल्हा'],
+    ['करीता', 'करिता'],
+    ['नषेत', 'नशेत'],
+    ['तपासनी', 'तपासणी'],
+    ['हिगणा', 'हिंगणा'],
+    ['हींगना', 'हिंगणा'],
+    ['हिंगना', 'हिंगणा'],
+    ['हीगना', 'हिंगणा'],
+    ['नागपुर', 'नागपूर'],
+    ['बूटीबोरी', 'बुटीबोरी'],
+    ['बुटिबोरी', 'बुटीबोरी'],
+    ['कपंनी', 'कंपनी'],
+    ['कंपणी', 'कंपनी'],
+    ['कपनी', 'कंपनी'],
+    ['नापोषि', 'नापोशि'],
+    ['पोषी', 'पोशि'],
+    ['पोषि', 'पोशि'],
+    ['पोशी', 'पोशि'],
+    ['नगदि', 'नगदी'],
+    ['पोलिस', 'पोलीस'],
+    ['पोउपनि', 'पोउपनी'],
+    ['जील्हयात', 'जिल्ह्यात'],
+    ['अनोळखि', 'अनोळखी'],
+    ['अनोळखीत', 'अनोळखी'],
+    ['ईसम', 'इसम'],
+    ['ईसमाने', 'इसमाने'],
+    ['ईसमांनी', 'इसमांनी'],
+    ['दरम्याण', 'दरम्यान'],
+    ['दरम्याने', 'दरम्यान'],
+    ['तक्ररी', 'तक्रारी'],
+    ['सोण्याचे', 'सोन्याचे'],
+    ['सोण्याची', 'सोन्याची'],
+    ['सोण्याचा', 'सोन्याचा'],
+    ['सोण्याच्या', 'सोन्याच्या'],
+    ['दागीने', 'दागिने'],
+    ['चादींच्या', 'चांदीच्या'],
+    ['चादिंचा', 'चांदीचा'],
+    ['मोटर', 'मोटार'],
+    ['गाडि', 'गाडी']
+  ];
+  SPELL.push(['पोंहवा', 'पोहवा'], ['आरोंपी', 'आरोपी'], ['बोंरी', 'बोरी'], ['आहें', 'आहे'], ['प्रकारें', 'प्रकारे'], ['प्राकरे', 'प्रकारे'], ['पकारे', 'प्रकारे'], ['रपकारे', 'प्रकारे'], ['पोस्टें', 'पोस्टे'], ['पोलींस', 'पोलीस'], ['नमंुद', 'नमुद'], ['नंमुद', 'नमुद'], ['याचें', 'याचे'], ['त्याचें', 'त्याचे'], ['असें', 'असे']);
+  var SPELL_MAP = {}; SPELL.forEach(function (p) { SPELL_MAP[p[0]] = p[1]; });
+  function spell(u) {
+    u = u.replace(/ेा/g, 'ो').replace(/ाे/g, 'ो').replace(/ांे|ाें|ेां/g, 'ों').replace(/ंे/g, 'ें').replace(/ंु/g, 'ुं').replace(/ंि/g, 'िं').replace(/ं{2,}/g, 'ं').replace(/्र्र/g, '्र')
+      .replace(/(^|[^ऀ-ॿ])्र([क-ह])/g, '$1$2्र').replace(/(^|[\s(])ं([क-ह])/g, '$1$2ं');
+    return u.replace(/[ऀ-ॿ]+/g, function (w) { return SPELL_MAP[w] || w; }).replace(/तोडी\s+रिपोर्ट|तोडि\s+रिपोर्ट|तोंडि\s+रिपोर्ट/g, 'तोंडी रिपोर्ट');
+  }
   function makeConv(fixes) {
     fixes = fixes || [];
     return function (s) {
-      var u = KD.convert(s || '');
+      var raw = String(s || '').replace(/(^|[^A-Za-z\u0001])((?:MH|MP|CG|TS|GJ|NL|UP|RJ|HR|DL|AP|KA|TN|WB|OD|OR|JH|BR|PB|CH|HP)\s?[-.]?\s?\d{1,2}\s?[-.]?\s?[A-Z]{0,3}\s?[-.]?\s?\d{3,4})(?![A-Za-z0-9])/g, function (m0, a, v) { return a + '\u0001' + v.replace(/\s*[-.]\s*/g, ' ').replace(/\s{2,}/g, ' ') + '\u0002'; });
+      var u = spell(KD.convert(raw));
       for (var i = 0; i < fixes.length; i++) if (fixes[i].from) u = u.split(fixes[i].from).join(fixes[i].to || '');
       u = u.replace(/([0-9०-९])ए(?=[0-9०-९]{3})/g, '$1,').replace(/([0-9०-९])ध्-/g, '$1/-');
       return u.replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
@@ -3197,7 +3370,7 @@ function api_process(files) {
     var mo = CORE.detectMonth(parsed.paras);
     if (mo && !month) month = mo.mm + '/' + mo.yyyy;
     var recs = CORE.extractRecords(parsed, ps, f.name);
-    info.push({ name: f.name, ps: ps, count: recs.length, tables: parsed.tables.length });
+    info.push({ name: f.name, ps: ps, count: recs.length, tables: parsed.tables.length, skipped: CORE.skippedRows(parsed, recs).slice(0, 30) });
     all = all.concat(recs);
   });
   // the month in the PS file heading is sometimes typed wrong: trust the filing dates when most agree
@@ -3327,11 +3500,116 @@ function test_converter() {
   Logger.log(KD.convert('?kVukLFkG'));          // घटनास्थळ
 }
 
+
+/* ---------------- API: अंतिम विभाग B Part वरून शिकणे ---------------- */
+// विभागाच्या head शीर्षकांचे (जुने/नवे लेखन) app head मध्ये रूपांतर
+var TITLE_MAP = [
+    [/मा[हि]ी?ती\s*तं|आयटी\s*(?:ॲक्ट|अॅक्ट)/, 'माहिती तंत्रज्ञान'], [/रॅगिंग|छळवाद/, 'महाराष्ट्र छळवाद'], [/भ्रष्टाचार|भ्रश्टाचार|लाचलुचपत/, 'भ्रष्टाचार'], [/स्नॅचिंग|स्नैचिंग/, 'चोरी'], [/दंगा/, 'दंगल'], [/जादुटोना|इतर\s*एस\s*एल\s*एल/, 'इतर एसएलएल'], [/पशु\s*संरक्षण/, 'महाराष्ट्र प्राणी संरक्षण'], [/निवडणुक/, 'निवडणुकीशी'], [/अपव्यापार|मानवी\s*तस्करी/, 'मानवी तस्करी'], [/^इतर\s*भादवि|^कलम\s*(?:291|217|112|188|298)/, 'इतर बीएनएस'],
+    [/मर्ग/, 'मर्ग'],
+    [/दारू/, 'महाराष्ट्र दारूबंदी'],
+    [/जुगार/, 'महाराष्ट्र जुगार'],
+    [/आर्म/, 'आर्म'],
+    [/अत्यावश्यक|जि?वनावश्यक|जीवनावश्यक/, 'जिवनावश्यक'],
+    [/वेठबिगारी|बाल\s*मजुरी/, 'वेठबिगारी'],
+    [/माहिती तंत्रज्ञान/, 'माहिती तंत्रज्ञान'],
+    [/प्राणी संरक्षण|प्राणीवधा|गोवंश/, 'महाराष्ट्र प्राणी संरक्षण'],
+    [/प्राणि?ी?वाका|प्राण्यांना/, 'प्राण्यांना'],
+    [/मपोका|पोलीस अधिनियम|122/, 'महाराष्ट्र पोलीस'],
+    [/मोवाका\s*1988|मोटार वाहन कायदा|मोटर वाहन कायदा/, 'मोटार वाहन'],
+    [/हुंडाबळी/, 'हुंडाबळी'],
+    [/सदोष मनुष्यवधाचा/, 'सदोष मनुष्यवधाचा'],
+    [/सदोष मनुष्यवध/, 'सदोष'],
+    [/खुनाचा प्रयत्न/, 'खुनाचा'],
+    [/खुन|खून/, 'खून कलम'],
+    [/आत्मह/, 'आत्महत्येस'],
+    [/निष्काळजी|304\s*A/, 'निष्काळजीपणाने'],
+    [/(बलात्कार|जबरी संभोग).*(पोक्सो|अवयस्क|अल्पवयीन)/, 'बलात्कार अल्पवयीन'],
+    [/बलात्कार|जबरी संभोग/, 'बलात्कार वयस्क'],
+    [/विनयभंग.*(पोक्सो|अवयस्क|अल्पवयीन)/, 'विनयभंग अल्पवयीन'],
+    [/विनयभंग/, 'विनयभंग वयस्क'],
+    [/कलम 79/, 'स्त्रीच्या नम्रतेचा'],
+    [/पळव/, 'पळवून नेणे'],
+    [/338/, '338'],
+    [/337/, '337'],
+    [/336|279/, '336'],
+    [/285|283/, 'कलम 285'],
+    [/घरफोडी.*रात्री|रात्री.*घरफोडी/, 'घरफोडी रात्री'],
+    [/घरफोडी/, 'घरफोडी दिवसा'],
+    [/जबरी चोरी/, 'जबरी'],
+    [/दरोडा/, 'दरोडा'],
+    [/चोरी|चारी/, 'चोरी'],
+    [/विश्वासघात/, 'विश्वासघात'],
+    [/फसवणुक|फसवणूक/, 'फसवणूक'],
+    [/अश्लि?ी?ल शिवी|296|294 भादवि/, 'अश्लिल'],
+    [/दुखापत/, 'दुखापत'],
+    [/85 बीएनएस|498/, 'पती'],
+    [/मंडळी|बेकायदेशीर सभा|189/, 'बेकायदेशीर सभा'],
+    [/दंगल/, 'दंगल'],
+    [/धार्मिक|299/, 'धर्माशी'],
+    [/आगळीक|अपकि्रया|अपक्रिया|गैरप्रकार|32[4-6] बीएनएस/, 'गैरप्रकार'],
+    [/अतिक्रमण|अतीक्रमण|452|333/, 'फौजदारी अतिक्रमण'],
+    [/पर्यावरण/, 'पर्यावरण'],
+    [/वि.?ुत|भाविका/, 'विद्युत'],
+    [/सार्वजनिक संपत्ती|सार्वजनिक मालमत्ता/, 'सार्वजनिक मालमत्ता'],
+    [/अ-जा-ज|अत्याचार/, 'अनुसूचित'],
+    [/मुलांची काळजी|बाल न्याय/, 'बाल न्याय'],
+    [/बालविवाह/, 'बालविवाह'],
+    [/खंडणी/, 'खंडणी']
+];
+function titleHead_(title, heads) {
+  var t = String(title || '').replace(/\(\s*\d+\s*\)\s*$/, '').replace(/\s+/g, ' ').trim();
+  if (!t) return '';
+  for (var i = 0; i < heads.length; i++) if (heads[i] === t) return heads[i];
+  for (i = 0; i < TITLE_MAP.length; i++) if (TITLE_MAP[i][0].test(t)) { var p = TITLE_MAP[i][1]; for (var j = 0; j < heads.length; j++) if (heads[j].indexOf(p) === 0) return heads[j]; }
+  var tok = function (x) { return x.replace(/[(),.\-\/]/g, ' ').split(/\s+/).filter(function (w) { return w && !/^(कलम|बीएनएस|व|ते)$/.test(w); }); };
+  var tt = tok(t), best = '', bs = 0;
+  heads.forEach(function (h) { var ht = tok(h), c = tt.filter(function (w) { return ht.indexOf(w) >= 0; }).length / Math.max(tt.length, 1); if (c > bs) { bs = c; best = h; } });
+  return bs >= 0.6 ? best : '';
+}
+// files: [{name,b64}] -> {rows:[{key, ps, no, crime, finalHead, appHead, secs, act, table}], total, mapped, unknownTitles}
+function api_finalCompare(files) {
+  var PSN = { 'बेला': 'bela', 'बोरी': 'bori', 'बुटीबोरी': 'bori', 'एमआयडीसी': 'midc' };
+  var U = function (x) { return KD.convert(String(x || '').replace(/[¼]/g, '(').replace(/[½]/g, ')')).replace(/\s+/g, ' ').trim(); };
+  var heads = getHeads_(), learned = getRules_(), out = [], total = 0, mapped = 0, unknown = {};
+  files.forEach(function (f) {
+    var blob = Utilities.newBlob(Utilities.base64Decode(f.b64), 'application/zip', f.name);
+    var parts = Utilities.unzip(blob);
+    var docPart = parts.filter(function (b) { return b.getName() === 'word/document.xml'; })[0];
+    if (!docPart) throw new Error(f.name + ': Word document सापडला नाही.');
+    var stylesPart = parts.filter(function (b) { return b.getName() === 'word/styles.xml'; })[0];
+    var parsed = CORE.parseDocumentXml(docPart.getDataAsString('UTF-8'), CORE.defaultIsLegacy(stylesPart ? stylesPart.getDataAsString('UTF-8') : ''));
+    var mo = CORE.detectMonth(parsed.paras.map(U));
+    parsed.tables.forEach(function (t) {
+      if (t.rows.length < 2) return;
+      var hdr = t.rows[0].map(U), hj = hdr.join('|');
+      var ci = -1; hdr.forEach(function (h, i) { if (ci < 0 && /अप.*क्र|मर्ग.*क्र|कलम/.test(h)) ci = i; });
+      if (ci < 0) return;
+      var pick = function (re) { for (var i = 0; i < hdr.length; i++) if (re.test(hdr[i])) return i; return -1; };
+      var psi = pick(/पोस्टे|पो.स्टे/), di = pick(/हकि?ी?कत|हकीगत|विवरण|कारण/), pi = pick(/फिर्यादी/), si = pick(/चोरीस/);
+      var marg = /मर्ग/.test(hj), title = U(t.prev.slice(-1)[0] || ''), fh = titleHead_(title, heads);
+      t.rows.slice(1).forEach(function (row) {
+        var crime = row[ci] || ''; if (!/\d/.test(crime)) return;
+        total++;
+        if (!fh) { unknown[title] = (unknown[title] || 0) + 1; return; }
+        mapped++;
+        var rec = { table: marg ? 'M' : 'A', crimeText: crime, extraText: [row[si] || '', row[di] || '', row[pi] || ''].join(' ') };
+        var res = ENG.classify(rec, null, learned);
+        if (res.head === fh) return;
+        var sec = ENG.parseSections(crime), secs = [];
+        sec.order.forEach(function (n) { var sb = sec.nums[n].filter(function (x, i, a) { return a.indexOf(x) === i; }); if (sb.length) sb.forEach(function (x) { secs.push(n + ':' + x); }); else secs.push(n); });
+        var acts = Object.keys(ENG.acts(ENG.norm(crime))).filter(function (a) { return a !== 'IPC'; });
+        var cu = U(crime), nm = cu.match(/(\d+)\s*\/\s*(\d{2,4})/);
+        out.push({ month: mo ? mo.mm + '/' + mo.yyyy : '', ps: PSN[U(row[psi]).replace(/\s|उघड/g, '')] || '', no: nm ? String(+nm[1]) : '', crime: cu.slice(0, 120), finalHead: fh, appHead: res.head || 'अवर्गीकृत', secs: secs, act: acts[0] || '', table: marg ? 'M' : 'A' });
+      });
+    });
+  });
+  return { rows: out, total: total, mapped: mapped, unknownTitles: unknown };
+}
 /* ---------------- API: इतिहास – जुने विभाग B Part (head-wise) वाचून महिन्याचा सारांश ---------------- */
 // files: [{name,b64}] -> [{key, month, rows:[{ps, head, det}]}]
 function api_histImport(files) {
   var PSN = { 'बेला': 'bela', 'बोरी': 'bori', 'बुटीबोरी': 'bori', 'एमआयडीसी': 'midc' };
-  var U = function (x) { return KD.convert(ENG.norm(x || '')).replace(/\s+/g, ' ').trim(); };
+  var U = function (x) { return KD.convert(String(x || '').replace(/[¼]/g, '(').replace(/[½]/g, ')')).replace(/\s+/g, ' ').trim(); };
   return files.map(function (f) {
     var blob = Utilities.newBlob(Utilities.base64Decode(f.b64), 'application/zip', f.name);
     var parts = Utilities.unzip(blob);
@@ -3411,16 +3689,18 @@ function copyText(t) {
 function warnsOf(r) { try { return TEXT.validate(r); } catch (e) { return []; } }
 
 /* ---------- tabs ---------- */
-var VIEWS = ['home', 'dash', 'files', 'queue', 'review', 'hbt', 'preview', 'download', 'archive', 'reports', 'typing', 'rules'];
+var VIEWS = ['home', 'dash', 'files', 'queue', 'review', 'hbt', 'preview', 'archive', 'reports', 'typing', 'rules'];
 function show(v) {
+  if (v === 'download') v = 'reports';
   S.cur = v;
   VIEWS.forEach(function (x) { $('v-' + x).classList.toggle('hide', x !== v); });
   Array.prototype.forEach.call(document.querySelectorAll('#tabs button'), function (b) { b.classList.toggle('on', b.dataset.v === v); });
   if (v === 'home') renderHome(); if (v === 'dash') renderDash(); if (v === 'files') { renderPsStatus(); updateMergeBox(); renderLog(); } if (v === 'queue') { buildQueue(); renderQueue(); }
-  if (v === 'archive') renderArchive(); if (v === 'review') renderReview(); if (v === 'hbt') renderHbt(); if (v === 'preview') renderPreview(); if (v === 'download') renderDownload(); if (v === 'reports') renderReports(); if (v === 'rules') renderRules();
+  if (v === 'archive') renderArchive(); if (v === 'review') renderReview(); if (v === 'hbt') renderHbt(); if (v === 'preview') renderPreview(); if (v === 'reports') { renderDownload(); renderReports(); } if (v === 'rules') renderRules();
   renderSteps();
   window.scrollTo(0, 0);
 }
+document.addEventListener('click', function (e) { var g = e.target.closest('[data-go]'); if (g && !g.closest('#v-home')) show(g.dataset.go); });
 $('tabs').addEventListener('click', function (e) { var b = e.target.closest('button'); if (b) show(b.dataset.v); });
 $('steps').addEventListener('click', function (e) { var b = e.target.closest('button[data-s]'); if (b) show(b.dataset.s); });
 function refreshView() { if (S.cur === 'queue') renderQueue(); else renderReview(); renderSteps(); }
@@ -3560,6 +3840,7 @@ $('procBtn').addEventListener('click', function () {
     r.files.forEach(function (f, i) { var part = r.records.slice(pos, pos + f.count); pos += f.count; if (lastF[f.ps] === i) { keepR = keepR.concat(part); keepF.push(f); } });
     if (keepF.length < r.files.length) toast('एका PS ची एकापेक्षा जास्त फाईल – फक्त शेवटची वापरली');
     r.records = keepR; r.files = keepF;
+    S.skipped = []; r.files.forEach(function (f) { (f.skipped || []).forEach(function (x) { S.skipped.push({ ps: f.ps, file: f.name, table: x.table, row: x.row, text: x.text }); }); });
     r.records.forEach(function (x) { x.hx0 = clone(x.hx); });
     if (merge && r.month && S.month && r.month !== S.month && !confirm('फाईलचा महिना ' + r.month + ' आहे, पण चालू काम ' + S.month + ' चे आहे. तरीही मिसळायचे?')) return;
     if (merge) {
@@ -3790,6 +4071,46 @@ function reclassify() {
   });
 }
 
+
+/* ---------- अंतिम विभाग B Part वरून शिकणे ---------- */
+var FINAL = null;
+function ruleSig(x) { var sx = (x.secs || []).filter(function (q) { return CHECKS.GENERIC.indexOf(q) < 0; }).sort(); return sx.length ? (x.act || '') + '|' + x.table + '|' + sx.join(',') : ''; }
+$('finalIn').addEventListener('change', function () {
+  var fl = Array.prototype.slice.call(this.files); this.value = '';
+  if (!fl.length) return;
+  busy(true, 'अंतिम फाईल तपासत आहे…');
+  Promise.all(fl.map(function (f) { return new Promise(function (res) { var rd = new FileReader(); rd.onload = function () { res({ name: f.name, b64: String(rd.result).split(',')[1] }); }; rd.readAsDataURL(f); }); }))
+    .then(function (files) { return call('api_finalCompare', files); })
+    .then(function (r) { busy(false); FINAL = r; renderFinal(); }).catch(fail);
+});
+function renderFinal() {
+  var r = FINAL; if (!r) return;
+  var cnt = {}; r.rows.forEach(function (x) { var k = ruleSig(x) + '>' + x.finalHead; cnt[k] = (cnt[k] || 0) + 1; });
+  var un = Object.keys(r.unknownTitles || {});
+  $('finalInfo').textContent = r.total + ' गुन्हे तपासले · ' + (r.mapped - r.rows.length) + ' जुळले · ' + r.rows.length + ' फरक';
+  $('finalBox').innerHTML = (r.rows.length ? '<div class="small muted" style="margin-bottom:6px">✓ असलेल्यांसाठी नियम बनेल. एकाच प्रकारचा फरक 2 किंवा अधिक वेळा आला तरच नियम आपोआप निवडलेला असतो – एखादा अपवादात्मक गुन्हा (उदा. नंतर मृत्यू झाल्याने 109 → खून) सर्वांना लागू होऊ नये म्हणून.</div><div style="overflow:auto"><table class="tblv"><tr><th>नियम?</th><th>महिना / PS / अप.क्र.</th><th>कलम</th><th>app चा head</th><th>तुमचा head</th></tr>' +
+    r.rows.map(function (x, i) { var sg = ruleSig(x), many = cnt[sg + '>' + x.finalHead] >= 2; return '<tr><td style="text-align:center"><input type="checkbox" data-fin="' + i + '"' + (sg && many ? ' checked' : '') + (sg ? '' : ' disabled title="कलम नाही"') + '></td><td>' + esc(x.month) + ' · ' + (PSU[x.ps] || '') + ' · ' + esc(x.no) + '</td><td style="text-align:left">' + esc(x.crime) + '</td><td>' + esc(x.appHead) + '</td><td><b>' + esc(x.finalHead) + '</b></td></tr>'; }).join('') +
+    '</table></div><div class="row" style="margin-top:10px"><button class="btn pri" id="finalApply">निवडलेल्यांसाठी नियम शिका</button></div>' : '<div class="small" style="color:var(--ok)">✓ सर्व गुन्ह्यांचे head तुमच्या अंतिम फाईलशी जुळतात.</div>') +
+    (un.length ? '<div class="small muted" style="margin-top:8px">ओळख न झालेली head शीर्षके (त्यातील गुन्हे तपासले नाहीत): ' + un.map(function (t) { return esc(t) + ' (' + r.unknownTitles[t] + ')'; }).join(', ') + '</div>' : '');
+  var b = $('finalApply'); if (b) b.addEventListener('click', applyFinal);
+}
+function applyFinal() {
+  var picked = Array.prototype.filter.call(document.querySelectorAll('[data-fin]'), function (c) { return c.checked; }).map(function (c) { return FINAL.rows[+c.dataset.fin]; });
+  // current month's records get the final head too
+  var nUpd = 0;
+  FINAL.rows.forEach(function (x) { S.records.forEach(function (r) { if (r.ps === x.ps && String(+r.no) === x.no && monthKey(S.month) === monthKey(x.month) && r.head !== x.finalHead) { r.head = x.finalHead; r.manual = true; r.rule = 'manual'; nUpd++; } }); });
+  var seen = {}, rules = [];
+  picked.forEach(function (x) {
+    var sg = ruleSig(x); if (!sg || seen[sg]) return; seen[sg] = 1;
+    var secs = (x.secs || []).filter(function (q) { return CHECKS.GENERIC.indexOf(q) < 0; });
+    rules.push({ head: x.finalHead, sections: secs, act: x.act || '', keywords: [], table: x.table, example: (PSU[x.ps] || '') + ' ' + x.no + ' (' + x.month + ', अंतिम फाईल)' });
+  });
+  busy(true, 'नियम शिकत आहे…');
+  rules.reduce(function (pr, rule) { return pr.then(function () { return call('api_saveRule', rule).then(function (res) { S.rules = res.rules; S.heads = res.heads; }); }); }, Promise.resolve())
+    .then(function () { return S.records.length ? reclassify() : 0; })
+    .then(function () { busy(false); S.pvDone = false; toast(rules.length + ' नियम शिकले ✓' + (nUpd ? ' · चालू महिन्यातील ' + nUpd + ' नोंदी बदलल्या' : '')); renderRules(); FINAL = null; $('finalBox').innerHTML = ''; renderSteps(); })
+    .catch(fail);
+}
 /* ---------- HBT ---------- */
 function kind(h) { if (!h) return ''; if (/घरफोडी/.test(h)) return 'H'; if (/चोरी/.test(h)) return 'T'; if (/दुखापत/.test(h)) return 'U'; return ''; }
 var HBTF = {
@@ -4163,7 +4484,7 @@ function renderHome() {
   var T, P, B, G;
   if (!n) { T = 'नमस्कार! नवीन महिना सुरू करूया'; P = 'तिन्ही PS ची B Part फाईल निवडा – बाकी काम app करेल.'; B = 'फाईल्स निवडा →'; G = 'files'; }
   else if (pend || unc) { T = pend + ' नोंदी तपासायच्या'; P = mo + ' · एकूण ' + n + ' नोंदी' + (unc ? ' · ' + unc + ' अवर्गीकृत' : ''); B = 'तपासणी रांग सुरू करा →'; G = pend ? 'queue' : 'review'; }
-  else if (!S.gen) { T = 'सर्व तपासले ✓'; P = mo + ' · ' + n + ' नोंदी तयार आहेत'; B = 'Word बनवा →'; G = 'download'; }
+  else if (!S.gen) { T = 'सर्व तपासले ✓'; P = mo + ' · ' + n + ' नोंदी तयार आहेत'; B = 'B Part Word बनवा →'; G = 'reports'; }
   else if (S.arcDirty) { T = 'Word तयार ✓ – महिना जतन करा'; P = mo + ' · जतन केले की पुढच्या महिन्यात तुलना व शोध करता येईल'; B = 'महिना जतन करा →'; G = 'archive'; }
   else { T = 'Word तयार ✓ · जतन झाले'; P = mo + ' · आता अहवाल पाहा'; B = 'अहवाल पाहा →'; G = 'reports'; }
   $('heroT').textContent = T; $('heroP').textContent = P; $('heroBtn').textContent = B; $('heroBtn').dataset.go = G;
@@ -4175,6 +4496,9 @@ function renderHome() {
   Array.prototype.forEach.call(document.querySelectorAll('#segFs button'), function (b) { b.classList.toggle('on', b.dataset.fs === (lsGet('bps_fs') || '1')); });
   Array.prototype.forEach.call(document.querySelectorAll('#segTh button'), function (b) { b.classList.toggle('on', b.dataset.th === (lsGet('bps_th') || 'auto')); });
   renderPsStatus(); homeArc();
+  var sk = S.records.length ? (S.skipped || []) : [];
+  $('skipBox').innerHTML = sk.length ? '<div class="card" style="border-color:var(--bad);background:var(--badSoft)"><h2 style="color:var(--bad)">⚠ ' + sk.length + ' ओळी app ला वाचता आल्या नाहीत</h2><p class="small" style="margin-top:0">PS फाईलमधील खालील ओळींत गुन्हा क्रमांक / कलम ओळखता आले नाही. त्या B Part मध्ये आलेल्या नाहीत – PS कडून दुरुस्त फाईल घ्या किंवा तपासा.</p><div class="list">' +
+    sk.map(function (x) { return '<div class="li"><span class="badge ps">' + (PSU[x.ps] || x.ps) + '</span><div class="tx small">तक्ता ' + x.table + ', ओळ ' + x.row + ': ' + esc(x.text || '(रिकामा गुन्हा क्र. रकाना)') + '</div></div>'; }).join('') + '</div></div>' : '';
 }
 $('heroBtn').addEventListener('click', function () { show(this.dataset.go || 'files'); });
 $('v-home').addEventListener('click', function (e) {
@@ -4196,7 +4520,7 @@ function applyMode() {
   var full = lsGet('bps_mode') === 'full';
   document.body.classList.toggle('simple', !full);
   Array.prototype.forEach.call(document.querySelectorAll('#segMode button'), function (b) { b.classList.toggle('on', b.dataset.mode === (full ? 'full' : 'simple')); });
-  if (!full && ['dash', 'hbt', 'archive', 'reports', 'typing'].indexOf(S.cur) >= 0) show('home');
+  if (!full && ['dash', 'typing'].indexOf(S.cur) >= 0) show('home');
 }
 $('segMode').addEventListener('click', function (e) { var b = e.target.closest('[data-mode]'); if (!b) return; lsSet('bps_mode', b.dataset.mode); applyMode(); toast(b.dataset.mode === 'full' ? 'सर्व साधने दाखवली' : 'साधी पद्धत'); });
 function applyLook() {
@@ -4707,8 +5031,8 @@ $('histIn').addEventListener('change', function () {
     rules: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>'
   };
   Array.prototype.forEach.call(document.querySelectorAll('#tabs button[data-v]'), function (b) { if (I[b.dataset.v]) b.insertAdjacentHTML('afterbegin', '<svg viewBox="0 0 24 24" aria-hidden="true">' + I[b.dataset.v] + '</svg>'); });
-  var sec = { home: 'काम', preview: 'निकाल', archive: 'साधने' };
-  document.getElementById('tabs').insertAdjacentHTML('beforeend', '<div class="navh" style="margin-top:auto;text-transform:none;letter-spacing:0;font-weight:500">आवृत्ती: 13-11-2026 (2)</div>');
+  var sec = { home: 'काम', reports: 'निकाल', archive: 'साधने' };
+  document.getElementById('tabs').insertAdjacentHTML('beforeend', '<div class="navh" style="margin-top:auto;text-transform:none;letter-spacing:0;font-weight:500">आवृत्ती: 13-11-2026 (3)</div>');
   Object.keys(sec).forEach(function (v) { var b = document.querySelector('#tabs button[data-v="' + v + '"]'); if (b) b.insertAdjacentHTML('beforebegin', '<div class="navh">' + sec[v] + '</div>'); });
 })();
 /* न जतन केलेले काम: वरच्या माहे-चिपवर खूण + बंद करताना इशारा */

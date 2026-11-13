@@ -47,21 +47,18 @@
 <div class="steps" id="steps">
   <button data-s="files" id="stp1"><i>1</i><span>फाईल्स<small id="stpT1">निवडा</small></span></button><span class="ln" id="ln1"></span>
   <button data-s="queue" id="stp2"><i>2</i><span>तपासा<small id="stpT2">—</small></span></button><span class="ln" id="ln2"></span>
-  <button data-s="download" id="stp3"><i>3</i><span>Word<small id="stpT3">बनवा</small></span></button>
+  <button data-s="reports" id="stp3"><i>3</i><span>अहवाल<small id="stpT3">बनवा</small></span></button>
 </div>
 <nav class="tabs" id="tabs">
   <button data-v="home" class="on">मुख्य</button>
-  <button data-v="dash" class="adv">डॅशबोर्ड</button>
   <button data-v="files">फाईल्स</button>
   <button data-v="queue">तपासणी रांग <span class="n hide" id="qN"></span></button>
   <button data-v="review">वर्गीकरण <span class="n hide" id="uncN"></span></button>
-  <button data-v="hbt" class="adv">HBT तपशील</button>
-  <button data-v="preview">पूर्वावलोकन</button>
-  <button data-v="download">Word डाउनलोड</button>
-  <button data-v="archive" class="adv">संग्रह</button>
-  <button data-v="reports" class="adv">अहवाल</button>
-  <button data-v="typing" class="adv">टायपिंग</button>
+  <button data-v="reports">अहवाल</button>
+  <button data-v="archive">संग्रह</button>
   <button data-v="rules">नियम व सेटिंग</button>
+  <button data-v="dash" class="adv">डॅशबोर्ड</button>
+  <button data-v="typing" class="adv">टायपिंग</button>
 </nav>
 <main>
   <!-- HOME -->
@@ -72,12 +69,13 @@
       <button class="btn" id="heroBtn">सुरू करा →</button>
     </div>
     <div id="draftBox"></div>
+    <div id="skipBox"></div>
     <div id="arcHome" class="adv"></div>
     <div id="bkBanner"></div>
     <div class="tiles" id="tiles"></div>
     <div class="card"><h2>PS कडून फाईल्स</h2><div id="psHome"></div></div>
     <div class="card">
-      <h2>दिसणे <span class="small muted appver" style="font-weight:400;margin-left:auto">आवृत्ती: 13-11-2026 (2)</span></h2>
+      <h2>दिसणे <span class="small muted appver" style="font-weight:400;margin-left:auto">आवृत्ती: 13-11-2026 (3)</span></h2>
       <div class="row" style="gap:18px">
         <div><div class="small muted" style="margin-bottom:4px">अक्षरांचा आकार</div><div class="seg" id="segFs"><button data-fs="1">अ</button><button data-fs="1.15" style="font-size:1.1em">अ</button><button data-fs="1.3" style="font-size:1.25em">अ</button></div></div>
         <div><div class="small muted" style="margin-bottom:4px">रंगसंगती</div><div class="seg" id="segTh"><button data-th="auto">आपोआप</button><button data-th="light">उजळ</button><button data-th="dark">गडद</button></div></div>
@@ -191,6 +189,7 @@
 
   <!-- HBT -->
   <section id="v-hbt" class="hide">
+    <div class="row" style="margin-bottom:8px"><button class="btn sm ghost" data-go="reports">← अहवाल</button></div>
     <div class="card small muted" style="margin-bottom:12px">घरफोडी, चोरी, दुखापत गुन्ह्यांचे तपशील इथे भरा/तपासा. चोरीस गेलेला माल रकान्यात नसल्यास हकिगतीतून आपोआप घेतला जातो. हे तपशील HBT यादीत आणि विभाग B Part च्या चोरी/घरफोडी तक्त्यातही वापरले जातात.</div>
     <div id="hbtBody"></div>
   </section>
@@ -199,6 +198,7 @@
   <section id="v-preview" class="hide">
     <div class="card">
       <div class="row">
+        <button class="btn sm ghost" data-go="reports">← अहवाल</button>
         <b>विभाग B Part – head नुसार</b>
         <div style="flex:1"></div>
         <select id="pvFull"><option value="0">हकिगत: संक्षिप्त</option><option value="1">हकिगत: पूर्ण</option></select>
@@ -210,43 +210,44 @@
     <div id="pvBody"></div>
   </section>
 
-  <!-- DOWNLOAD -->
-  <section id="v-download" class="hide">
-    <div class="card">
-      <div class="row">
+  <!-- REPORTS (अहवाल) -->
+  <section id="v-reports" class="hide">
+    <div class="rhead">
+      <div><h2 style="margin:0;font-size:22px;font-weight:700">अहवाल</h2><div class="small muted" id="divSum">—</div></div>
+      <div class="row ropts">
         <b>हकिगत:</b>
         <select id="dlFull"><option value="0">संक्षिप्त (साचेबद्ध वाक्ये काढून, माहिती तीच)</option><option value="1">पूर्ण (जशी PS ने दिली तशी)</option></select>
         <b style="margin-left:8px">कागद:</b>
         <select id="dlPaper"><option value="a4">A4 (आडवा)</option><option value="legal">Legal (आडवा)</option></select>
       </div>
-      <p class="muted small" id="divSum" style="margin-bottom:0"></p>
     </div>
     <div class="dlgrid">
-      <div class="card">
-        <h2>विभाग B Part</h2>
+      <div class="card rcard">
+        <div class="ricon">B</div>
+        <h2>विभाग B Part <span class="small muted" style="font-weight:400">head नुसार</span></h2>
+        <p class="muted small" style="margin-top:0">तिन्ही PS चे गुन्हे head-wise, प्रत्येक head नवीन पानावर.</p>
         <div class="row">
           <button class="btn pri" data-gen="division:0">Unicode Word</button>
           <button class="btn" data-gen="division:1">Kruti Dev Word</button>
+          <button class="btn ghost" data-go="preview">पूर्वावलोकन →</button>
         </div>
         <div class="dl-res" id="res-division"></div>
       </div>
-      <div class="card adv">
+      <div class="card rcard">
+        <div class="ricon" style="background:var(--accentSoft);color:var(--accent)">H</div>
         <h2>HBT, THEFT, HURT यादी</h2>
         <p class="muted small" style="margin-top:0" id="hbtSum"></p>
         <div class="row">
           <button class="btn pri" data-gen="hbt:0">Unicode Word</button>
           <button class="btn" data-gen="hbt:1">Kruti Dev Word</button>
+          <button class="btn ghost" data-go="hbt">तपशील भरा / तपासा →</button>
         </div>
         <div class="dl-res" id="res-hbt"></div>
       </div>
     </div>
     <p class="muted small"><span class="gdrive">फाईल्स Drive मध्ये "B-Part App Output" फोल्डरमध्येही जतन होतात. </span>Unicode: Mangal फॉन्ट · Kruti Dev: Kruti Dev 010 (इंग्रजी अक्षरे/क्रमांक Times New Roman).</p>
-  </section>
-
-  <!-- REPORTS -->
-  <section id="v-reports" class="hide">
     <div class="card">
-      <h2>मासिक अहवाल</h2>
+      <h2>इतर मासिक अहवाल</h2>
       <p class="muted small" style="margin-top:0">वर्गीकरण झाल्यावर प्रत्येक अहवाल "पहा" ने app मध्ये दिसतो, आणि Word / PDF (Unicode) मध्ये download होतो. आकडे चुकीचे वाटल्यास वर्गीकरण टॅबमध्ये त्या गुन्ह्याच्या "तपशील" मध्ये उघड / प्रकार बदला.</p>
       <div class="list" id="ahList"></div>
       <div class="dl-res" id="res-ahwal"></div>
@@ -256,7 +257,7 @@
       <div id="ahPrev" class="ahprev" style="margin-top:10px;overflow:auto"></div>
     </div>
     <div class="card">
-      <h2>त्रुटी / माहिती राहिलेली यादी <span class="count" id="warnCount">0</span></h2>
+      <h2>त्रुटी यादी व PS ला दुरुस्तीसाठी पाठवा <span class="count" id="warnCount">0</span></h2>
       <div id="warnList" class="list"></div>
       <div class="row" style="margin-top:10px"><button class="btn sm" id="copyWarn">यादी कॉपी</button></div>
       <div class="small muted" style="margin-top:12px">PS ला दुरुस्तीसाठी पाठवा (WhatsApp / शेअर):</div>
@@ -299,9 +300,15 @@
   <!-- RULES -->
   <section id="v-rules" class="hide">
     <div class="card">
-      <h2>App पद्धत <span class="small muted appver" style="font-weight:400;margin-left:auto">आवृत्ती: 13-11-2026 (2)</span></h2>
+      <h2>App पद्धत <span class="small muted appver" style="font-weight:400;margin-left:auto">आवृत्ती: 13-11-2026 (3)</span></h2>
       <div class="seg" id="segMode"><button data-mode="simple">साधी (फक्त B Part)</button><button data-mode="full">सर्व साधने</button></div>
-      <p class="muted small" style="margin-bottom:0">साधी पद्धत: फाईल्स → तपासणी → head-wise Word एवढेच दिसते. "सर्व साधने" निवडल्यास डॅशबोर्ड, HBT यादी, अहवाल, संग्रह, टायपिंग परत दिसतात.</p>
+      <p class="muted small" style="margin-bottom:0">साधी पद्धत: मुख्य काम (फाईल्स → तपासणी → अहवाल) एवढेच. "सर्व साधने" निवडल्यास डॅशबोर्ड व टायपिंग ही अतिरिक्त साधने दिसतात.</p>
+    </div>
+    <div class="card">
+      <h2>अंतिम विभाग B Part वरून शिका</h2>
+      <p class="muted small" style="margin-top:0">तुम्ही हाताने तपासून पाठवलेली <b>अंतिम विभाग B Part</b> (.docx, एक किंवा अनेक महिने) निवडा. app प्रत्येक गुन्ह्याचा तुमचा head आणि app चा head जुळवून पाहील. जिथे फरक आहे ते खाली दिसेल – निवडलेल्यांसाठी नियम शिकला जाईल आणि पुढच्या महिन्यापासून तसाच head लागेल. चालू महिन्याच्या नोंदी उघड्या असतील तर त्यांनाही तो head लागतो.</p>
+      <div class="row"><label class="btn pri" style="cursor:pointer">अंतिम विभाग B Part निवडा<input type="file" id="finalIn" accept=".docx" multiple hidden></label><span class="small muted" id="finalInfo"></span></div>
+      <div id="finalBox" style="margin-top:10px"></div>
     </div>
     <div class="card">
       <h2>शिकलेले नियम <span class="count" id="ruleN">0</span></h2>

@@ -316,6 +316,7 @@ var TEXT = (function () {
     if (e <= 0 || e > 900) return t;
     return (t.slice(0, start) + ' ' + rest.slice(e)).replace(/\s{2,}/g, ' ');
   }
+
   function tplHakikat(head, crimeU, detU) {
     var t = (detU || '').replace(/\s+/g, ' ').replace(/ध-/g, '/-');
     if (!t || !head) return '';
@@ -722,7 +723,22 @@ var CORE = (function () {
     });
     return recs;
   }
-  return { parseDocumentXml: parseDocumentXml, defaultIsLegacy: defaultIsLegacy, detectPs: detectPs, detectMonth: detectMonth, extractRecords: extractRecords, classifyAll: classifyAll, tableType: tableType };
+  // table rows that look like a crime entry but were not read (so nothing goes missing silently)
+  function skippedRows(parsed, recs) {
+    var got = {}, out = [];
+    recs.forEach(function (r) { var m = String(r.id).match(/:(\d+):(\d+)$/); if (m) got[m[1] + ':' + m[2]] = 1; });
+    parsed.tables.forEach(function (t, ti) {
+      t.rows.forEach(function (row, ri) {
+        if (!ri || got[ti + ':' + ri]) return;
+        var txt = row.join(' ');
+        if (!/\d/.test(txt) || !row.some(function (c) { return c.length > 60; })) return;
+        var cell = function (i) { try { return KD.convert(row[i] || '').replace(/\s+/g, ' ').trim().slice(0, 70); } catch (e) { return ''; } };
+        out.push({ table: ti + 1, row: ri, text: [cell(1), cell(2)].filter(function (x) { return x; }).join(' | ') });
+      });
+    });
+    return out;
+  }
+  return { parseDocumentXml: parseDocumentXml, defaultIsLegacy: defaultIsLegacy, detectPs: detectPs, detectMonth: detectMonth, extractRecords: extractRecords, classifyAll: classifyAll, tableType: tableType, skippedRows: skippedRows };
 })();
 if (typeof module !== 'undefined') module.exports = CORE;
 
