@@ -79,7 +79,7 @@
     <div class="card"><h2>PS कडून फाईल्स <span class="small muted" style="font-weight:400" id="psHomeSub"></span></h2><div id="psHome"></div></div>
     <div class="card"><h2>वर्ष <span id="ystripY"></span> <span class="small muted" style="font-weight:400">– जतन केलेले महिने</span></h2><div class="ystrip" id="ystrip"></div></div>
     <div class="card">
-      <h2>दिसणे <span class="small muted appver" style="font-weight:400;margin-left:auto">आवृत्ती: 13-11-2026 (5) · नवे डिझाइन</span></h2>
+      <h2>दिसणे <span class="small muted appver" style="font-weight:400;margin-left:auto">आवृत्ती: 13-11-2026 (6)</span></h2>
       <div class="row" style="gap:18px">
         <div><div class="small muted" style="margin-bottom:4px">अक्षरांचा आकार</div><div class="seg" id="segFs"><button data-fs="1">अ</button><button data-fs="1.15" style="font-size:1.1em">अ</button><button data-fs="1.3" style="font-size:1.25em">अ</button></div></div>
         <div><div class="small muted" style="margin-bottom:4px">रंगसंगती</div><div class="seg" id="segTh"><button data-th="auto">आपोआप</button><button data-th="light">उजळ</button><button data-th="dark">गडद</button></div></div>
@@ -143,6 +143,13 @@
   <!-- FILES -->
   <section id="v-files" class="hide">
     <div class="card"><h2>कोणत्या PS ची फाईल आली?</h2><div id="psFiles"></div></div>
+    <div class="card"><h2>PS साठी प्रमाणित नमुना (Word)</h2>
+      <p class="small muted" style="margin-top:0">हा नमुना PS ला द्या. त्यातच B Part भरला तर app 100% अचूक वाचेल – रकाने, तक्ते व शीर्षक आधीच ठरलेले (Kruti Dev) आहेत.</p>
+      <div class="row"><label class="small">माहे <input type="text" id="tplMonth" placeholder="11/2026" style="width:100px" data-notype="1"></label></div>
+      <div class="tplg"><button class="btn" data-tpl="bela">⬇ बेला नमुना</button><button class="btn" data-tpl="bori">⬇ बोरी नमुना</button><button class="btn" data-tpl="midc">⬇ एमआयडीसी नमुना</button></div>
+      <div id="tplOut" style="margin-top:8px"></div>
+      <details style="margin-top:6px"><summary class="small" style="cursor:pointer">नमुन्यात PS ला दिलेल्या सूचना</summary><ol class="tplhelp" id="tplHelp"></ol></details>
+    </div>
     <div class="card">
       <h2>PS चे B Part निवडा</h2>
       <p class="muted small" style="margin-top:0">बेला, बोरी, एमआयडीसी यांच्या .docx फाईल्स (Kruti Dev) निवडा. पोलीस स्टेशन आपोआप ओळखले जाते; चुकले तर यादीत बदला.</p>
@@ -322,7 +329,7 @@
   <!-- RULES -->
   <section id="v-rules" class="hide">
     <div class="card">
-      <h2>App पद्धत <span class="small muted appver" style="font-weight:400;margin-left:auto">आवृत्ती: 13-11-2026 (5) · नवे डिझाइन</span></h2>
+      <h2>App पद्धत <span class="small muted appver" style="font-weight:400;margin-left:auto">आवृत्ती: 13-11-2026 (6)</span></h2>
       <div class="seg" id="segMode"><button data-mode="simple">साधी (फक्त B Part)</button><button data-mode="full">सर्व साधने</button></div>
       <p class="muted small" style="margin-bottom:0">साधी पद्धत: मुख्य काम (फाईल्स → तपासणी → अहवाल) एवढेच. "सर्व साधने" निवडल्यास डॅशबोर्ड व टायपिंग ही अतिरिक्त साधने दिसतात.</p>
     </div>

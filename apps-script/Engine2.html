@@ -668,7 +668,7 @@ var CORE = (function () {
     var hdr = (t.rows[0] || []).join(' ');
     var prev = (t.prev || []).slice(-2).join(' ');
     if (/exZ/.test(hdr)) return 'M';
-    if (/nk[:#]\s*C?[cC]anh|nk[:#]Ckanh|nk:canh|nk#canh/.test(prev)) return 'D';
+    if (/nk[:#]\s*C?[cC]anh|nk[:#]Ckanh|nk:canh|nk#canh|nkjw\s*canh/.test(prev)) return 'D';
     return 'A';
   }
   function colIndex(hdr, re, dflt) {

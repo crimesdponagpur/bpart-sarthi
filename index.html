@@ -352,7 +352,11 @@ body.simple .adv{display:none!important}
 @media (max-width:760px){.ystrip{grid-template-columns:repeat(6,minmax(0,1fr))}}
 .psc .pst{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
 .psc .pst span{font-size:12px;border-radius:7px;padding:1px 8px;background:var(--surface);border:1px solid var(--line)}
-.psc .pst span.w{color:var(--warn);border-color:var(--warn)}.psc .pst span.b{color:var(--bad);border-color:var(--bad)}
+.psc .pst span.w{color:var(--warn);border-color:var(--warn)}
+.why{font-size:12.5px;color:var(--muted);margin:3px 0 0;line-height:1.5}.why b{color:var(--ink);font-weight:600}.why .q{display:inline-block;background:var(--brandSoft);color:var(--brand);border-radius:6px;padding:0 6px;margin-right:4px;font-weight:700}
+.psc .pst span.g{color:var(--ok);border-color:var(--ok)}
+.tplg{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-top:8px}
+.tplhelp{font-size:13px;line-height:1.7;margin:8px 0 0;padding-left:20px}.psc .pst span.b{color:var(--bad);border-color:var(--bad)}
 .badge.ps[data-ps=bela]{background:rgba(42,120,214,.12);color:var(--s1)}
 .badge.ps[data-ps=bori]{background:rgba(235,104,52,.13);color:var(--s2)}
 .badge.ps[data-ps=midc]{background:rgba(27,175,122,.14);color:var(--s3)}
@@ -486,7 +490,7 @@ body.simple .adv{display:none!important}
     <div class="card"><h2>PS कडून फाईल्स <span class="small muted" style="font-weight:400" id="psHomeSub"></span></h2><div id="psHome"></div></div>
     <div class="card"><h2>वर्ष <span id="ystripY"></span> <span class="small muted" style="font-weight:400">– जतन केलेले महिने</span></h2><div class="ystrip" id="ystrip"></div></div>
     <div class="card">
-      <h2>दिसणे <span class="small muted appver" style="font-weight:400;margin-left:auto">आवृत्ती: 13-11-2026 (5) · नवे डिझाइन</span></h2>
+      <h2>दिसणे <span class="small muted appver" style="font-weight:400;margin-left:auto">आवृत्ती: 13-11-2026 (6)</span></h2>
       <div class="row" style="gap:18px">
         <div><div class="small muted" style="margin-bottom:4px">अक्षरांचा आकार</div><div class="seg" id="segFs"><button data-fs="1">अ</button><button data-fs="1.15" style="font-size:1.1em">अ</button><button data-fs="1.3" style="font-size:1.25em">अ</button></div></div>
         <div><div class="small muted" style="margin-bottom:4px">रंगसंगती</div><div class="seg" id="segTh"><button data-th="auto">आपोआप</button><button data-th="light">उजळ</button><button data-th="dark">गडद</button></div></div>
@@ -550,6 +554,13 @@ body.simple .adv{display:none!important}
   <!-- FILES -->
   <section id="v-files" class="hide">
     <div class="card"><h2>कोणत्या PS ची फाईल आली?</h2><div id="psFiles"></div></div>
+    <div class="card"><h2>PS साठी प्रमाणित नमुना (Word)</h2>
+      <p class="small muted" style="margin-top:0">हा नमुना PS ला द्या. त्यातच B Part भरला तर app 100% अचूक वाचेल – रकाने, तक्ते व शीर्षक आधीच ठरलेले (Kruti Dev) आहेत.</p>
+      <div class="row"><label class="small">माहे <input type="text" id="tplMonth" placeholder="11/2026" style="width:100px" data-notype="1"></label></div>
+      <div class="tplg"><button class="btn" data-tpl="bela">⬇ बेला नमुना</button><button class="btn" data-tpl="bori">⬇ बोरी नमुना</button><button class="btn" data-tpl="midc">⬇ एमआयडीसी नमुना</button></div>
+      <div id="tplOut" style="margin-top:8px"></div>
+      <details style="margin-top:6px"><summary class="small" style="cursor:pointer">नमुन्यात PS ला दिलेल्या सूचना</summary><ol class="tplhelp" id="tplHelp"></ol></details>
+    </div>
     <div class="card">
       <h2>PS चे B Part निवडा</h2>
       <p class="muted small" style="margin-top:0">बेला, बोरी, एमआयडीसी यांच्या .docx फाईल्स (Kruti Dev) निवडा. पोलीस स्टेशन आपोआप ओळखले जाते; चुकले तर यादीत बदला.</p>
@@ -729,7 +740,7 @@ body.simple .adv{display:none!important}
   <!-- RULES -->
   <section id="v-rules" class="hide">
     <div class="card">
-      <h2>App पद्धत <span class="small muted appver" style="font-weight:400;margin-left:auto">आवृत्ती: 13-11-2026 (5) · नवे डिझाइन</span></h2>
+      <h2>App पद्धत <span class="small muted appver" style="font-weight:400;margin-left:auto">आवृत्ती: 13-11-2026 (6)</span></h2>
       <div class="seg" id="segMode"><button data-mode="simple">साधी (फक्त B Part)</button><button data-mode="full">सर्व साधने</button></div>
       <p class="muted small" style="margin-bottom:0">साधी पद्धत: मुख्य काम (फाईल्स → तपासणी → अहवाल) एवढेच. "सर्व साधने" निवडल्यास डॅशबोर्ड व टायपिंग ही अतिरिक्त साधने दिसतात.</p>
     </div>
@@ -2049,7 +2060,7 @@ var CORE = (function () {
     var hdr = (t.rows[0] || []).join(' ');
     var prev = (t.prev || []).slice(-2).join(' ');
     if (/exZ/.test(hdr)) return 'M';
-    if (/nk[:#]\s*C?[cC]anh|nk[:#]Ckanh|nk:canh|nk#canh/.test(prev)) return 'D';
+    if (/nk[:#]\s*C?[cC]anh|nk[:#]Ckanh|nk:canh|nk#canh|nkjw\s*canh/.test(prev)) return 'D';
     return 'A';
   }
   function colIndex(hdr, re, dflt) {
@@ -3986,12 +3997,33 @@ function issuesOf(r) { try { return CHECKS.issues(r, { month: S.month, dups: S.b
 var _prevFor = null;
 function ensurePrev() {
   var key = monthKey(S.month); if (!key || _prevFor === key) return; _prevFor = key;
-  var idx = {}, add = function (mk, nos) { if (!nos || mk >= key) return; Object.keys(nos).forEach(function (k) { (nos[k] || []).forEach(function (n) { idx[k + n] = keyLabel(mk); }); }); };
-  var hist = lsJSON('bps_hist', {}); Object.keys(hist).forEach(function (k) { add(k, hist[k].sum && hist[k].sum.nos); });
+  var pk = prevKey(key), yr = key.slice(0, 4), pmax = {};
+  var idx = {}, add = function (mk, nos) { if (!nos || mk >= key) return; Object.keys(nos).forEach(function (k) { (nos[k] || []).forEach(function (n) { idx[k + n] = keyLabel(mk); if (mk === pk && n.split('|')[0] === yr) { var v = +n.split('|')[1]; if (!pmax[k] || v > pmax[k]) pmax[k] = v; } }); }); };
+  pmax._have = false; var mark = function (mk) { if (mk === pk) pmax._have = true; };
+  var hist = lsJSON('bps_hist', {}); Object.keys(hist).forEach(function (k) { if (hist[k].sum && hist[k].sum.nos) mark(k); add(k, hist[k].sum && hist[k].sum.nos); });
   ARC.all().catch(function () { return []; }).then(function (list) {
-    (list || []).forEach(function (m) { add(m.key, m.records ? monthSum(m.records).nos : m.sum && m.sum.nos); });
-    S.prevNos = idx; if (S.records.length) { renderSteps(); if (S.cur === 'queue' || S.cur === 'review') refreshView(); }
+    (list || []).forEach(function (m) { var nos = m.records ? monthSum(m.records).nos : m.sum && m.sum.nos; if (nos) mark(m.key); add(m.key, nos); });
+    S.prevNos = idx; S.prevMax = pmax; if (S.records.length) { renderSteps(); if (S.cur === 'queue' || S.cur === 'review') refreshView(); }
   });
+}
+
+function prevKey(key) { var y = +key.slice(0, 4), m = +key.slice(5, 7) - 1; if (!m) { y--; m = 12; } return y + '-' + ('0' + m).slice(-2); }
+// प्रत्येक PS ची क्रमांक मालिका: मागील महिन्याच्या शेवटच्या क्रमांकापासून सलग आहे का?
+function contInfo() {
+  var key = monthKey(S.month); if (!key || !S.records.length) return [];
+  var yr = key.slice(0, 4), jan = key.slice(5) === '01', pm = S.prevMax || {}, out = [];
+  var ser = {};
+  S.records.forEach(function (r) {
+    var n = parseInt(r.no, 10); if (!isFinite(n) || !PSU[r.ps]) return;
+    var fy = CHECKS.pdate(r.u ? r.u.filed : r.filed); if (fy && String(fy.y) !== yr) return;
+    var k = r.ps + '|' + (r.table === 'M' ? 'M' : ''); (ser[k] = ser[k] || []).push(n);
+  });
+  Object.keys(ser).forEach(function (k) {
+    var a = ser[k], lo = Math.min.apply(null, a), hi = Math.max.apply(null, a), prev = jan ? 0 : pm[k], o = { ps: k.split('|')[0], marg: /M$/.test(k), from: lo, to: hi, prev: prev, known: jan || !!pm._have, miss: [] };
+    if (prev !== undefined && lo > prev + 1) for (var i = prev + 1; i < lo && o.miss.length < 200; i++) o.miss.push(i);
+    out.push(o);
+  });
+  return out.sort(function (a, b) { return a.marg - b.marg; });
 }
 function needsLook(r) { return !r.ok && issuesOf(r).some(function (i) { return i.lv === 'hi' || i.lv === 'mid'; }); }
 function pendingCount() { return S.records.filter(needsLook).length; }
@@ -4165,6 +4197,36 @@ function renderStats() {
 function headOptions(sel) {
   return '<option value="">— head निवडा —</option>' + headOrder().map(function (h) { return '<option' + (h === sel ? ' selected' : '') + '>' + esc(h) + '</option>'; }).join('') + '<option value="__new">+ नवीन head…</option>';
 }
+
+/* ---------- हा head का? ---------- */
+var WHY = {
+  'table-marg': 'PS फाईलच्या मर्ग तक्त्यात नोंद आहे', 'table-daru': 'PS फाईलच्या दारूबंदी तक्त्यात नोंद आहे',
+  ndps: 'एनडीपीएस कायद्याचे कलम', jugar12: 'कलम 12(अ) – जुगार', mda: 'दारूबंदी कायद्याचे कलम (मोठा गुन्हा सोबत नाही)', arms: 'आर्म ॲक्टचे कलम (मोठा गुन्हा सोबत नाही)',
+  essen: 'जीवनावश्यक वस्तू कायदा', labour: 'बाल / वेठबिगारी कायदा', it: 'माहिती तंत्रज्ञान कायद्याचे कलम', elec: 'विद्युत कायदा',
+  theft303: 'कलम 303 – घरफोडी / जबरी / दरोड्याचे कलम नाही म्हणून साधी चोरी', theft: 'चोरीचे कलम (303–307)',
+  mpoka: 'फक्त महाराष्ट्र पोलीस अधिनियमाचे कलम', jugar: 'जुगार कायदा / हकिगतीत जुगाराचे शब्द',
+  'rape-m': 'बलात्काराचे कलम + पोक्सो (पीडिता अल्पवयीन)', 'rape-a': 'बलात्काराचे कलम, पोक्सो नाही', 'mod-m': 'विनयभंगाचे कलम + पोक्सो (पीडिता अल्पवयीन)', 'mod-a': 'विनयभंगाचे कलम, पोक्सो नाही',
+  'burg-dw': 'घरफोडी कलम 331 + PS ने "दिवसा" लिहिले', 'burg-nw': 'घरफोडी कलम 331 + PS ने "रात्री" लिहिले', 'burg-n': 'कलम 331(4) – रात्रीची घरफोडी', 'burg-d': 'कलम 331(3) – दिवसाची घरफोडी',
+  'burg-305': 'कलम 305 + 331–334 व हकिगतीत रात्रीची वेळ', 'burg-305d': 'कलम 305 + 331–334, रात्रीचा उल्लेख नाही',
+  s336m: 'मोवाका 184/134 + कलम 125/324 – अपघात', mva185: 'कलम 185 मोवाका – दारू पिऊन वाहन', mva: 'फक्त मोटार वाहन कायद्याची कलमे',
+  s311: 'कलम 310/311 – दरोडा', s309: 'कलम 309 – जबरी चोरी', s137: 'कलम 137 – अल्पवयीन पळवणे', s140: 'कलम 140 – पळवून नेणे', s118: 'कलम 115–118 – दुखापत'
+};
+var ACTMR = { BNS: 'बीएनएस', BNSS: 'बीएनएसएस', IPC: 'भादवि', MVA: 'मोवाका', MDA: 'दारूबंदी', MJKA: 'जुगार', MPOKA: 'मपोका', NDPS: 'एनडीपीएस', ARMS: 'आर्म ॲक्ट', POCSO: 'पोक्सो', IT: 'आयटी ॲक्ट', ELEC: 'विद्युत', ESSEN: 'जीवनावश्यक', LABOUR: 'बालमजुरी', ANIMAL: 'प्राणी छळ', ANIMAL76: 'प्राणी संरक्षण', ATRO: 'ॲट्रॉसिटी' };
+var SUBMR = { A: 'अ', B: 'ब', C: 'क', D: 'ड', E: 'ई' };
+function secLabel(x) { var p = String(x).split(':'); return p[0] + (p[1] ? '(' + (SUBMR[p[1]] || p[1]) + ')' : ''); }
+function whyHtml(r) {
+  var auto = r.auto, why;
+  if (r.manual) why = 'तुम्ही स्वतः निवडला' + (auto && auto !== r.head ? ' (app चा अंदाज होता: ' + esc(auto) + ')' : '');
+  else if (/^learned/.test(r.rule || '')) why = 'तुम्ही शिकवलेल्या नियमानुसार';
+  else if (!r.head) why = 'कोणताही नियम बसला नाही – head हाताने निवडा';
+  else if (WHY[r.rule]) why = WHY[r.rule];
+  else {
+    var m = String(r.rule || '').match(/^(ipc|s|x)(\d+)/), law = /^l-/.test(r.rule || '');
+    why = m ? 'कलम ' + m[2] + (m[1] === 'ipc' ? ' भादवि' : ' बीएनएस') : law ? 'विशेष कायद्याचे नाव गुन्ह्यात आहे' : 'कलमांवरून';
+  }
+  var secs = (r.secs || []).slice(0, 8).map(secLabel).join(', ');
+  return '<div class="why"><span class="q">का?</span>' + why + (secs && !r.manual ? ' · <span class="muted">कलमे: ' + esc(secs) + (r.acts && r.acts.length ? ' (' + esc(r.acts.map(function (x) { return ACTMR[x] || x; }).join(', ')) + ')' : '') + '</span>' : '') + '</div>';
+}
 function itemHtml(r, opt) {
   var edB = Object.keys(r.ed || {}).length ? '<span class="badge manual">✎ संपादित</span>' : '';
   var badge = r.manual ? '<span class="badge manual">बदलले</span>' : /^learned/.test(r.rule || '') ? '<span class="badge learned">तुमचा नियम</span>' : r.head ? '<span class="badge">आपोआप</span>' : '<span class="badge none">ठरले नाही</span>';
@@ -4172,7 +4234,7 @@ function itemHtml(r, opt) {
   var first = r.u.crime.split('\n').filter(function (x) { return x.trim(); }).slice(0, 3).join('\n');
   var ws = warnsOf(r).filter(function (w) { return w !== 'head ठरलेला नाही'; });
   var h = '<div class="item" id="it-' + esc(r.id) + '"><div class="l1"><span class="badge ps" data-ps="' + esc(r.ps) + '">' + PSU[r.ps] + '</span><b>' + esc(r.no) + '</b><span class="badge">' + tbl + '</span>' + badge + edB + '</div>' +
-    '<div class="crime">' + esc(first).replace(/(कलम\s*)([^\n]*)/, function (m0, a, b) { return a + b.replace(/(\d{1,3}(?:\([^)]{1,5}\))*)/g, '<span class="mark-sec">$1</span>'); }) + '</div><div class="place">' + esc(r.u.place.replace(/\n/g, ' ')) + '</div>' +
+    '<div class="crime">' + esc(first).replace(/(कलम\s*)([^\n]*)/, function (m0, a, b) { return a + b.replace(/(\d{1,3}(?:\([^)]{1,5}\))*)/g, '<span class="mark-sec">$1</span>'); }) + '</div>' + whyHtml(r) + '<div class="place">' + esc(r.u.place.replace(/\n/g, ' ')) + '</div>' +
     (ws.length && !(opt && opt.noWarn) ? '<div class="warns">' + ws.map(function (w) { return '<div>⚠ ' + esc(w) + '</div>'; }).join('') + '</div>' : '') +
     '<div class="ctl"><select data-head="' + esc(r.id) + '">' + headOptions(r.head) + '</select><button class="btn sm" data-det="' + esc(r.id) + '">तपशील</button>' +
     (r.manual ? '<button class="btn sm" data-rule="' + esc(r.id) + '">नियम बनवा</button>' : '') + '</div>';
@@ -4465,6 +4527,65 @@ $('yrImport').addEventListener('change', function () {
     }).catch(fail);
 });
 
+
+/* ---------- PS साठी प्रमाणित नमुना ---------- */
+var TPL_HELP = [
+  'प्रत्येक गुन्ह्यासाठी एकच ओळ. ओळी merge करू नका, एका ओळीत दोन गुन्हे लिहू नका.',
+  '"अप.क्र. व कलम" रकान्यात असे लिहा: 363/26 कलम 331(4), 305(अ) बीएनएस – आधी क्रमांक/वर्ष, नंतर "कलम", शेवटी कायद्याचे नाव.',
+  'घरफोडीत कलम 331(3) (दिवसा) किंवा 331(4) (रात्री) स्पष्ट लिहा.',
+  'अल्पवयीन पीडित असल्यास पोक्सो कलम लिहा.',
+  'चोरी / घरफोडीत "चोरीस माल" रकान्यात माल व एकूण किंमत (रु.) लिहा; वसुल माल वेगळ्या रकान्यात.',
+  'प्रतिबंधक कारवाई (इस्तगासा क्र., कलम) "अटक ता. वेळ व प्रतिबंधक" रकान्यात लिहा.',
+  'तारीख व वेळ असे लिहा: 29/10/26 चे 20/00 वा.',
+  'गुन्हे क्रमाने लिहा; मागील महिन्याच्या शेवटच्या क्रमांकानंतरचा एकही क्रमांक सोडू नका.',
+  'दारूबंदी / जुगार गुन्हे "दारूबंदी / जुगार" तक्त्यात, मर्ग "मर्ग" तक्त्यात.',
+  'फाईल .docx मध्येच पाठवा (PDF / फोटो नको). Kruti Dev फॉन्ट चालेल.'
+];
+function psTemplateDocx(ps, month, fill) {
+  var K = function (u) { return TEXT.u2k(u).replace(/nkjw\s*canh/g, 'nk:canh'); };
+  var X = function (t) { return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); };
+  var run = function (t, o) { o = o || {}; var f = o.uni ? 'Mangal' : 'Kruti Dev 010'; return '<w:r><w:rPr><w:rFonts w:ascii="' + f + '" w:hAnsi="' + f + '" w:cs="Mangal"/>' + (o.b ? '<w:b/>' : '') + '<w:sz w:val="' + (o.sz || 24) + '"/></w:rPr><w:t xml:space="preserve">' + X(o.uni ? t : K(t)) + '</w:t></w:r>'; };
+  var para = function (t, o) { o = o || {}; return '<w:p><w:pPr>' + (o.c ? '<w:jc w:val="center"/>' : '') + '<w:spacing w:before="' + (o.before || 0) + '" w:after="80"/></w:pPr>' + run(t, o) + '</w:p>'; };
+  var COLS = {
+    A: ['अ.क्र.', 'अप.क्र. व कलम', 'घटनास्थळ', 'घटना ता.वेळ', 'दाखल ता.वेळ', 'नाव व पत्ता फिर्यादी आणि आरोपी नाव व पत्ता', 'अटक ता. वेळ व प्रतिबंधक', 'चोरीस माल', 'वसुल माल', 'दाखल / तपास', 'हकिकत'],
+    B: ['अ.क्र.', 'अप.क्र. व कलम', 'घटनास्थळ', 'घटना ता.वेळ', 'दाखल ता.वेळ', 'फिर्यादीचे नाव व पत्ता आणि आरोपीचे नाव व पत्ता', 'अटक ता. वेळ व प्रतिबंधक', 'दाखल / तपास', 'हकिकत'],
+    M: ['अ.क्र.', 'मर्ग क्र. व कलम', 'घटनास्थळ', 'घटना ता.वेळ', 'दाखल ता.वेळ', 'फिर्यादीचे नाव व पत्ता', 'मृतक नाव व पत्ता', 'दाखल / तपास', 'मरणाचे कारण']
+  };
+  var W = { A: [500, 1700, 1300, 1100, 1100, 1900, 1300, 1300, 1000, 1200, 3300], B: [500, 1800, 1500, 1200, 1200, 2300, 1500, 1400, 4300], M: [500, 1700, 1600, 1200, 1200, 2000, 2000, 1400, 3100] };
+  var table = function (type, rows) {
+    var cols = COLS[type], w = W[type], bd = '<w:tblBorders>' + ['top', 'left', 'bottom', 'right', 'insideH', 'insideV'].map(function (x) { return '<w:' + x + ' w:val="single" w:sz="4" w:space="0" w:color="000000"/>'; }).join('') + '</w:tblBorders>';
+    var cell = function (t, i, hd) { return '<w:tc><w:tcPr><w:tcW w:w="' + w[i] + '" w:type="dxa"/>' + (hd ? '<w:shd w:val="clear" w:color="auto" w:fill="E7ECF5"/>' : '') + '</w:tcPr><w:p>' + (t ? run(t, { b: hd, sz: hd ? 22 : 22 }) : '') + '</w:p></w:tc>'; };
+    var tr = function (cells, hd) { return '<w:tr>' + (hd ? '<w:trPr><w:tblHeader/></w:trPr>' : '') + cells.map(function (t, i) { return cell(t, i, hd); }).join('') + '</w:tr>'; };
+    var body = (rows && rows.length ? rows : [1, 2, 3, 4, 5].map(function (n) { return [String(n)].concat(cols.slice(1).map(function () { return ''; })); }));
+    return '<w:tbl><w:tblPr><w:tblW w:w="0" w:type="auto"/>' + bd + '<w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid>' + w.map(function (x) { return '<w:gridCol w:w="' + x + '"/>'; }).join('') + '</w:tblGrid>' + tr(cols, true) + body.map(function (r) { return tr(r); }).join('') + '</w:tbl>';
+  };
+  fill = fill || {};
+  var mo = month || '__/____';
+  var body = para('पोलीस स्टेशन ' + PSU[ps] + ' बी पार्ट माहे ' + mo, { b: 1, sz: 32, c: 1 }) +
+    para('भाग 1 ते 6 – मालमत्तेविरुद्धचे गुन्हे (चोरी, घरफोडी, जबरी, दरोडा इ.)', { b: 1, sz: 26, before: 200 }) + table('A', fill.A) +
+    para('इतर भा.न्या.सं. / विशेष कायद्याचे गुन्हे', { b: 1, sz: 26, before: 200 }) + table('B', fill.B) +
+    para('महाराष्ट्र दारूबंदी / जुगार कायद्याचे गुन्हे', { b: 1, sz: 26, before: 200 }) + table('B', fill.D) +
+    para('मर्ग', { b: 1, sz: 26, before: 200 }) + table('M', fill.M) +
+    '<w:p><w:r><w:br w:type="page"/></w:r></w:p>' + para('B Part भरण्याच्या सूचना', { b: 1, sz: 26, uni: 1 }) +
+    TPL_HELP.map(function (t, i) { return para((i + 1) + '. ' + t, { uni: 1, sz: 22 }); }).join('');
+  var doc = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:body>' + body +
+    '<w:sectPr><w:pgSz w:w="16838" w:h="11906" w:orient="landscape"/><w:pgMar w:top="720" w:right="567" w:bottom="720" w:left="567" w:header="360" w:footer="360" w:gutter="0"/></w:sectPr></w:body></w:document>';
+  var files = {
+    '[Content_Types].xml': '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>',
+    '_rels/.rels': '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>',
+    'word/document.xml': doc
+  };
+  var name = 'PS ' + PSU[ps] + ' B Part नमुना' + (month ? ' ' + month.replace('/', '-') : '') + '.docx';
+  var blob = Utilities.zip(Object.keys(files).map(function (k) { return Utilities.newBlob(files[k], 'application/xml', k); }), name);
+  return { name: name, b64: Utilities.base64Encode(blob.getBytes()), mime: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' };
+}
+$('tplHelp').innerHTML = TPL_HELP.map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('');
+document.addEventListener('click', function (e) {
+  var b = e.target.closest('[data-tpl]'); if (!b) return;
+  var mo = ($('tplMonth').value || '').trim();
+  if (mo && !/^\d{1,2}\/20\d\d$/.test(mo)) { toast('माहे असा लिहा: 11/2026'); return; }
+  try { var res = psTemplateDocx(b.dataset.tpl, mo); $('tplOut').innerHTML = ''; showFile($('tplOut'), res); } catch (err) { toast('नमुना बनवता आला नाही: ' + err.message); }
+});
 /* ---------- फोनसाठी खालचा मेनू ---------- */
 var BN_MAP = { home: 'home', files: 'files', queue: 'queue', review: 'more', reports: 'reports', hbt: 'reports', preview: 'reports', archive: 'more', rules: 'more', dash: 'more', typing: 'more' };
 function syncBnav() {
@@ -4857,6 +4978,11 @@ function renderQueue() {
     bl.push('<li>' + PSU[g.ps] + (g.marg ? ' (मर्ग)' : '') + ': गुन्हा क्र. <b>' + m + '</b> यादीत नाही (' + g.from + ' ते ' + g.to + ' च्या दरम्यान)</li>');
   });
   (b.dupList || []).forEach(function (d) { bl.push('<li>' + esc(d.text) + '</li>'); });
+  contInfo().forEach(function (c) {
+    if (!c.miss.length) return;
+    var m = c.miss.length > 12 ? c.miss[0] + ' ते ' + c.miss[c.miss.length - 1] + ' (' + c.miss.length + ' गुन्हे)' : c.miss.join(', ');
+    bl.push('<li>' + PSU[c.ps] + (c.marg ? ' (मर्ग)' : '') + ': ' + (c.prev ? 'मागील महिन्याचा शेवटचा क्र. <b>' + c.prev + '</b>, या महिन्याचा पहिला <b>' + c.from + '</b>' : 'जानेवारी – पहिला क्र. <b>' + c.from + '</b>') + ' – मधले क्र. <b>' + m + '</b> कोणत्याच B Part मध्ये नाहीत</li>');
+  });
   $('qBatch').innerHTML = (bl.length && !S.batchOk) ? '<div class="bcard"><b>संपूर्ण यादी तपासणी – हे पाहा:</b><ul style="margin:6px 0 8px;padding-left:20px">' + bl.join('') + '</ul><button class="btn sm" id="qBatchOk">पाहिले, ठीक आहे</button></div>' : '';
   var focus = S.qMode !== 'list';
   if (focus && ids.length) {
@@ -4886,14 +5012,37 @@ function renderPsStatus() {
     var files = S.files.filter(function (f) { return f.ps === k; }), nrec = S.records.filter(function (r) { return r.ps === k; }).length;
     var got = files.length > 0 || nrec > 0;
     var pr = S.records.filter(function (r) { return r.ps === k; }), pp = pr.filter(needsLook).length, pu = pr.filter(function (r) { return !r.head; }).length;
-    var stats = nrec ? '<div class="pst"><span>' + nrec + ' नोंदी</span>' + (pp ? '<span class="w">' + pp + ' तपासायच्या</span>' : '<span>✓ तपासले</span>') + (pu ? '<span class="b">' + pu + ' अवर्गीकृत</span>' : '') + '</div>' : '';
+    var ci = contInfo().filter(function (c) { return c.ps === k && !c.marg; })[0];
+    var cchip = ci ? (ci.miss.length ? '<span class="b" title="मागील महिन्याचा शेवटचा क्र. ' + ci.prev + '">क्र. ' + ci.from + '–' + ci.to + ' · ' + ci.miss.length + ' सुटले</span>' : ci.prev !== undefined ? '<span class="g" title="मागील महिन्याचा शेवटचा क्र. ' + ci.prev + '">क्र. ' + ci.from + '–' + ci.to + ' ✓ सलग</span>' : '<span title="मागील महिना जतन नाही">क्र. ' + ci.from + '–' + ci.to + '</span>') : '';
+    var stats = nrec ? '<div class="pst"><span>' + nrec + ' नोंदी</span>' + cchip + (pp ? '<span class="w">' + pp + ' तपासायच्या</span>' : '<span>✓ तपासले</span>') + (pu ? '<span class="b">' + pu + ' अवर्गीकृत</span>' : '') + '</div>' : '';
     return '<div class="psc ' + (got ? 'got' : 'miss') + '"><h4><span class="badge ps" data-ps="' + k + '">' + PSU[k] + '</span> ' + (got ? '✓' : '⚠') + '</h4><div class="st">' + (got ? (nrec ? 'फाईल वाचली' : files.length + ' फाईल निवडली') : 'फाईल आलेली नाही') + '</div>' + stats +
+      (nrec && psErrors(k).length ? '<div class="row"><button class="btn sm" data-waerr="' + k + '">PS ला ' + psErrors(k).length + ' त्रुटी पाठवा</button></div>' : '') +
       (got ? '' : '<input type="text" inputmode="numeric" placeholder="PS चा WhatsApp नंबर (एकदाच)" data-psnum="' + k + '" value="' + esc(lsGet('psnum_' + k) || '') + '" data-notype="1"><div class="row"><button class="btn sm" data-wa="' + k + '">WhatsApp वर आठवण पाठवा</button></div>') + '</div>';
   }).join('') + '</div>';
   var unk = S.files.filter(function (f) { return !f.ps; }).length;
   if (unk) html += '<div class="small muted" style="margin-top:8px">⚠ ' + unk + ' फाईलचा PS ओळखला नाही – यादीत PS निवडा.</div>';
   $('psHome').innerHTML = html; $('psFiles').innerHTML = html;
 }
+
+// PS ने दुरुस्त करायच्या गोष्टी (WhatsApp संदेशासाठी)
+function psErrors(k) {
+  var out = [];
+  (S.skipped || []).filter(function (x) { return x.ps === k; }).forEach(function (x) { out.push('तक्ता ' + x.table + ', ओळ ' + x.row + ': ओळ वाचता आली नाही (गुन्हा क्र./कलम नीट लिहा)'); });
+  contInfo().filter(function (c) { return c.ps === k && c.miss.length; }).forEach(function (c) { out.push((c.marg ? 'मर्ग ' : 'गुन्हा ') + 'क्र. ' + (c.miss.length > 12 ? c.miss[0] + ' ते ' + c.miss[c.miss.length - 1] : c.miss.join(', ')) + ' B Part मध्ये नाहीत (मागील शेवटचा ' + c.prev + ')'); });
+  ((S.batch || {}).gaps || []).filter(function (g) { return g.ps === k; }).forEach(function (g) { out.push((g.marg ? 'मर्ग ' : 'गुन्हा ') + 'क्र. ' + g.missing.slice(0, 15).join(', ') + ' यादीत नाहीत'); });
+  ((S.batch || {}).dupList || []).filter(function (d) { return d.ps === k; }).forEach(function (d) { out.push(d.text); });
+  S.records.filter(function (r) { return r.ps === k; }).forEach(function (r) {
+    var w = issuesOf(r).filter(function (i) { return /नोंद नाही|दिसत नाही|या महिन्याची नाही|भविष्यातील|आधीच्या महिन्यात/.test(i.t) && i.k !== 'amb'; }).map(function (i) { return i.t; });
+    if (w.length) out.push('गुन्हा ' + r.no + ': ' + w.join(', '));
+  });
+  return out;
+}
+document.addEventListener('click', function (e) {
+  var b = e.target.closest('[data-waerr]'); if (!b) return;
+  var k = b.dataset.waerr, list = psErrors(k), num = (lsGet('psnum_' + k) || '').replace(/\D/g, ''); if (num.length === 10) num = '91' + num;
+  var msg = 'नमस्कार, पो.स्टे. ' + PSU[k] + ' – ' + (S.month ? 'माहे ' + S.month + ' च्या ' : '') + 'B Part मध्ये खालील दुरुस्त्या कराव्यात:\n' + list.slice(0, 30).map(function (x, i) { return (i + 1) + ') ' + x; }).join('\n') + (list.length > 30 ? '\n… आणखी ' + (list.length - 30) : '') + '\nदुरुस्त .docx फाईल पुन्हा पाठवावी.\n– उपविभागीय पोलीस अधिकारी कार्यालय';
+  copyText(msg); window.open('https://wa.me/' + num + '?text=' + encodeURIComponent(msg), '_blank'); toast('संदेश कॉपी झाला');
+});
 document.addEventListener('change', function (e) { var t = e.target; if (t.dataset && t.dataset.psnum) { lsSet('psnum_' + t.dataset.psnum, t.value.trim()); } });
 document.addEventListener('click', function (e) {
   var b = e.target.closest('[data-wa]'); if (!b) return;
@@ -5486,7 +5635,7 @@ $('histIn').addEventListener('change', function () {
   };
   Array.prototype.forEach.call(document.querySelectorAll('#tabs button[data-v]'), function (b) { if (I[b.dataset.v]) b.insertAdjacentHTML('afterbegin', '<svg viewBox="0 0 24 24" aria-hidden="true">' + I[b.dataset.v] + '</svg>'); });
   var sec = { home: 'काम', reports: 'निकाल', archive: 'साधने' };
-  document.getElementById('tabs').insertAdjacentHTML('beforeend', '<div class="navh" style="margin-top:auto;text-transform:none;letter-spacing:0;font-weight:500">आवृत्ती: 13-11-2026 (5) · नवे डिझाइन</div>');
+  document.getElementById('tabs').insertAdjacentHTML('beforeend', '<div class="navh" style="margin-top:auto;text-transform:none;letter-spacing:0;font-weight:500">आवृत्ती: 13-11-2026 (6)</div>');
   Object.keys(sec).forEach(function (v) { var b = document.querySelector('#tabs button[data-v="' + v + '"]'); if (b) b.insertAdjacentHTML('beforebegin', '<div class="navh">' + sec[v] + '</div>'); });
 })();
 /* न जतन केलेले काम: वरच्या माहे-चिपवर खूण + बंद करताना इशारा */

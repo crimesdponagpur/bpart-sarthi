@@ -58,12 +58,33 @@ function issuesOf(r) { try { return CHECKS.issues(r, { month: S.month, dups: S.b
 var _prevFor = null;
 function ensurePrev() {
   var key = monthKey(S.month); if (!key || _prevFor === key) return; _prevFor = key;
-  var idx = {}, add = function (mk, nos) { if (!nos || mk >= key) return; Object.keys(nos).forEach(function (k) { (nos[k] || []).forEach(function (n) { idx[k + n] = keyLabel(mk); }); }); };
-  var hist = lsJSON('bps_hist', {}); Object.keys(hist).forEach(function (k) { add(k, hist[k].sum && hist[k].sum.nos); });
+  var pk = prevKey(key), yr = key.slice(0, 4), pmax = {};
+  var idx = {}, add = function (mk, nos) { if (!nos || mk >= key) return; Object.keys(nos).forEach(function (k) { (nos[k] || []).forEach(function (n) { idx[k + n] = keyLabel(mk); if (mk === pk && n.split('|')[0] === yr) { var v = +n.split('|')[1]; if (!pmax[k] || v > pmax[k]) pmax[k] = v; } }); }); };
+  pmax._have = false; var mark = function (mk) { if (mk === pk) pmax._have = true; };
+  var hist = lsJSON('bps_hist', {}); Object.keys(hist).forEach(function (k) { if (hist[k].sum && hist[k].sum.nos) mark(k); add(k, hist[k].sum && hist[k].sum.nos); });
   ARC.all().catch(function () { return []; }).then(function (list) {
-    (list || []).forEach(function (m) { add(m.key, m.records ? monthSum(m.records).nos : m.sum && m.sum.nos); });
-    S.prevNos = idx; if (S.records.length) { renderSteps(); if (S.cur === 'queue' || S.cur === 'review') refreshView(); }
+    (list || []).forEach(function (m) { var nos = m.records ? monthSum(m.records).nos : m.sum && m.sum.nos; if (nos) mark(m.key); add(m.key, nos); });
+    S.prevNos = idx; S.prevMax = pmax; if (S.records.length) { renderSteps(); if (S.cur === 'queue' || S.cur === 'review') refreshView(); }
   });
+}
+
+function prevKey(key) { var y = +key.slice(0, 4), m = +key.slice(5, 7) - 1; if (!m) { y--; m = 12; } return y + '-' + ('0' + m).slice(-2); }
+// प्रत्येक PS ची क्रमांक मालिका: मागील महिन्याच्या शेवटच्या क्रमांकापासून सलग आहे का?
+function contInfo() {
+  var key = monthKey(S.month); if (!key || !S.records.length) return [];
+  var yr = key.slice(0, 4), jan = key.slice(5) === '01', pm = S.prevMax || {}, out = [];
+  var ser = {};
+  S.records.forEach(function (r) {
+    var n = parseInt(r.no, 10); if (!isFinite(n) || !PSU[r.ps]) return;
+    var fy = CHECKS.pdate(r.u ? r.u.filed : r.filed); if (fy && String(fy.y) !== yr) return;
+    var k = r.ps + '|' + (r.table === 'M' ? 'M' : ''); (ser[k] = ser[k] || []).push(n);
+  });
+  Object.keys(ser).forEach(function (k) {
+    var a = ser[k], lo = Math.min.apply(null, a), hi = Math.max.apply(null, a), prev = jan ? 0 : pm[k], o = { ps: k.split('|')[0], marg: /M$/.test(k), from: lo, to: hi, prev: prev, known: jan || !!pm._have, miss: [] };
+    if (prev !== undefined && lo > prev + 1) for (var i = prev + 1; i < lo && o.miss.length < 200; i++) o.miss.push(i);
+    out.push(o);
+  });
+  return out.sort(function (a, b) { return a.marg - b.marg; });
 }
 function needsLook(r) { return !r.ok && issuesOf(r).some(function (i) { return i.lv === 'hi' || i.lv === 'mid'; }); }
 function pendingCount() { return S.records.filter(needsLook).length; }
@@ -237,6 +258,36 @@ function renderStats() {
 function headOptions(sel) {
   return '<option value="">— head निवडा —</option>' + headOrder().map(function (h) { return '<option' + (h === sel ? ' selected' : '') + '>' + esc(h) + '</option>'; }).join('') + '<option value="__new">+ नवीन head…</option>';
 }
+
+/* ---------- हा head का? ---------- */
+var WHY = {
+  'table-marg': 'PS फाईलच्या मर्ग तक्त्यात नोंद आहे', 'table-daru': 'PS फाईलच्या दारूबंदी तक्त्यात नोंद आहे',
+  ndps: 'एनडीपीएस कायद्याचे कलम', jugar12: 'कलम 12(अ) – जुगार', mda: 'दारूबंदी कायद्याचे कलम (मोठा गुन्हा सोबत नाही)', arms: 'आर्म ॲक्टचे कलम (मोठा गुन्हा सोबत नाही)',
+  essen: 'जीवनावश्यक वस्तू कायदा', labour: 'बाल / वेठबिगारी कायदा', it: 'माहिती तंत्रज्ञान कायद्याचे कलम', elec: 'विद्युत कायदा',
+  theft303: 'कलम 303 – घरफोडी / जबरी / दरोड्याचे कलम नाही म्हणून साधी चोरी', theft: 'चोरीचे कलम (303–307)',
+  mpoka: 'फक्त महाराष्ट्र पोलीस अधिनियमाचे कलम', jugar: 'जुगार कायदा / हकिगतीत जुगाराचे शब्द',
+  'rape-m': 'बलात्काराचे कलम + पोक्सो (पीडिता अल्पवयीन)', 'rape-a': 'बलात्काराचे कलम, पोक्सो नाही', 'mod-m': 'विनयभंगाचे कलम + पोक्सो (पीडिता अल्पवयीन)', 'mod-a': 'विनयभंगाचे कलम, पोक्सो नाही',
+  'burg-dw': 'घरफोडी कलम 331 + PS ने "दिवसा" लिहिले', 'burg-nw': 'घरफोडी कलम 331 + PS ने "रात्री" लिहिले', 'burg-n': 'कलम 331(4) – रात्रीची घरफोडी', 'burg-d': 'कलम 331(3) – दिवसाची घरफोडी',
+  'burg-305': 'कलम 305 + 331–334 व हकिगतीत रात्रीची वेळ', 'burg-305d': 'कलम 305 + 331–334, रात्रीचा उल्लेख नाही',
+  s336m: 'मोवाका 184/134 + कलम 125/324 – अपघात', mva185: 'कलम 185 मोवाका – दारू पिऊन वाहन', mva: 'फक्त मोटार वाहन कायद्याची कलमे',
+  s311: 'कलम 310/311 – दरोडा', s309: 'कलम 309 – जबरी चोरी', s137: 'कलम 137 – अल्पवयीन पळवणे', s140: 'कलम 140 – पळवून नेणे', s118: 'कलम 115–118 – दुखापत'
+};
+var ACTMR = { BNS: 'बीएनएस', BNSS: 'बीएनएसएस', IPC: 'भादवि', MVA: 'मोवाका', MDA: 'दारूबंदी', MJKA: 'जुगार', MPOKA: 'मपोका', NDPS: 'एनडीपीएस', ARMS: 'आर्म ॲक्ट', POCSO: 'पोक्सो', IT: 'आयटी ॲक्ट', ELEC: 'विद्युत', ESSEN: 'जीवनावश्यक', LABOUR: 'बालमजुरी', ANIMAL: 'प्राणी छळ', ANIMAL76: 'प्राणी संरक्षण', ATRO: 'ॲट्रॉसिटी' };
+var SUBMR = { A: 'अ', B: 'ब', C: 'क', D: 'ड', E: 'ई' };
+function secLabel(x) { var p = String(x).split(':'); return p[0] + (p[1] ? '(' + (SUBMR[p[1]] || p[1]) + ')' : ''); }
+function whyHtml(r) {
+  var auto = r.auto, why;
+  if (r.manual) why = 'तुम्ही स्वतः निवडला' + (auto && auto !== r.head ? ' (app चा अंदाज होता: ' + esc(auto) + ')' : '');
+  else if (/^learned/.test(r.rule || '')) why = 'तुम्ही शिकवलेल्या नियमानुसार';
+  else if (!r.head) why = 'कोणताही नियम बसला नाही – head हाताने निवडा';
+  else if (WHY[r.rule]) why = WHY[r.rule];
+  else {
+    var m = String(r.rule || '').match(/^(ipc|s|x)(\d+)/), law = /^l-/.test(r.rule || '');
+    why = m ? 'कलम ' + m[2] + (m[1] === 'ipc' ? ' भादवि' : ' बीएनएस') : law ? 'विशेष कायद्याचे नाव गुन्ह्यात आहे' : 'कलमांवरून';
+  }
+  var secs = (r.secs || []).slice(0, 8).map(secLabel).join(', ');
+  return '<div class="why"><span class="q">का?</span>' + why + (secs && !r.manual ? ' · <span class="muted">कलमे: ' + esc(secs) + (r.acts && r.acts.length ? ' (' + esc(r.acts.map(function (x) { return ACTMR[x] || x; }).join(', ')) + ')' : '') + '</span>' : '') + '</div>';
+}
 function itemHtml(r, opt) {
   var edB = Object.keys(r.ed || {}).length ? '<span class="badge manual">✎ संपादित</span>' : '';
   var badge = r.manual ? '<span class="badge manual">बदलले</span>' : /^learned/.test(r.rule || '') ? '<span class="badge learned">तुमचा नियम</span>' : r.head ? '<span class="badge">आपोआप</span>' : '<span class="badge none">ठरले नाही</span>';
@@ -244,7 +295,7 @@ function itemHtml(r, opt) {
   var first = r.u.crime.split('\n').filter(function (x) { return x.trim(); }).slice(0, 3).join('\n');
   var ws = warnsOf(r).filter(function (w) { return w !== 'head ठरलेला नाही'; });
   var h = '<div class="item" id="it-' + esc(r.id) + '"><div class="l1"><span class="badge ps" data-ps="' + esc(r.ps) + '">' + PSU[r.ps] + '</span><b>' + esc(r.no) + '</b><span class="badge">' + tbl + '</span>' + badge + edB + '</div>' +
-    '<div class="crime">' + esc(first).replace(/(कलम\s*)([^\n]*)/, function (m0, a, b) { return a + b.replace(/(\d{1,3}(?:\([^)]{1,5}\))*)/g, '<span class="mark-sec">$1</span>'); }) + '</div><div class="place">' + esc(r.u.place.replace(/\n/g, ' ')) + '</div>' +
+    '<div class="crime">' + esc(first).replace(/(कलम\s*)([^\n]*)/, function (m0, a, b) { return a + b.replace(/(\d{1,3}(?:\([^)]{1,5}\))*)/g, '<span class="mark-sec">$1</span>'); }) + '</div>' + whyHtml(r) + '<div class="place">' + esc(r.u.place.replace(/\n/g, ' ')) + '</div>' +
     (ws.length && !(opt && opt.noWarn) ? '<div class="warns">' + ws.map(function (w) { return '<div>⚠ ' + esc(w) + '</div>'; }).join('') + '</div>' : '') +
     '<div class="ctl"><select data-head="' + esc(r.id) + '">' + headOptions(r.head) + '</select><button class="btn sm" data-det="' + esc(r.id) + '">तपशील</button>' +
     (r.manual ? '<button class="btn sm" data-rule="' + esc(r.id) + '">नियम बनवा</button>' : '') + '</div>';
@@ -537,6 +588,65 @@ $('yrImport').addEventListener('change', function () {
     }).catch(fail);
 });
 
+
+/* ---------- PS साठी प्रमाणित नमुना ---------- */
+var TPL_HELP = [
+  'प्रत्येक गुन्ह्यासाठी एकच ओळ. ओळी merge करू नका, एका ओळीत दोन गुन्हे लिहू नका.',
+  '"अप.क्र. व कलम" रकान्यात असे लिहा: 363/26 कलम 331(4), 305(अ) बीएनएस – आधी क्रमांक/वर्ष, नंतर "कलम", शेवटी कायद्याचे नाव.',
+  'घरफोडीत कलम 331(3) (दिवसा) किंवा 331(4) (रात्री) स्पष्ट लिहा.',
+  'अल्पवयीन पीडित असल्यास पोक्सो कलम लिहा.',
+  'चोरी / घरफोडीत "चोरीस माल" रकान्यात माल व एकूण किंमत (रु.) लिहा; वसुल माल वेगळ्या रकान्यात.',
+  'प्रतिबंधक कारवाई (इस्तगासा क्र., कलम) "अटक ता. वेळ व प्रतिबंधक" रकान्यात लिहा.',
+  'तारीख व वेळ असे लिहा: 29/10/26 चे 20/00 वा.',
+  'गुन्हे क्रमाने लिहा; मागील महिन्याच्या शेवटच्या क्रमांकानंतरचा एकही क्रमांक सोडू नका.',
+  'दारूबंदी / जुगार गुन्हे "दारूबंदी / जुगार" तक्त्यात, मर्ग "मर्ग" तक्त्यात.',
+  'फाईल .docx मध्येच पाठवा (PDF / फोटो नको). Kruti Dev फॉन्ट चालेल.'
+];
+function psTemplateDocx(ps, month, fill) {
+  var K = function (u) { return TEXT.u2k(u).replace(/nkjw\s*canh/g, 'nk:canh'); };
+  var X = function (t) { return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); };
+  var run = function (t, o) { o = o || {}; var f = o.uni ? 'Mangal' : 'Kruti Dev 010'; return '<w:r><w:rPr><w:rFonts w:ascii="' + f + '" w:hAnsi="' + f + '" w:cs="Mangal"/>' + (o.b ? '<w:b/>' : '') + '<w:sz w:val="' + (o.sz || 24) + '"/></w:rPr><w:t xml:space="preserve">' + X(o.uni ? t : K(t)) + '</w:t></w:r>'; };
+  var para = function (t, o) { o = o || {}; return '<w:p><w:pPr>' + (o.c ? '<w:jc w:val="center"/>' : '') + '<w:spacing w:before="' + (o.before || 0) + '" w:after="80"/></w:pPr>' + run(t, o) + '</w:p>'; };
+  var COLS = {
+    A: ['अ.क्र.', 'अप.क्र. व कलम', 'घटनास्थळ', 'घटना ता.वेळ', 'दाखल ता.वेळ', 'नाव व पत्ता फिर्यादी आणि आरोपी नाव व पत्ता', 'अटक ता. वेळ व प्रतिबंधक', 'चोरीस माल', 'वसुल माल', 'दाखल / तपास', 'हकिकत'],
+    B: ['अ.क्र.', 'अप.क्र. व कलम', 'घटनास्थळ', 'घटना ता.वेळ', 'दाखल ता.वेळ', 'फिर्यादीचे नाव व पत्ता आणि आरोपीचे नाव व पत्ता', 'अटक ता. वेळ व प्रतिबंधक', 'दाखल / तपास', 'हकिकत'],
+    M: ['अ.क्र.', 'मर्ग क्र. व कलम', 'घटनास्थळ', 'घटना ता.वेळ', 'दाखल ता.वेळ', 'फिर्यादीचे नाव व पत्ता', 'मृतक नाव व पत्ता', 'दाखल / तपास', 'मरणाचे कारण']
+  };
+  var W = { A: [500, 1700, 1300, 1100, 1100, 1900, 1300, 1300, 1000, 1200, 3300], B: [500, 1800, 1500, 1200, 1200, 2300, 1500, 1400, 4300], M: [500, 1700, 1600, 1200, 1200, 2000, 2000, 1400, 3100] };
+  var table = function (type, rows) {
+    var cols = COLS[type], w = W[type], bd = '<w:tblBorders>' + ['top', 'left', 'bottom', 'right', 'insideH', 'insideV'].map(function (x) { return '<w:' + x + ' w:val="single" w:sz="4" w:space="0" w:color="000000"/>'; }).join('') + '</w:tblBorders>';
+    var cell = function (t, i, hd) { return '<w:tc><w:tcPr><w:tcW w:w="' + w[i] + '" w:type="dxa"/>' + (hd ? '<w:shd w:val="clear" w:color="auto" w:fill="E7ECF5"/>' : '') + '</w:tcPr><w:p>' + (t ? run(t, { b: hd, sz: hd ? 22 : 22 }) : '') + '</w:p></w:tc>'; };
+    var tr = function (cells, hd) { return '<w:tr>' + (hd ? '<w:trPr><w:tblHeader/></w:trPr>' : '') + cells.map(function (t, i) { return cell(t, i, hd); }).join('') + '</w:tr>'; };
+    var body = (rows && rows.length ? rows : [1, 2, 3, 4, 5].map(function (n) { return [String(n)].concat(cols.slice(1).map(function () { return ''; })); }));
+    return '<w:tbl><w:tblPr><w:tblW w:w="0" w:type="auto"/>' + bd + '<w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid>' + w.map(function (x) { return '<w:gridCol w:w="' + x + '"/>'; }).join('') + '</w:tblGrid>' + tr(cols, true) + body.map(function (r) { return tr(r); }).join('') + '</w:tbl>';
+  };
+  fill = fill || {};
+  var mo = month || '__/____';
+  var body = para('पोलीस स्टेशन ' + PSU[ps] + ' बी पार्ट माहे ' + mo, { b: 1, sz: 32, c: 1 }) +
+    para('भाग 1 ते 6 – मालमत्तेविरुद्धचे गुन्हे (चोरी, घरफोडी, जबरी, दरोडा इ.)', { b: 1, sz: 26, before: 200 }) + table('A', fill.A) +
+    para('इतर भा.न्या.सं. / विशेष कायद्याचे गुन्हे', { b: 1, sz: 26, before: 200 }) + table('B', fill.B) +
+    para('महाराष्ट्र दारूबंदी / जुगार कायद्याचे गुन्हे', { b: 1, sz: 26, before: 200 }) + table('B', fill.D) +
+    para('मर्ग', { b: 1, sz: 26, before: 200 }) + table('M', fill.M) +
+    '<w:p><w:r><w:br w:type="page"/></w:r></w:p>' + para('B Part भरण्याच्या सूचना', { b: 1, sz: 26, uni: 1 }) +
+    TPL_HELP.map(function (t, i) { return para((i + 1) + '. ' + t, { uni: 1, sz: 22 }); }).join('');
+  var doc = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:body>' + body +
+    '<w:sectPr><w:pgSz w:w="16838" w:h="11906" w:orient="landscape"/><w:pgMar w:top="720" w:right="567" w:bottom="720" w:left="567" w:header="360" w:footer="360" w:gutter="0"/></w:sectPr></w:body></w:document>';
+  var files = {
+    '[Content_Types].xml': '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>',
+    '_rels/.rels': '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>',
+    'word/document.xml': doc
+  };
+  var name = 'PS ' + PSU[ps] + ' B Part नमुना' + (month ? ' ' + month.replace('/', '-') : '') + '.docx';
+  var blob = Utilities.zip(Object.keys(files).map(function (k) { return Utilities.newBlob(files[k], 'application/xml', k); }), name);
+  return { name: name, b64: Utilities.base64Encode(blob.getBytes()), mime: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' };
+}
+$('tplHelp').innerHTML = TPL_HELP.map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('');
+document.addEventListener('click', function (e) {
+  var b = e.target.closest('[data-tpl]'); if (!b) return;
+  var mo = ($('tplMonth').value || '').trim();
+  if (mo && !/^\d{1,2}\/20\d\d$/.test(mo)) { toast('माहे असा लिहा: 11/2026'); return; }
+  try { var res = psTemplateDocx(b.dataset.tpl, mo); $('tplOut').innerHTML = ''; showFile($('tplOut'), res); } catch (err) { toast('नमुना बनवता आला नाही: ' + err.message); }
+});
 /* ---------- फोनसाठी खालचा मेनू ---------- */
 var BN_MAP = { home: 'home', files: 'files', queue: 'queue', review: 'more', reports: 'reports', hbt: 'reports', preview: 'reports', archive: 'more', rules: 'more', dash: 'more', typing: 'more' };
 function syncBnav() {

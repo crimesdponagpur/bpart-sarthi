@@ -312,6 +312,11 @@ function renderQueue() {
     bl.push('<li>' + PSU[g.ps] + (g.marg ? ' (मर्ग)' : '') + ': गुन्हा क्र. <b>' + m + '</b> यादीत नाही (' + g.from + ' ते ' + g.to + ' च्या दरम्यान)</li>');
   });
   (b.dupList || []).forEach(function (d) { bl.push('<li>' + esc(d.text) + '</li>'); });
+  contInfo().forEach(function (c) {
+    if (!c.miss.length) return;
+    var m = c.miss.length > 12 ? c.miss[0] + ' ते ' + c.miss[c.miss.length - 1] + ' (' + c.miss.length + ' गुन्हे)' : c.miss.join(', ');
+    bl.push('<li>' + PSU[c.ps] + (c.marg ? ' (मर्ग)' : '') + ': ' + (c.prev ? 'मागील महिन्याचा शेवटचा क्र. <b>' + c.prev + '</b>, या महिन्याचा पहिला <b>' + c.from + '</b>' : 'जानेवारी – पहिला क्र. <b>' + c.from + '</b>') + ' – मधले क्र. <b>' + m + '</b> कोणत्याच B Part मध्ये नाहीत</li>');
+  });
   $('qBatch').innerHTML = (bl.length && !S.batchOk) ? '<div class="bcard"><b>संपूर्ण यादी तपासणी – हे पाहा:</b><ul style="margin:6px 0 8px;padding-left:20px">' + bl.join('') + '</ul><button class="btn sm" id="qBatchOk">पाहिले, ठीक आहे</button></div>' : '';
   var focus = S.qMode !== 'list';
   if (focus && ids.length) {
@@ -341,14 +346,37 @@ function renderPsStatus() {
     var files = S.files.filter(function (f) { return f.ps === k; }), nrec = S.records.filter(function (r) { return r.ps === k; }).length;
     var got = files.length > 0 || nrec > 0;
     var pr = S.records.filter(function (r) { return r.ps === k; }), pp = pr.filter(needsLook).length, pu = pr.filter(function (r) { return !r.head; }).length;
-    var stats = nrec ? '<div class="pst"><span>' + nrec + ' नोंदी</span>' + (pp ? '<span class="w">' + pp + ' तपासायच्या</span>' : '<span>✓ तपासले</span>') + (pu ? '<span class="b">' + pu + ' अवर्गीकृत</span>' : '') + '</div>' : '';
+    var ci = contInfo().filter(function (c) { return c.ps === k && !c.marg; })[0];
+    var cchip = ci ? (ci.miss.length ? '<span class="b" title="मागील महिन्याचा शेवटचा क्र. ' + ci.prev + '">क्र. ' + ci.from + '–' + ci.to + ' · ' + ci.miss.length + ' सुटले</span>' : ci.prev !== undefined ? '<span class="g" title="मागील महिन्याचा शेवटचा क्र. ' + ci.prev + '">क्र. ' + ci.from + '–' + ci.to + ' ✓ सलग</span>' : '<span title="मागील महिना जतन नाही">क्र. ' + ci.from + '–' + ci.to + '</span>') : '';
+    var stats = nrec ? '<div class="pst"><span>' + nrec + ' नोंदी</span>' + cchip + (pp ? '<span class="w">' + pp + ' तपासायच्या</span>' : '<span>✓ तपासले</span>') + (pu ? '<span class="b">' + pu + ' अवर्गीकृत</span>' : '') + '</div>' : '';
     return '<div class="psc ' + (got ? 'got' : 'miss') + '"><h4><span class="badge ps" data-ps="' + k + '">' + PSU[k] + '</span> ' + (got ? '✓' : '⚠') + '</h4><div class="st">' + (got ? (nrec ? 'फाईल वाचली' : files.length + ' फाईल निवडली') : 'फाईल आलेली नाही') + '</div>' + stats +
+      (nrec && psErrors(k).length ? '<div class="row"><button class="btn sm" data-waerr="' + k + '">PS ला ' + psErrors(k).length + ' त्रुटी पाठवा</button></div>' : '') +
       (got ? '' : '<input type="text" inputmode="numeric" placeholder="PS चा WhatsApp नंबर (एकदाच)" data-psnum="' + k + '" value="' + esc(lsGet('psnum_' + k) || '') + '" data-notype="1"><div class="row"><button class="btn sm" data-wa="' + k + '">WhatsApp वर आठवण पाठवा</button></div>') + '</div>';
   }).join('') + '</div>';
   var unk = S.files.filter(function (f) { return !f.ps; }).length;
   if (unk) html += '<div class="small muted" style="margin-top:8px">⚠ ' + unk + ' फाईलचा PS ओळखला नाही – यादीत PS निवडा.</div>';
   $('psHome').innerHTML = html; $('psFiles').innerHTML = html;
 }
+
+// PS ने दुरुस्त करायच्या गोष्टी (WhatsApp संदेशासाठी)
+function psErrors(k) {
+  var out = [];
+  (S.skipped || []).filter(function (x) { return x.ps === k; }).forEach(function (x) { out.push('तक्ता ' + x.table + ', ओळ ' + x.row + ': ओळ वाचता आली नाही (गुन्हा क्र./कलम नीट लिहा)'); });
+  contInfo().filter(function (c) { return c.ps === k && c.miss.length; }).forEach(function (c) { out.push((c.marg ? 'मर्ग ' : 'गुन्हा ') + 'क्र. ' + (c.miss.length > 12 ? c.miss[0] + ' ते ' + c.miss[c.miss.length - 1] : c.miss.join(', ')) + ' B Part मध्ये नाहीत (मागील शेवटचा ' + c.prev + ')'); });
+  ((S.batch || {}).gaps || []).filter(function (g) { return g.ps === k; }).forEach(function (g) { out.push((g.marg ? 'मर्ग ' : 'गुन्हा ') + 'क्र. ' + g.missing.slice(0, 15).join(', ') + ' यादीत नाहीत'); });
+  ((S.batch || {}).dupList || []).filter(function (d) { return d.ps === k; }).forEach(function (d) { out.push(d.text); });
+  S.records.filter(function (r) { return r.ps === k; }).forEach(function (r) {
+    var w = issuesOf(r).filter(function (i) { return /नोंद नाही|दिसत नाही|या महिन्याची नाही|भविष्यातील|आधीच्या महिन्यात/.test(i.t) && i.k !== 'amb'; }).map(function (i) { return i.t; });
+    if (w.length) out.push('गुन्हा ' + r.no + ': ' + w.join(', '));
+  });
+  return out;
+}
+document.addEventListener('click', function (e) {
+  var b = e.target.closest('[data-waerr]'); if (!b) return;
+  var k = b.dataset.waerr, list = psErrors(k), num = (lsGet('psnum_' + k) || '').replace(/\D/g, ''); if (num.length === 10) num = '91' + num;
+  var msg = 'नमस्कार, पो.स्टे. ' + PSU[k] + ' – ' + (S.month ? 'माहे ' + S.month + ' च्या ' : '') + 'B Part मध्ये खालील दुरुस्त्या कराव्यात:\n' + list.slice(0, 30).map(function (x, i) { return (i + 1) + ') ' + x; }).join('\n') + (list.length > 30 ? '\n… आणखी ' + (list.length - 30) : '') + '\nदुरुस्त .docx फाईल पुन्हा पाठवावी.\n– उपविभागीय पोलीस अधिकारी कार्यालय';
+  copyText(msg); window.open('https://wa.me/' + num + '?text=' + encodeURIComponent(msg), '_blank'); toast('संदेश कॉपी झाला');
+});
 document.addEventListener('change', function (e) { var t = e.target; if (t.dataset && t.dataset.psnum) { lsSet('psnum_' + t.dataset.psnum, t.value.trim()); } });
 document.addEventListener('click', function (e) {
   var b = e.target.closest('[data-wa]'); if (!b) return;
