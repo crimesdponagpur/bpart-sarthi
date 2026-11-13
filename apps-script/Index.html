@@ -42,6 +42,7 @@
     <option value="roman">रोमन → मराठी</option>
     <option value="kruti">Kruti Dev → मराठी</option>
   </select>
+  <button class="topsearch" id="kOpen" title="शोधा (Ctrl+K)"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><span>शोधा</span><kbd>Ctrl K</kbd></button>
   <div class="month" id="monthTag">माहे —</div>
 </div>
 <div class="steps" id="steps">
@@ -63,19 +64,22 @@
 <main>
   <!-- HOME -->
   <section id="v-home">
-    <div class="hero">
-      <h2 id="heroT">नमस्कार!</h2>
-      <p id="heroP"></p>
-      <button class="btn" id="heroBtn">सुरू करा →</button>
+    <div class="hero hc">
+      <div class="hc-top">
+        <div style="min-width:0"><div class="hc-hello" id="heroHello">नमस्कार</div><h2 id="heroT">नमस्कार!</h2><p id="heroP"></p></div>
+        <button class="btn" id="heroBtn">सुरू करा →</button>
+      </div>
+      <div class="hpath" id="hpath"></div>
     </div>
     <div id="draftBox"></div>
     <div id="skipBox"></div>
     <div id="arcHome" class="adv"></div>
     <div id="bkBanner"></div>
     <div class="tiles" id="tiles"></div>
-    <div class="card"><h2>PS कडून फाईल्स</h2><div id="psHome"></div></div>
+    <div class="card"><h2>PS कडून फाईल्स <span class="small muted" style="font-weight:400" id="psHomeSub"></span></h2><div id="psHome"></div></div>
+    <div class="card"><h2>वर्ष <span id="ystripY"></span> <span class="small muted" style="font-weight:400">– जतन केलेले महिने</span></h2><div class="ystrip" id="ystrip"></div></div>
     <div class="card">
-      <h2>दिसणे <span class="small muted appver" style="font-weight:400;margin-left:auto">आवृत्ती: 13-11-2026 (4)</span></h2>
+      <h2>दिसणे <span class="small muted appver" style="font-weight:400;margin-left:auto">आवृत्ती: 13-11-2026 (5) · नवे डिझाइन</span></h2>
       <div class="row" style="gap:18px">
         <div><div class="small muted" style="margin-bottom:4px">अक्षरांचा आकार</div><div class="seg" id="segFs"><button data-fs="1">अ</button><button data-fs="1.15" style="font-size:1.1em">अ</button><button data-fs="1.3" style="font-size:1.25em">अ</button></div></div>
         <div><div class="small muted" style="margin-bottom:4px">रंगसंगती</div><div class="seg" id="segTh"><button data-th="auto">आपोआप</button><button data-th="light">उजळ</button><button data-th="dark">गडद</button></div></div>
@@ -132,6 +136,7 @@
   <section id="v-queue" class="hide">
     <div class="card" id="qHead"></div>
     <div id="qBatch"></div>
+    <div id="qFocus"></div>
     <div id="qList"></div>
   </section>
 
@@ -184,7 +189,7 @@
       <input type="text" id="qF" placeholder="शोधा: गुन्हा क्र. / कलम / नाव" style="flex:1;min-width:180px" data-notype="1">
       <button class="btn sm" id="collapseAll">सर्व मिटवा</button>
     </div>
-    <div id="groups"></div>
+    <div class="rv-grid"><aside class="rv-nav" id="rvNav"></aside><div id="groups"></div></div>
   </section>
 
   <!-- HBT -->
@@ -317,7 +322,7 @@
   <!-- RULES -->
   <section id="v-rules" class="hide">
     <div class="card">
-      <h2>App पद्धत <span class="small muted appver" style="font-weight:400;margin-left:auto">आवृत्ती: 13-11-2026 (4)</span></h2>
+      <h2>App पद्धत <span class="small muted appver" style="font-weight:400;margin-left:auto">आवृत्ती: 13-11-2026 (5) · नवे डिझाइन</span></h2>
       <div class="seg" id="segMode"><button data-mode="simple">साधी (फक्त B Part)</button><button data-mode="full">सर्व साधने</button></div>
       <p class="muted small" style="margin-bottom:0">साधी पद्धत: मुख्य काम (फाईल्स → तपासणी → अहवाल) एवढेच. "सर्व साधने" निवडल्यास डॅशबोर्ड व टायपिंग ही अतिरिक्त साधने दिसतात.</p>
     </div>
@@ -354,6 +359,17 @@
     </div>
   </section>
 </main>
+<div class="kpal" id="kpal"><div class="kbox"><input type="text" id="kq" placeholder="गुन्हा क्र., नाव, कलम, गाव… (उदा. 344, 303, बेला)" data-notype="1" autocomplete="off"><div class="klist" id="klist"></div><div class="small muted khint">↑↓ निवडा · Enter उघडा · Esc बंद</div></div></div>
+<nav class="bnav" id="bnav">
+  <button data-b="home"><svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg><span>मुख्य</span></button>
+  <button data-b="files"><svg viewBox="0 0 24 24"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/><path d="M12 18v-6"/><path d="M9 15l3-3 3 3"/></svg><span>फाईल्स</span></button>
+  <button data-b="queue"><svg viewBox="0 0 24 24"><path d="M9 6h12"/><path d="M9 12h12"/><path d="M9 18h12"/><path d="M3 6l1.5 1.5L7 5"/><path d="M3 12l1.5 1.5L7 11"/><path d="M3 18l1.5 1.5L7 17"/></svg><span>तपासणी</span><i class="bn-n hide" id="bnQ"></i></button>
+  <button data-b="reports"><svg viewBox="0 0 24 24"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/><path d="M8 13h8"/><path d="M8 17h5"/></svg><span>अहवाल</span></button>
+  <button data-b="more"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg><span>अधिक</span></button>
+</nav>
+<div class="bsheet" id="bsheet"><div class="bs-box"><div class="bs-grip"></div>
+  <button data-b="review">वर्गीकरण (head नुसार)</button><button data-b="archive">संग्रह (जतन केलेले महिने)</button><button data-b="rules">नियम व सेटिंग</button><button data-b="dash" class="adv">डॅशबोर्ड</button><button data-b="typing" class="adv">टायपिंग</button>
+</div></div>
 <div class="toast" id="toast"></div>
 <div class="overlay" id="ov"><div class="box"><div class="spin"></div><div id="ovTx">काम सुरू आहे…</div></div></div>
 
@@ -375,11 +391,12 @@
 <script>
 <?!= include('App1'); ?>
 <?!= include('App2'); ?>
+<?!= include('App3'); ?>
 </script>
 <script>
 /* जोडणी तपासणी: एखादी फाईल अपुरी paste झाली असेल तर ती इथे दिसते */
 (function () {
-  var want = ['Engine1','Engine2','Engine3','Engine4','Engine5','App1','App2'], got = window.__BPS_PARTS || [], miss = want.filter(function (x) { return got.indexOf(x) < 0; });
+  var want = ['Engine1','Engine2','Engine3','Engine4','Engine5','App1','App2','App3'], got = window.__BPS_PARTS || [], miss = want.filter(function (x) { return got.indexOf(x) < 0; });
   var probe = document.createElement('div'); probe.className = '__bps_styles_ok'; document.body.appendChild(probe);
   if (getComputedStyle(probe).display !== 'none') miss.unshift('Styles');
   if (miss.length) {

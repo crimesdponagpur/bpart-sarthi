@@ -43,7 +43,7 @@ function show(v) {
   Array.prototype.forEach.call(document.querySelectorAll('#tabs button'), function (b) { b.classList.toggle('on', b.dataset.v === v); });
   if (v === 'home') renderHome(); if (v === 'dash') renderDash(); if (v === 'files') { renderPsStatus(); updateMergeBox(); renderLog(); } if (v === 'queue') { buildQueue(); renderQueue(); }
   if (v === 'archive') renderArchive(); if (v === 'review') renderReview(); if (v === 'hbt') renderHbt(); if (v === 'preview') renderPreview(); if (v === 'reports') { renderDownload(); renderReports(); renderYear(); } if (v === 'rules') renderRules();
-  renderSteps();
+  renderSteps(); syncBnav();
   window.scrollTo(0, 0);
 }
 document.addEventListener('click', function (e) { var g = e.target.closest('[data-go]'); if (g && !g.closest('#v-home')) show(g.dataset.go); });
@@ -243,8 +243,8 @@ function itemHtml(r, opt) {
   var tbl = r.table === 'M' ? 'मर्ग' : r.table === 'D' ? 'दारूबंदी तक्ता' : 'भाग 1-6';
   var first = r.u.crime.split('\n').filter(function (x) { return x.trim(); }).slice(0, 3).join('\n');
   var ws = warnsOf(r).filter(function (w) { return w !== 'head ठरलेला नाही'; });
-  var h = '<div class="item" id="it-' + esc(r.id) + '"><div class="l1"><span class="badge ps">' + PSU[r.ps] + '</span><b>' + esc(r.no) + '</b><span class="badge">' + tbl + '</span>' + badge + edB + '</div>' +
-    '<div class="crime">' + esc(first) + '</div><div class="place">' + esc(r.u.place.replace(/\n/g, ' ')) + '</div>' +
+  var h = '<div class="item" id="it-' + esc(r.id) + '"><div class="l1"><span class="badge ps" data-ps="' + esc(r.ps) + '">' + PSU[r.ps] + '</span><b>' + esc(r.no) + '</b><span class="badge">' + tbl + '</span>' + badge + edB + '</div>' +
+    '<div class="crime">' + esc(first).replace(/(कलम\s*)([^\n]*)/, function (m0, a, b) { return a + b.replace(/(\d{1,3}(?:\([^)]{1,5}\))*)/g, '<span class="mark-sec">$1</span>'); }) + '</div><div class="place">' + esc(r.u.place.replace(/\n/g, ' ')) + '</div>' +
     (ws.length && !(opt && opt.noWarn) ? '<div class="warns">' + ws.map(function (w) { return '<div>⚠ ' + esc(w) + '</div>'; }).join('') + '</div>' : '') +
     '<div class="ctl"><select data-head="' + esc(r.id) + '">' + headOptions(r.head) + '</select><button class="btn sm" data-det="' + esc(r.id) + '">तपशील</button>' +
     (r.manual ? '<button class="btn sm" data-rule="' + esc(r.id) + '">नियम बनवा</button>' : '') + '</div>';
@@ -322,7 +322,11 @@ function renderReview() {
   if (!S.records.length) { $('groups').innerHTML = '<div class="card empty">आधी फाईल्स निवडून "वर्गीकरण करा" दाबा.</div>'; return; }
   var by = {}; S.records.forEach(function (r) { if (!matches(r)) return; var h = r.head || UNC; (by[h] = by[h] || []).push(r); });
   var order = [UNC].concat(headOrder());
-  var html = order.filter(function (h) { return by[h] && by[h].length; }).map(function (h) {
+  var all = {}; S.records.forEach(function (r) { var h = r.head || UNC; all[h] = (all[h] || 0) + 1; });
+  $('rvNav').innerHTML = '<div class="rvh">Head (' + Object.keys(all).length + ')</div><button data-rvh=""' + (S.rvHead ? '' : ' class="on"') + '><span>सर्व heads</span><b class="count">' + S.records.length + '</b></button>' +
+    order.filter(function (h) { return all[h]; }).map(function (h) { return '<button data-rvh="' + esc(h) + '"' + (S.rvHead === h ? ' class="on"' : '') + (h === UNC ? ' style="color:var(--bad)"' : '') + '><span>' + esc(h) + '</span><b class="count">' + all[h] + '</b></button>'; }).join('');
+  if (S.rvHead && !all[S.rvHead]) S.rvHead = '';
+  var html = order.filter(function (h) { return by[h] && by[h].length && (!S.rvHead || h === S.rvHead); }).map(function (h) {
     var col = S.collapsed[h];
     return '<div class="group' + (h === UNC ? ' unc' : '') + '"><header data-g="' + esc(h) + '"><span>' + (col ? '▸' : '▾') + '</span><h3>' + esc(h) + '</h3><span class="count">' + by[h].length + '</span></header>' +
       (col ? '' : by[h].map(itemHtml).join('')) + '</div>';
@@ -330,6 +334,7 @@ function renderReview() {
   $('groups').innerHTML = html || '<div class="card empty">या फिल्टरमध्ये नोंद नाही.</div>';
 }
 function rec(id) { for (var i = 0; i < S.records.length; i++) if (S.records[i].id === id) return S.records[i]; }
+$('rvNav').addEventListener('click', function (e) { var b = e.target.closest('[data-rvh]'); if (!b) return; S.rvHead = b.dataset.rvh; if (S.rvHead) S.collapsed[S.rvHead] = false; renderReview(); window.scrollTo(0, 0); });
 document.querySelector('.filters').addEventListener('click', function (e) {
   var b = e.target.closest('[data-f]'); if (b) { S.filter = b.dataset.f; Array.prototype.forEach.call(document.querySelectorAll('[data-f]'), function (x) { x.classList.toggle('on', x === b); }); renderReview(); }
 });
@@ -531,6 +536,57 @@ $('yrImport').addEventListener('change', function () {
       });
     }).catch(fail);
 });
+
+/* ---------- फोनसाठी खालचा मेनू ---------- */
+var BN_MAP = { home: 'home', files: 'files', queue: 'queue', review: 'more', reports: 'reports', hbt: 'reports', preview: 'reports', archive: 'more', rules: 'more', dash: 'more', typing: 'more' };
+function syncBnav() {
+  var on = BN_MAP[S.cur] || 'home';
+  Array.prototype.forEach.call(document.querySelectorAll('#bnav button'), function (b) { b.classList.toggle('on', b.dataset.b === on); });
+  var q = $('bnQ'), n = S.records.length ? pendingCount() : 0; q.textContent = n; q.classList.toggle('hide', !n);
+}
+$('bnav').addEventListener('click', function (e) { var b = e.target.closest('[data-b]'); if (!b) return; if (b.dataset.b === 'more') { $('bsheet').classList.add('on'); return; } show(b.dataset.b); });
+$('bsheet').addEventListener('click', function (e) { var b = e.target.closest('[data-b]'); $('bsheet').classList.remove('on'); if (b) show(b.dataset.b); });
+/* ---------- Ctrl+K शोध ---------- */
+var KP = { sel: 0, res: [] };
+function kOpen() { $('kpal').classList.add('on'); $('kq').value = ''; kSearch(); setTimeout(function () { $('kq').focus(); }, 30); }
+function kClose() { $('kpal').classList.remove('on'); }
+function kSearch() {
+  var q = $('kq').value.trim().toLowerCase();
+  if (!S.records.length) { $('klist').innerHTML = '<div class="empty small">आधी फाईल्स प्रक्रिया करा.</div>'; KP.res = []; return; }
+  var words = q.split(/\s+/).filter(Boolean);
+  KP.res = S.records.filter(function (r) {
+    if (!words.length) return false;
+    var hay = (r.no + ' ' + PSU[r.ps] + ' ' + (r.head || 'अवर्गीकृत') + ' ' + r.u.crime + ' ' + r.u.party + ' ' + r.u.place).toLowerCase();
+    return words.every(function (w) { return /^\d+$/.test(w) ? (String(+r.no) === w || new RegExp('(^|\\D)' + w + '(\\D|$)').test(r.u.crime)) : hay.indexOf(w) >= 0; });
+  }).slice(0, 40);
+  KP.sel = 0;
+  $('klist').innerHTML = KP.res.map(function (r, i) { return '<div class="kit' + (i ? '' : ' on') + '" data-k="' + i + '"><span class="badge ps" data-ps="' + r.ps + '">' + PSU[r.ps] + '</span><div class="kc"><div><b>' + esc(r.no) + '</b> · ' + esc(r.head || 'अवर्गीकृत') + '</div><div class="small muted">' + esc(r.u.crime.split('\n')[0]) + ' · ' + esc(r.u.place.replace(/\n/g, ' ').slice(0, 60)) + '</div></div></div>'; }).join('') || (q ? '<div class="empty small">काही सापडले नाही.</div>' : '<div class="empty small">गुन्हा क्र., नाव, कलम किंवा गाव लिहा.</div>');
+}
+function kGo(i) {
+  var r = KP.res[i]; if (!r) return; kClose();
+  S.filter = 'all'; S.ps = ''; S.rvHead = ''; S.q = ''; $('qF').value = ''; $('psF').value = '';
+  S.collapsed[r.head || UNC] = false; S.open[r.id] = true; show('review');
+  setTimeout(function () { var el = $('it-' + r.id); if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); el.style.transition = 'background .6s'; el.style.background = 'var(--accentSoft)'; setTimeout(function () { el.style.background = ''; }, 1600); } }, 60);
+}
+$('kOpen').addEventListener('click', kOpen);
+$('kq').addEventListener('input', kSearch);
+$('kpal').addEventListener('click', function (e) { if (e.target === $('kpal')) kClose(); var it = e.target.closest('[data-k]'); if (it) kGo(+it.dataset.k); });
+document.addEventListener('keydown', function (e) {
+  if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')) { e.preventDefault(); kOpen(); return; }
+  if ($('kpal').classList.contains('on')) {
+    if (e.key === 'Escape') kClose();
+    else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); KP.sel = Math.max(0, Math.min(KP.res.length - 1, KP.sel + (e.key === 'ArrowDown' ? 1 : -1))); Array.prototype.forEach.call(document.querySelectorAll('#klist .kit'), function (x, i) { x.classList.toggle('on', i === KP.sel); if (i === KP.sel) x.scrollIntoView({ block: 'nearest' }); }); }
+    else if (e.key === 'Enter') { e.preventDefault(); kGo(KP.sel); }
+    return;
+  }
+  // तपासणी रांग: Enter = ठीक, → पुढचा, ← मागचा
+  if (S.cur === 'queue' && S.qMode !== 'list' && !/INPUT|TEXTAREA|SELECT/.test((document.activeElement || {}).tagName || '')) {
+    var ids = qOpenIds(); if (!ids.length) return;
+    if (e.key === 'Enter') { e.preventDefault(); qApprove(ids[Math.min(S.qPos || 0, ids.length - 1)]); }
+    else if (e.key === 'ArrowRight' || e.key === 'j') { S.qPos = Math.min(ids.length - 1, (S.qPos || 0) + 1); renderQueue(); }
+    else if (e.key === 'ArrowLeft' || e.key === 'k') { S.qPos = Math.max(0, (S.qPos || 0) - 1); renderQueue(); }
+  }
+});
 /* ---------- HBT ---------- */
 function kind(h) { if (!h) return ''; if (/घरफोडी/.test(h)) return 'H'; if (/चोरी/.test(h)) return 'T'; if (/दुखापत/.test(h)) return 'U'; return ''; }
 var HBTF = {
@@ -558,249 +614,5 @@ function renderHbt() {
   $('hbtBody').innerHTML = S.records.length ? html : '<div class="card empty">आधी फाईल्स प्रक्रिया करा.</div>';
 }
 $('hbtBody').addEventListener('input', function (e) { var t = e.target; if (t.dataset.hx) { var r = rec(t.dataset.hx); r.hx = r.hx || {}; r.hx[t.dataset.k] = t.value; S.pvDone = false; } });
-
-/* ---------- preview ---------- */
-function plainRecs() { return S.records.map(function (r) { var c = {}; for (var k in r) if (k !== 'u') c[k] = r[k]; return c; }); }
-function renderPreview() {
-  if (!S.records.length) { $('pvBody').innerHTML = '<div class="card empty">आधी फाईल्स प्रक्रिया करा.</div>'; return; }
-  if (S.pvDone) return;
-  busy(true, 'पूर्वावलोकन तयार करत आहे…');
-  call('api_model', { records: plainRecs(), heads: headOrder(), month: S.month, full: $('pvFull').value === '1' }).then(function (m) {
-    busy(false); S.pvDone = true;
-    $('pvBody').innerHTML = '<div class="card" style="text-align:center"><b>' + esc(m.titles.join(' · ')) + '</b></div>' + m.sections.map(function (sec) {
-      return '<div class="pv"><h3>' + esc(sec.title) + ' <span class="count">' + sec.rows.length + '</span></h3><div class="pvwrap"><table class="pt"><thead><tr>' +
-        sec.headers.map(function (h) { return '<th>' + esc(h) + '</th>'; }).join('') + '</tr></thead><tbody>' +
-        sec.rows.map(function (r) { return '<tr>' + r.map(function (c) { return '<td>' + esc(c) + '</td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table></div></div>';
-    }).join('');
-  }).catch(fail);
-}
-$('pvRefresh').addEventListener('click', function () { S.pvDone = false; renderPreview(); });
-$('pvFull').addEventListener('change', function () { S.pvDone = false; renderPreview(); });
-
-/* ---------- download ---------- */
-function renderDownload() {
-  var unc = S.records.filter(function (r) { return !r.head; }).length;
-  var heads = {}; S.records.forEach(function (r) { if (r.head) heads[r.head] = 1; });
-  $('divSum').innerHTML = S.records.length ? (S.records.length + ' नोंदी · ' + Object.keys(heads).length + ' heads' + (unc ? ' · <b style="color:var(--bad)">' + unc + ' अवर्गीकृत ("अवर्गीकृत" head खाली येतील)</b>' : '')) : 'आधी फाईल्स प्रक्रिया करा.';
-  var h = S.records.filter(function (r) { return kind(r.head); });
-  $('hbtSum').textContent = 'घरफोडी ' + h.filter(function (r) { return kind(r.head) === 'H'; }).length + ' · चोरी ' + h.filter(function (r) { return kind(r.head) === 'T'; }).length + ' · दुखापत ' + h.filter(function (r) { return kind(r.head) === 'U'; }).length;
-  Array.prototype.forEach.call(document.querySelectorAll('[data-gen]'), function (b) { b.disabled = !S.records.length; });
-}
-// show a generated file: download link, Share (iPhone: save to Files / WhatsApp), and Drive link when available
-function showFile(box, res) {
-  var bin = atob(res.b64), arr = new Uint8Array(bin.length); for (var i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
-  var blob = new Blob([arr], { type: res.mime }), url = URL.createObjectURL(blob), id = 'f' + Date.now();
-  var file = null; try { file = new File([blob], res.name, { type: res.mime }); } catch (e) {}
-  var canShare = file && navigator.canShare && navigator.canShare({ files: [file] });
-  box.insertAdjacentHTML('afterbegin', '<div class="row" style="margin-bottom:6px"><a class="btn pri sm" href="' + url + '" download="' + esc(res.name) + '">⬇ ' + esc(res.name) + '</a>' +
-    (canShare ? '<button class="btn sm" id="' + id + '">शेअर / Files मध्ये जतन</button>' : '') + (res.url ? '<a class="btn sm" href="' + res.url + '" target="_blank">Drive</a>' : '') + '</div>');
-  if (canShare) $(id).addEventListener('click', function () { navigator.share({ files: [file], title: res.name }).catch(function () {}); });
-}
-function gen(kindName, kruti) {
-  if (!S.month) { var m = prompt('माहे लिहा (उदा. 09/2026)'); if (!m) return; S.month = m.trim(); $('monthIn').value = S.month; $('monthTag').textContent = 'माहे ' + S.month; }
-  busy(true, 'Word फाईल बनवत आहे…');
-  call('api_generate', { kind: kindName, kruti: kruti, paper: $('dlPaper').value, full: $('dlFull').value === '1', month: S.month, records: plainRecs(), heads: headOrder() }).then(function (res) {
-    busy(false);
-    res.mime = res.mime || 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
-    showFile($('res-' + kindName), res);
-    if (kindName === 'division') { S.gen = true; saveDraftSoon(); renderSteps(); }
-    toast('फाईल तयार ✓');
-  }).catch(fail);
-}
-document.addEventListener('click', function (e) {
-  var b = e.target.closest('[data-gen]'); if (!b) return;
-  var p = b.dataset.gen.split(':'); gen(p[0], p[1] === '1');
-});
-
-/* ---------- reports ---------- */
-function renderReports() {
-  $('ahList').innerHTML = AHWAL.LIST.map(function (x, i) {
-    return '<div class="li"><div class="tx"><b>' + (i + 1) + '. ' + esc(x.name) + '</b></div><button class="btn sm" data-ahv="' + x.id + '">पहा</button><button class="btn sm pri" data-ahd="' + x.id + ':docx">Word</button><button class="btn sm" data-ahd="' + x.id + ':pdf">PDF</button></div>';
-  }).join('');
-  Array.prototype.forEach.call(document.querySelectorAll('[data-ahv],[data-ahd]'), function (b) { b.disabled = !S.records.length; });
-  if (!S.records.length) { $('warnList').innerHTML = '<div class="muted small">आधी फाईल्स प्रक्रिया करा.</div>'; $('warnCount').textContent = 0; return; }
-  var wl = [], seen = {};
-  S.records.forEach(function (r) {
-    warnsOf(r).forEach(function (w) { if (w !== 'head ठरलेला नाही' || !r.head) { seen[r.id + w] = 1; wl.push({ ps: PSU[r.ps], pk: r.ps, no: r.no, head: r.head || UNC, w: w }); } });
-    issuesOf(r).forEach(function (i) { if (/^(prevm|ipc|bnsno|noact|arrord|future|month|order|arrdate|dup)$/.test(i.k) && !seen[r.id + i.t]) { seen[r.id + i.t] = 1; wl.push({ ps: PSU[r.ps], pk: r.ps, no: r.no, head: r.head || UNC, w: i.t }); } });
-  });
-  var byPs = {}; wl.forEach(function (x) { (byPs[x.pk] = byPs[x.pk] || []).push(x); });
-  $('psSend').innerHTML = Object.keys(PSU).filter(function (k) { return byPs[k]; }).map(function (k) { return '<button class="btn sm" data-pssend="' + k + '">' + PSU[k] + ' (' + byPs[k].length + ')</button>'; }).join('') || '<span class="small muted">पाठवण्यासारखे काही नाही ✓</span>';
-  S.warnByPs = byPs;
-  S.warnRows = wl;
-  $('warnCount').textContent = wl.length;
-  $('warnList').innerHTML = wl.map(function (x) { return '<div class="li"><span class="badge ps">' + x.ps + '</span><div class="tx"><b>' + esc(x.no) + '</b> <span class="small muted">' + esc(x.head) + '</span><div class="small" style="color:var(--warn)">⚠ ' + esc(x.w) + '</div></div></div>'; }).join('') || '<div class="muted small">कोणतीही त्रुटी नाही ✓</div>';
-}
-function ahRecs() { return S.records; }
-$('ahList').addEventListener('click', function (e) {
-  var v = e.target.closest('[data-ahv]'), d = e.target.closest('[data-ahd]');
-  if (v) {
-    try {
-      var m = AHWAL.build(v.dataset.ahv, ahRecs(), S.month);
-      $('ahPrevTitle').textContent = AHWAL.LIST.filter(function (x) { return x.id === v.dataset.ahv; })[0].name;
-      $('ahPrev').innerHTML = REPORT.modelHtml(m);
-      $('ahPrevCard').classList.remove('hide');
-      $('ahPrevCard').scrollIntoView({ behavior: 'smooth' });
-    } catch (err) { fail(err); }
-  }
-  if (d) {
-    var p = d.dataset.ahd.split(':');
-    if (p[1] === 'pdf' && window.BPS_PWA) { // installed app: PDF through the device's print → "Save as PDF"
-      var pv = document.querySelector('[data-ahv="' + p[0] + '"]'); if (pv) pv.click();
-      setTimeout(function () { window.print(); }, 400); return;
-    }
-    busy(true, 'अहवाल बनवत आहे…');
-    call('api_ahwal', { kind: p[0], fmt: p[1], month: S.month, records: plainRecs() }).then(function (res) {
-      busy(false);
-      showFile($('res-ahwal'), res);
-      toast('अहवाल तयार ✓');
-    }).catch(fail);
-  }
-});
-$('ahClose').addEventListener('click', function () { $('ahPrevCard').classList.add('hide'); });
-$('ahPrint').addEventListener('click', function () { window.print(); });
-try { var pp = lsGet('bps_paper'); if (pp) $('dlPaper').value = pp; } catch (e) {}
-$('dlPaper').addEventListener('change', function () { lsSet('bps_paper', this.value); });
-$('psSend').addEventListener('click', function (e) {
-  var b = e.target.closest('[data-pssend]'); if (!b) return;
-  var k = b.dataset.pssend, list = (S.warnByPs || {})[k] || [], by = {};
-  list.forEach(function (x) { (by[x.no] = by[x.no] || []).push(x.w); });
-  var txt = 'पोलीस स्टेशन ' + PSU[k] + ' – B Part माहे ' + (S.month || '') + '\nखालील नोंदींची दुरुस्ती करून सुधारित B Part पाठवावा:\n\n' +
-    Object.keys(by).map(function (no, i) { return (i + 1) + ') अप.क्र. ' + no + ' – ' + by[no].join('; '); }).join('\n') + '\n\n– उपविभागीय पोलीस अधिकारी कार्यालय, नागपूर विभाग';
-  if (navigator.share) navigator.share({ text: txt }).catch(function () {});
-  else { copyText(txt); window.open('https://wa.me/?text=' + encodeURIComponent(txt), '_blank'); toast('संदेश कॉपी झाला'); }
-});
-$('copyWarn').addEventListener('click', function () { copyText((S.warnRows || []).map(function (x) { return [x.ps, x.no, x.head, x.w].join('\t'); }).join('\n')); toast('कॉपी झाले'); });
-
-/* ---------- typing tool ---------- */
-$('kIn').addEventListener('input', function () { $('kOut').textContent = KD.convert(this.value); });
-$('rIn').addEventListener('input', function () { $('rOut').textContent = TEXT.roman(this.value); });
-$('kClear').addEventListener('click', function () { $('kIn').value = ''; $('kOut').textContent = ''; });
-$('rClear').addEventListener('click', function () { $('rIn').value = ''; $('rOut').textContent = ''; });
-document.addEventListener('click', function (e) { var b = e.target.closest('[data-copy]'); if (b) { copyText($(b.dataset.copy).textContent); toast('कॉपी झाले'); } });
-
-/* inline typing in every text field */
-var TMODE = 'off';
-try { TMODE = localStorage.getItem('tmode') || 'off'; } catch (e) {}
-$('tmode').value = TMODE;
-$('tmode').addEventListener('change', function () { TMODE = this.value; try { localStorage.setItem('tmode', TMODE); } catch (e) {} toast(TMODE === 'roman' ? 'रोमन → मराठी: शब्द लिहून Space दाबा' : TMODE === 'kruti' ? 'Kruti Dev टायपिंग चालू' : 'साधे टायपिंग'); });
-function setVal(el, val, caret) { el.value = val; try { el.setSelectionRange(caret, caret); } catch (e) {} }
-var _inConv = false;
-function refire(el) { _inConv = true; try { el.dispatchEvent(new Event('input', { bubbles: true })); } finally { _inConv = false; } }
-function isTypable(el) { return el && el.matches && el.matches('input[type=text],textarea') && !el.dataset.notype; }
-// phone keyboards: no auto-capital / auto-correct while Roman typing is on
-document.addEventListener('focusin', function (e) {
-  if (TMODE !== 'roman' || !isTypable(e.target)) return;
-  var el = e.target; el.setAttribute('autocapitalize', 'off'); el.setAttribute('autocorrect', 'off'); el.setAttribute('spellcheck', 'false'); el.setAttribute('autocomplete', 'off');
-});
-// last word (no space typed after it) is converted when you leave the field
-document.addEventListener('focusout', function (e) {
-  var el = e.target;
-  if (TMODE !== 'roman' || !isTypable(el)) return;
-  var v = el.value, m = v.match(/([A-Za-z]+)$/);
-  if (!m) return;
-  el.value = v.slice(0, v.length - m[1].length) + TEXT.romanWord(m[1]);
-  refire(el); el.dispatchEvent(new Event('change', { bubbles: true }));
-});
-document.addEventListener('input', function (e) {
-  var el = e.target;
-  if (_inConv || TMODE === 'off' || !isTypable(el)) return;
-  var type = e.inputType || '';
-  var pos = el.selectionStart, v = el.value;
-  if (TMODE === 'roman') {
-    // works for normal keys AND for phone keyboards that send "composition" events:
-    // look at the character just before the cursor – if it is a space/punctuation after Roman letters, convert that word
-    if (/^(delete|history)/.test(type) || !pos) return;
-    var last = v.charAt(pos - 1);
-    if (!last || /[A-Za-z]/.test(last)) return;
-    var before = v.slice(0, pos - 1);
-    var m = before.match(/([A-Za-z]+)$/);
-    if (!m) return;
-    var conv = TEXT.romanWord(m[1]);
-    var start = before.length - m[1].length;
-    var nv = v.slice(0, start) + conv + v.slice(start + m[1].length);
-    setVal(el, nv, pos - m[1].length + conv.length);
-    refire(el);
-  } else if (TMODE === 'kruti') {
-    if (type === 'insertText' && e.data) {
-      var ch = e.data;
-      if (/\s/.test(ch)) { el._kraw = ''; return; }
-      var prev = el._kraw || '';
-      var prevU = KD.convert(prev);
-      var wordStart = pos - ch.length - prevU.length;
-      if (wordStart < 0 || v.slice(wordStart, pos - ch.length) !== prevU) { prev = ''; prevU = ''; wordStart = pos - ch.length; }
-      var raw = prev + ch, cu = KD.convert(raw);
-      el._kraw = raw;
-      setVal(el, v.slice(0, wordStart) + cu + v.slice(pos), wordStart + cu.length);
-    } else { el._kraw = ''; }
-  }
-});
-
-/* ---------- rules / settings ---------- */
-function renderRules() {
-  $('bkInfo').textContent = bkInfoText();
-  $('ruleN').textContent = S.rules.length;
-  $('ruleList').innerHTML = S.rules.slice().reverse().map(function (r) {
-    var cond = (r.sections || []).map(secLabel).join(' + ') + (r.act ? ' · ' + (ACTU[r.act] || r.act) : '') + ((r.keywords || []).length ? ' · शब्द: ' + r.keywords.join(', ') : '');
-    return '<div class="li"><div class="tx"><div><b>' + esc(cond || '—') + '</b> → ' + esc(r.head) + '</div><div class="small muted">' + (r.example ? 'उदाहरण: ' + esc(r.example) + ' · ' : '') + (r.created || '').slice(0, 10) + '</div></div><button class="btn sm danger" data-delrule="' + esc(r.id) + '">काढा</button></div>';
-  }).join('') || '<div class="muted small">अजून नियम नाहीत. वर्गीकरण टॅबमध्ये head बदलून "नियम जतन करा" दाबा.</div>';
-  $('headList').innerHTML = S.heads.map(function (h, i) {
-    return '<div class="li" data-hi="' + i + '" data-h="' + esc(h) + '"><span class="grip">⋮⋮</span><div class="tx">' + (i + 1) + '. ' + esc(h) + '</div>' +
-      (S.defaultHeads.indexOf(h) < 0 ? '<button class="btn sm ghost danger" data-delhead="' + i + '">✕</button>' : '') + '</div>';
-  }).join('');
-  $('fxList').innerHTML = S.fixes.map(function (f, i) { return '<div class="li"><div class="tx">' + esc(f.from) + ' → <b>' + esc(f.to) + '</b></div><button class="btn sm ghost danger" data-delfx="' + i + '">✕</button></div>'; }).join('') || '<div class="muted small">दुरुस्त्या नाहीत.</div>';
-}
-$('v-rules').addEventListener('click', function (e) {
-  var t = e.target.closest('button'); if (!t) return;
-  if (t.dataset.delrule) { if (!confirm('हा नियम काढायचा?')) return; busy(true); call('api_deleteRule', t.dataset.delrule).then(function (r) { S.rules = r; return S.records.length ? reclassify() : 0; }).then(function () { busy(false); renderRules(); toast('नियम काढला'); }).catch(fail); }
-  if (t.dataset.delhead != null) { S.heads.splice(+t.dataset.delhead, 1); saveHeads(); }
-  if (t.dataset.delfx != null) { S.fixes.splice(+t.dataset.delfx, 1); saveFixes(); }
-});
-function saveHeads() { S.pvDone = false; renderRules(); call('api_saveHeads', S.heads).then(function (h) { S.heads = h; }).catch(fail); }
-function saveFixes() { renderRules(); call('api_saveFixes', S.fixes).catch(fail); }
-$('addHead').addEventListener('click', function () { var v = $('newHead').value.trim(); if (!v || S.heads.indexOf(v) >= 0) return; S.heads.push(v); $('newHead').value = ''; saveHeads(); });
-$('addFx').addEventListener('click', function () { var a = $('fxFrom').value, b = $('fxTo').value; if (!a) return; S.fixes.push({ from: a, to: b }); $('fxFrom').value = $('fxTo').value = ''; saveFixes(); toast('पुढच्या प्रक्रियेपासून लागू होईल'); });
-$('expBtn').addEventListener('click', function () { call('api_exportSettings').then(function (j) { var t = $('bkTxt'); t.classList.remove('hide'); t.value = j; t.select(); try { document.execCommand('copy'); toast('कॉपी झाले – सुरक्षित ठिकाणी पेस्ट करून ठेवा'); } catch (e) {} }).catch(fail); });
-$('impBtn').addEventListener('click', function () {
-  var t = $('bkTxt'); if (t.classList.contains('hide') || !t.value.trim()) { t.classList.remove('hide'); t.value = ''; t.placeholder = 'बॅकअप मजकूर इथे पेस्ट करा आणि पुन्हा "बॅकअप परत आणा" दाबा'; return; }
-  applyBackup(t.value);
-});
-
-/* long-press + drag to reorder heads */
-(function () {
-  var list = $('headList'), drag = null, timer = null, startY = 0, startX = 0;
-  list.addEventListener('pointerdown', function (e) {
-    var li = e.target.closest('.li[data-hi]'); if (!li || e.target.closest('button')) return;
-    startY = e.clientY; startX = e.clientX;
-    clearTimeout(timer);
-    timer = setTimeout(function () {
-      drag = li; li.classList.add('dragging');
-      try { if (navigator.vibrate) navigator.vibrate(15); } catch (_) {}
-    }, 380);
-  });
-  list.addEventListener('pointermove', function (e) {
-    if (!drag) { if (timer && (Math.abs(e.clientY - startY) > 8 || Math.abs(e.clientX - startX) > 8)) { clearTimeout(timer); timer = null; } return; }
-    e.preventDefault();
-    var items = Array.prototype.slice.call(list.querySelectorAll('.li[data-hi]')).filter(function (x) { return x !== drag; });
-    var placed = false;
-    for (var i = 0; i < items.length; i++) {
-      var r = items[i].getBoundingClientRect();
-      if (e.clientY < r.top + r.height / 2) { list.insertBefore(drag, items[i]); placed = true; break; }
-    }
-    if (!placed && items.length) list.appendChild(drag);
-    var rr = drag.getBoundingClientRect();
-    if (rr.top < 90) window.scrollBy(0, -12); else if (rr.bottom > window.innerHeight - 40) window.scrollBy(0, 12);
-  });
-  function end() {
-    clearTimeout(timer); timer = null;
-    if (!drag) return;
-    drag.classList.remove('dragging'); drag = null;
-    var names = Array.prototype.map.call(list.querySelectorAll('.li[data-hi]'), function (x) { return x.dataset.h; });
-    if (names.join('|') !== S.heads.join('|')) { S.heads = names; saveHeads(); toast('क्रम बदलला ✓'); }
-  }
-  list.addEventListener('pointerup', end); list.addEventListener('pointercancel', end); list.addEventListener('pointerleave', function () { if (drag) end(); });
-  list.addEventListener('touchmove', function (e) { if (drag) e.preventDefault(); }, { passive: false });
-  list.addEventListener('contextmenu', function (e) { if (e.target.closest('.li[data-hi]')) e.preventDefault(); });
-})();
 
 ;(window.__BPS_PARTS = window.__BPS_PARTS || []).push('App1'); /* ===== END OF App1 ===== */
